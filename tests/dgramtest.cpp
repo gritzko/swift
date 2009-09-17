@@ -1,0 +1,96 @@
+/*
+ *  dgramtest.cpp
+ *  serp++
+ *
+ *  Created by Victor Grishchenko on 3/13/09.
+ *  Copyright 2009 Delft Technical University. All rights reserved.
+ *
+ */
+#include <gtest/gtest.h>
+#include <glog/logging.h>
+#include "datagram.h"
+
+using namespace p2tp;
+
+
+TEST(Datagram, BinaryTest) {	
+	int socket = Datagram::Bind(7001);
+	ASSERT_TRUE(socket>0);
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(7001);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	Datagram d(socket,addr);
+	const char * text = "text";
+	const uint8_t num8 = 0xab;
+	const uint16_t num16 = 0xabcd;
+	const uint32_t num32 = 0xabcdef01;
+	const uint64_t num64 = 0xabcdefabcdeffULL;
+	d.PushString(text);
+	d.Push8(num8);
+	d.Push16(num16);
+	d.Push32(num32);
+	d.Push64(num64);
+	char buf[1024];
+	int i;
+	for(i=0; i<d.length; i++)
+		sprintf(buf+i*2,"%02x",*(unsigned char*)(d.buf+i));
+	buf[i*2] = 0;
+	EXPECT_STREQ("74657874ababcdabcdef01000abcdefabcdeff",buf);
+	int datalen = strlen(text)+1+2+4+8;
+	ASSERT_EQ(datalen,d.Send());
+    int socks[1] = {socket};
+	socket = Datagram::Wait(1,socks);
+	Datagram rcv(socket);
+	ASSERT_EQ(datalen,rcv.Recv());
+	char* rbuf;
+	int pl = rcv.Pull((uint8_t**)&rbuf,strlen(text));
+	memcpy(buf,rbuf,pl);
+	buf[pl]=0;
+	uint8_t rnum8 = rcv.Pull8();
+	uint16_t rnum16 = rcv.Pull16();
+	uint32_t rnum32 = rcv.Pull32();
+	uint64_t rnum64 = rcv.Pull64();
+	EXPECT_STREQ("text",buf);
+	EXPECT_EQ(0xab,rnum8);
+	EXPECT_EQ(0xabcd,rnum16);
+	EXPECT_EQ(0xabcdef01,rnum32);
+	EXPECT_EQ(0xabcdefabcdeffULL,rnum64);
+	Datagram::Close(socket);
+}
+
+TEST(Datagram,TwoPortTest) {
+	int sock1 = Datagram::Bind(10001);
+	int sock2 = Datagram::Bind(10002);
+	ASSERT_TRUE(sock1>0);
+	ASSERT_TRUE(sock2>0);
+	struct sockaddr_in addr1, addr2;
+	addr1.sin_family = AF_INET;
+	addr1.sin_port = htons(10001);
+	addr1.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr2.sin_family = AF_INET;
+	addr2.sin_port = htons(10002);
+	addr2.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	
+	Datagram send(sock1,addr2);
+	send.Push32(1234);
+	send.Send();
+	
+    int socks[2] = {sock1,sock2};
+	EXPECT_EQ(sock2,Datagram::Wait(2,socks));
+	Datagram recv(sock2);
+	recv.Recv();
+	uint32_t test = recv.Pull32();
+	ASSERT_EQ(1234,test);
+	
+	Datagram::Close(sock1);
+	Datagram::Close(sock2);
+}
+
+int main (int argc, char** argv) {
+	
+	testing::InitGoogleTest(&argc, argv);
+    google::InitGoogleLogging(argv[0]);
+	return RUN_ALL_TESTS();
+	
+}

@@ -1,0 +1,44 @@
+env = Environment(CPPPATH = '.',CXXFLAGS="-g")
+
+env.Program( 
+    target='bintest',
+    source=['bintest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='binstest',
+    source=['binstest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='dgramtest',
+    source=['dgramtest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='hashtest',
+    source=['hashtest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog','crypto'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='ledbattest',
+    source=['ledbattest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog','crypto'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='bin64test',
+    source=['bin64test.cpp','../bin64.h'],
+    CPPPATH=['..'],
+    LIBS=['gtest'],
+    LIBPATH='..' )
+

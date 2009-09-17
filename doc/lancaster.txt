@@ -1,0 +1,27 @@
+* MISSION : <1 min
+    * multiparty transport protocol
+    * diverse usecases (files, VoD, live)
+    * for embedded 24x7 use
+* OBJECTIVES : 1 min
+    * light footprint (embedded)
+    * NAT penetration
+    * non-intrusive congestion control
+    * genericity
+* METHOD : 1 min
+    * UDP
+    * LEDBAT (Mugurel)
+    * common messages 
+    * Merkle hashes
+    * binmaps
+* STATUS : 5 min
+    * state machine: implemented
+    * congestion control: implemented
+    * binmaps: implemented
+    * streaming: in progress
+    * todo: test, integrate, test
+* HELP NEEDED : 4 min
+    * testing
+    * security
+    * robustness
+    * usecases
+
