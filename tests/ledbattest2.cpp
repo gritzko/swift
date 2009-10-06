@@ -175,7 +175,7 @@ TEST(Datagram,LedbatTest) {
 
 int main (int argc, char** argv) {
 
-    int opt, ret;
+    int opt;
     printf("Warning: use the script to set up dummynet!\n");
     testing::InitGoogleTest(&argc, argv);
     google::InitGoogleLogging(argv[0]);
