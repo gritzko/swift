@@ -36,6 +36,13 @@ env.Program(
     LIBPATH='..' )
 
 env.Program( 
+    target='ledbattest2',
+    source=['ledbattest2.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog','crypto'],
+    LIBPATH='..' )
+
+env.Program( 
     target='bin64test',
     source=['bin64test.cpp','../bin64.h'],
     CPPPATH=['..'],
