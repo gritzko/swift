@@ -183,7 +183,7 @@ int main (int argc, char** argv) {
     while ((opt = getopt(argc, argv, "a:d:s:h")) != -1)
         switch (opt) {
         case 'd':
-            if ((inet_aton(optarg, (struct in_addr *)&dest_addr)) == -1) {
+            if (!inet_aton(optarg, (struct in_addr *)&dest_addr)) {
                 fprintf(stderr, "inet_aton failed for addr: %s\n", optarg);
                 return -1;
             }
