@@ -17,14 +17,15 @@ Messages
  initial handshake packet also has the root hash
  (a HASH message).
  
- DATA		01, bin, buffer
+ DATA		01, bin_32, buffer
  1K of data.
  
- ACK		02, bin
+ ACK		02, bin_32
+ ACKTS      08, bin_32, timestamp_32
  Confirms successfull delivery of data. Used for
  congestion control, as well.
- 
- HINT		03, bin
+  
+ HINT		03, bin_32
  Practical value of "hints" is to avoid overlap, mostly.
  Hints might be lost in the network or ignored.
  Peer might send out data without a hint.
@@ -33,153 +34,156 @@ Messages
  As peers cant pick randomly kilobyte here and there,
  they send out "long hints" for non-base bins.
  
- HASH		04, bin, sha1hash
+ HASH		04, bin_32, sha1hash
  SHA1 hash tree hashes for data verification. The
  connection to a fresh peer starts with bootstrapping
  him with peak hashes. Later, before sending out
  any data, a peer sends the necessary uncle hashes.
  
- PEX+/PEX-	05/06, ip, port
+ PEX+/PEX-	05/06, ipv4 addr, port
  Peer exchange messages; reports all connected and
  disconected peers. Might has special meaning (as
  in the case with swarm supervisors).
- 
- --8X---- maybe (give2get)
- 
- CRED		07, scrchid
- Communicated the public channel id at the sender
- side. Any grandchildren's credits will go to this
- channel.
- 
- CRED1/2	08/09, ip, port, scrchid
- Second-step and trird-step credits.
- 
- ACK1/2		10/11, scrchid, packets
- Grandchildren's acknowledgements of data being
- received from a child; the public channel id
- is mentioned.
  
 */
 #ifndef P2TP_H
 #define P2TP_H
 #include <stdint.h>
-#include <iostream>
 #include <vector>
 #include <deque>
-#include "bin.h"
-#include "sbit.h"
+#include "bin64.h"
+#include "bins.h"
 #include "datagram.h"
 #include "hashtree.h"
 
 namespace p2tp {
 
-	/* 64-bit time counter, microseconds since epoch
-	typedef int64_t tint;
-	static const tint TINT_1SEC = 1000000;
-    static const tint TINT_1MSEC = 1000;
-	static const tint TINT_INFINITY = 0x7fffffffffffffffULL;
-    */
-	struct tintbin {
-		tint time;
-		bin pos;
-		tintbin(tint t, bin p) : time(t), pos(p) {}
-	};
-	typedef std::deque<tintbin> tbinvec;
+    typedef std::pair<tint,bin64_t> tintbin;
+    
+	typedef std::deque<tintbin> tbqueue;
+    typedef std::deque<bin64_t> binqueue;
 
 	typedef enum { 
 		P2TP_HANDSHAKE = 0, 
 		P2TP_DATA = 1, 
 		P2TP_ACK = 2, 
+		P2TP_ACKTS = 8, 
 		P2TP_HINT = 3, 
 		P2TP_HASH = 4, 
 		P2TP_PEX_ADD = 5,
 		P2TP_PEX_RM = 6,
 		P2TP_MESSAGE_COUNT = 7
 	} messageid_t;
+    
+    class PiecePicker;
+    class CongestionController;
+    class PeerSelector;
 
 	
-	struct	File {
+	class	FileTransfer {
 		
-		typedef enum {EMPTY,IN_PROGRESS,DONE} status_t;
+    public:
+		
+        /** Offer a hash; returns true if it verified; false otherwise.
+         Once it cannot be verified (no sibling or parent), the hash
+         is remembered, while returning false. */
+		bool            OfferHash (bin64_t pos, const Sha1Hash& hash);
+        /** Offer data; the behavior is the same as with a hash:
+            accept or remember or drop. */
+        bool            OfferData (bin64_t bin, uint8_t* data);
+        
+		const Sha1Hash& root_hash () const { return *root_hash; }
+        
+		size_t          size () const;
+		size_t          packet_size () const;
+        size_t          size_complete () const;
+        size_t          packets_complete () const;
+		
+		static FileTransfer* find (const Sha1Hash& hash);
+		static FileTransfer* file (int fd) { return fd<files.size() ? files[fd] : NULL; }
+        
+		friend int      Open (const char* filename);
+		friend int      Open (const Sha1Hash& hash, const char* filename);
+		friend void     Close (int fdes);
+        
+    private:
 
-		static std::vector<File*> files;
-		
-		/**	File descriptor. */
-		int				fd;
-		/**	Whether the file is completely downloaded. */
-		status_t		status_;
-		
-		//	A map for all packets obtained and succesfully checked.
-		bins			ack_out;
-		//	Hinted packets.
-		bins			hint_out;
-		
-		HashTree		hashes;
-		//	History of bin retrieval.
-		bin::vec		history;
-		
-		// TBD
-		uint64_t		options;
-
-		/**	Submit a fresh file. */
-		File (int fd);
-		/**	Retrieve a file.	*/
-		File (Sha1Hash hash, int fd);
-		/**	Placeholder. */
-		File () : fd(-1), hashes(Sha1Hash::ZERO) {}
+		static std::vector<FileTransfer*> files;
+        
+		/**	Open/submit/retrieve a file.	*/
+		FileTransfer (Sha1Hash hash, char* file_name);
 		/**	Close everything. */
-		~File();
+		~FileTransfer();
 		
-		bool OfferHash (bin pos, const Sha1Hash& hash);
-		const Sha1Hash& root_hash () const { return hashes.root; }
-		size_t		size () const { return hashes.data_size()<<10; }
-		size_t		packet_size () const { return hashes.data_size(); }
-		status_t status () const { return status_; }
-		
-		static File* find (const Sha1Hash& hash);
-		static File* file (int fd) { return fd<files.size() ? files[fd] : NULL; }
+		/**	file descriptor. */
+		int				fd;
+        /** File size, as derived from the hashes. */
+        size_t          sizek;
+		/**	Whether the file is completely downloaded. */
+		bool            complete;
+		/**	A map for all packets obtained and succesfully checked. */
+		bins			ack_out;
+		/**	History of bin retrieval. */
+		binqueue		ack_history;
+        /** Piece picker strategy. */
+        PiecePicker*    picker;
+		/** File for keeping the Merkle hash tree. */
+        int             hashfd;
+        /** Merkle hash tree: root */
+        Sha1Hash*       root_hash;
+        /** Merkle hash tree: peak hashes */
+        Sha1Hash*       peak_hashes;
+        /** Merkle hash tree: the tree, as a bin64_t-indexed array */
+        Sha1Hash*       hashes;
+    protected:
+        void            Resize(size_t bytes);
 
-		friend int Open (const char* filename);
-		friend int Open (const Sha1Hash& hash, const char* filename);
-		friend void Close (int fdes);
 		friend class Channel;
 	};
 	
 	
 	int		Open (const char* filename) ;
 	int		Open (const Sha1Hash& root_hash, const char* filename);	
-	size_t	file_size (int fd);	
 	void	Close (int fid) ;
+    void    Loop (tint till);
+    int     Bind (int port);
+    void    Shutdown (int fd);
+    void    HeardOfPeer (const Sha1Hash& root, struct sockaddr_in address);
 	
 
-	struct CongestionControl {
-		typedef enum {SLOW_START_STATE,CONG_AVOID_STATE} stdtcpstate_t;
-		typedef enum { DATA_EV, ACK_EV, LOSS_EV } CongCtrlEvents;
-		
-		stdtcpstate_t state_;
-		tint rtt_avg_, dev_avg_, last_arrival_, rate_;
-		int cwnd_, cainc_, ssthresh_;
-		int peer_cwnd_, data_ins_;
-		
-		CongestionControl();
-		virtual ~CongestionControl() {}
-		virtual void	OnCongestionEvent (CongCtrlEvents ev);
-		void	RttSample (tint rtt);
-		
-		tint	avg_rtt() const { return rtt_avg_; }
-		tint	safe_avg_rtt() const { return avg_rtt() + avg_rtt_dev()*8; }
-		tint	avg_rtt_dev() const { return dev_avg_; }
-		int		cwnd () const {  return cwnd_; }
-		int		peer_cwnd () const;
-		int		peer_bps () const;
-		tint	data_in_rate () const { return rate_; }
+	class CongestionController {
+    public:
+        tint    rtt_avg;
+        tint    dev_avg;
+        int     cwnd;
+        int     peer_cwnd;
+        virtual void OnDataSent(bin64_t b) = 0;
+        virtual void OnDataRecvd(bin64_t b) = 0;
+        virtual void OnAckRcvd(bin64_t b, tint peer_stamp) = 0;
+		virtual ~CongestionControl() = 0;
 	};
-	
+    
+    class PiecePicker {
+    public:
+        virtual bin64_t Pick (bins& from, uint8_t layer) = 0;
+        virtual void    Received (bin64_t b) = 0;
+        virtual void    Snubbed (bin64_t b) = 0;
+    };
+    
+    class PeerSelector {
+    public:
+        virtual void PeerKnown (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
+        virtual sockaddr_in GetPeer (const Sha1Hash& for_root) = 0;
+    };
 	
 
-	/**	P2TP "control block". */
+	/**	P2TP channel's "control block"; channels loosely correspond to TCP
+        connections or FTP sessions; one channel is created for one file
+        being transferred between two peers. As we don't need buffers and
+        lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
+        (There was a seductive idea to remove channels, just put the root
+        hash or a fragment of it into every datagram.) */
 	class Channel {
-
 	public:
 		Channel	(int filedes, int socket, struct sockaddr_in peer,
 				 uint32_t peer_channel, uint64_t supports=0);
@@ -187,15 +191,11 @@ namespace p2tp {
 		
 		static void	Recv (int socket);
 		void		Recv (Datagram& dgram);
-		void		Send ();
-		void		SendSomething ();
+		tint		Send ();
+		tint		SendSomething ();
 		void		SendHandshake ();
-		void		Tick ();
 
-		typedef enum {HS_REQ_OUT,HS_RES_OUT,HS_DONE} state_t;
-		File&		file () { return *File::files[fd]; }
-		
-		
+		FileTransfer&		file () { return *FileTransfer::files[fd]; }
 	
 		void		OnAck (Datagram& dgram);
 		void		OnData (Datagram& dgram);
@@ -209,75 +209,57 @@ namespace p2tp {
 		void		AddUncleHashes (Datagram& dgram, bin pos);
 		void		AddPeakHashes (Datagram& dgram);
 
-		bin			SenderPiecePick () ;
-		bin			ReceiverPiecePick (int sizelim) ;
-		void		CleanStaleDataOut(bin ack_pos);
-		void		CleanStaleHintOut();
-		void		CleanStaleHintIn();
+		void		CleanStaleHints();
 		
 		state_t		state () const;
-		File::status_t	peer_status() const { return peer_status_; }
-		const CongestionControl& congestion_control() const { return cc_; }
 
 		static int DecodeID(int scrambled);
 		static int EncodeID(int unscrambled);
-		static void Loop (tint time);
-		static Channel* channel(int ind) {return ind<channels.size()?channels[ind]:NULL;}
-		static int MAX_REORDERING;
-		static tint TIMEOUT;
-		static std::vector<Channel*> channels;
-		static int* sockets_;
-		static int sock_count_;
-		static tint last_tick;
-		//static int socket;
+		static Channel* channel(int i) {return i<channels.size()?channels[i]:NULL;}
 		
-		friend int Connect (int fd, int sock, 
+		/*friend int Connect (int fd, int sock, 
 							const struct sockaddr_in& addr, uint32_t peerch=0);
 		friend int Init (int portno);
-		friend std::ostream& operator << (std::ostream& os, const Channel& s);
+		friend std::ostream& operator << (std::ostream& os, const Channel& s);*/
 		
 	private:
 		
-		// index in the channel array
-		int			id;
-		//	Socket address of the peer.
+		/** Channel id: index in the channel array. */
+		uint32_t	id;
+		/**	Socket address of the peer. */
 		struct sockaddr_in	peer;
-		//	The UDP socket fd.
-		int			socket_;
-		File::status_t	peer_status_;
-		//	Descriptor of the file in question
-		int			fd;
-		//	Zero if we are trying to open a channel.
+		/**	The UDP socket fd. */
+		int			socket;
+		/**	Descriptor of the file in question. */
+		FileTransfer*	file;
+		/**	Peer channel id; zero if we are trying to open a channel. */
 		uint32_t	peer_channel_id;
-		//	Temporarily, a pointer to a composed/parsed datagram.
-		//Datagram*	dgram;
-		
-		//	Peer's retrieved pieces.
+		/**	Peer's progress, based on acknowledgements. */
 		bins		ack_in;
-		//	Progress of piece acknowledgement to the peer.
-		bin			data_in_;
+		/**	Last data received; needs to be acked immediately. */
+		bin64_t		data_in;
+        /** Index in the history array. */
 		int			ack_out;
-		//	Transmit schedule: in most cases filled with the peer's hints
-		tbinvec		hint_in;
-		//  Hints sent (to detect and reschedule ignored hints).
-		tbinvec		hint_out;
-		//	Uncle hash send pos; in the case both data and hashes do not fit
-		//	into a single datagram, we set this.
-		bin			hash_out;
-		//	Send history: all cwnd pieces.
-		tbinvec		data_out; 
-		
-		CongestionControl	cc_;
-		tint		last_send_time;
+		/**	Transmit schedule: in most cases filled with the peer's hints */
+		tbqueue		hint_in;
+		/** Hints sent (to detect and reschedule ignored hints). */
+		tbqueue		hint_out;
+		/** The congestion control strategy. */
+		CongestionController	*cc;
+        /** For repeats. */
+		tint		last_send_time, last_recv_time;
+        
+        static PeerSelector* peer_selector;
+        
+		static int  MAX_REORDERING;
+		static tint TIMEOUT;
+		static std::vector<Channel*> channels;
+		static tint last_tick;
+        
 	};
 
 	
-	//int		connect (int fd, const struct sockaddr_in& addr, uint32_t peerch=0) ;
-	void	Loop (tint time=0) ;
-	int		Init (int portno) ;
-	void	Shutdown (int portno);
-	
-	uint32_t Width (const tbinvec& v);
+	//uint32_t Width (const tbinvec& v);
 }
 
 #define RETLOG(str) { LOG(WARNING)<<str; return; }

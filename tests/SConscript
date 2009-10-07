@@ -43,6 +43,13 @@ env.Program(
     LIBPATH='..' )
 
 env.Program( 
+    target='freemap',
+    source=['freemap.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','stdc++','gtest','glog'],
+    LIBPATH='..' )
+
+env.Program( 
     target='bin64test',
     source=['bin64test.cpp','../bin64.h'],
     CPPPATH=['..'],

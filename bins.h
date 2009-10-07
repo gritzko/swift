@@ -6,86 +6,121 @@
  *  Copyright 2009 Delft Technical University. All rights reserved.
  *
  */
-#ifndef SERP_SBIT_H
-#define SERP_SBIT_H
+#ifndef BINS_H
+#define BINS_H
 #include "bin64.h"
+#include <gtest/gtest.h>
 
-class bins64 {
+/**  A binmap covering 2^64 range. Complexity limit: 100+200LoC  */
+class bins {
+    
+public:
+    typedef enum { FILLED=0xffff, EMPTY=0x0000 } fill_t;
+    static const int NOJOIN;
+    
+    bins();
+    
+    uint16_t get (bin64_t bin); 
+    
+    void set (bin64_t bin, fill_t val=FILLED); 
+    
+    bin64_t find (const bin64_t range, const uint8_t layer) ;
+    
+    void dump(const char* note);
 
-    private:
+    uint64_t*   get_stripes (int& count);
 
-        uint32_t    *bits;
-        uint32_t    alloc_block;
-
-    protected:
-
-        bool        join(uint32_t half) {
-            uint32_t cellno = bits[half]>>(half&1?16:0);
-
-            if (deep(left) || deep(right)) // some half is deep
-                return false;
-            uint8_t b1=JOIN[cell&0xf],
-                    b2=JOIN[(cell>>8)&0xf],
-                    b3=JOIN[(cell>>16)&0xf],
-                    b4=JOIN[cell>>24];
-            if (b1==0xff || b2==0xff || b3==0xff || b4==0xff)
-                return false;
-            bits[half] = b1 | (b2<<4) | (b3<<8) | (b4<<12) ;
-            (*parentdeepcell) ^= 1<<(halfno&32);
-            (*childdeepcell) &= 0xffff>>1; // clean the full bit
-        }
-
-        bool        split(uint32_t half) {
-            if (deep(half))
-                return false;
-            uint32_t cell = alloc_cell(), left=cell<<1, right=left+1;
-            bits[half|0xf] |= 1<<(half&0xf);
-            bits[left] = SPLIT[bits[half]>>8];
-            bits[right] = SPLIT[bits[half&0xff]];
-            bits[half] = cell;
-            return true;
-        }
-
-        uint32_t    alloc_cell () {
-            do{
-                for(int block=alloc_block; bits[block]&(1<<32); block+=32);
-                for(int off=0; bits[block+off]==0 && off<31; off++);
-                if (off==31) 
-                    bits[block] |= 1<<32;
-                if (block&(1<<31)) {
-                    bits = realloc(bits,block*2);
-                    memset();
-                }
-            } while (off==31);
-            alloc_block = block;
-            return block+off;
-        }
-
-    public:
-
-        class iterator {
-            bins64_t    *host;
-            uint32_t    back[32];
-            uint32_t    half;
-            bin64_t     top;
-            bin64_t     focus;
-            bin16_t     mask;
-            public:
-            void left();
-            void right();
-            void parent();
-            bin64_t next();
-            bool defined();
-            uint16_t& operator* ();
-        };
-        friend class iterator;
-
-        bool get (uint64_t bin);
-
-        void set (uint64_t bin);
-
-        bin64_t find (bin64_t range, int layer);
-
-        // TODO: bitwise operators
-
+    uint32_t    size() { return cells_allocated; }
+    // TODO: bitwise operators
+    
+private:
+    
+    /** Every 16th uint32 is a flag field denoting whether
+     previous 30 halves (in 15 cells) are deep or not.
+     The last bit is used as a fill-flag.
+     Free cells have a value of 0; neither deep nor flat
+     cell could have a value of 0 except for the root
+     cell in case the binmap is all-0. */
+    union {
+        uint32_t    *cells;
+        uint16_t    *halves;
+    };
+    uint32_t    blocks_allocated;
+    uint32_t    cells_allocated;
+    int         height;
+    uint32_t    ap;
+    
+    void extend();
+    
+    static const uint8_t    SPLIT[16];
+    static const uint8_t    JOIN[16];
+    
+    bool        deep(uint32_t half) const {
+        return cells[(half>>1)|0xf] & (1<<(half&0x1f));
+    }
+    void        mark(uint32_t half) {
+        cells[(half>>1)|0xf] |= (1<<(half&0x1f));
+    }
+    void        unmark(uint32_t half) {
+        cells[(half>>1)|0xf] &= ~(1<<(half&0x1f));
+    }
+    
+    void extend_range();
+    
+    uint16_t    alloc_cell ();
+    void        free_cell (uint16_t cell);
+    
+    /** Join the cell this half is pointing to
+     (in other words, flatten the half). */
+    bool        join(uint32_t half) ;
+    
+    /** Make the half deep. */
+    void        split(uint32_t half) ;
+    
+    static uint32_t split16to32(uint16_t half);
+    static int join32to16(uint32_t cell);
+    
+    friend class iterator;
+    FRIEND_TEST(BinsTest,Routines);
 };
+
+
+/** Iterates over bins; for deep halves, bin==half.
+ For flat halves, bin is a range of bits in a half.
+ Iterator may split cells if needed.
+ Value is either undefined (deep cell, mixed cell)
+ or FILLED/EMPTY. */
+class iterator {
+public: // rm this
+    bins        *host;
+    uint32_t    history[64];
+    uint32_t    half;
+    bin64_t     pos;  // TODO: half[] layer bin
+public:
+    iterator(bins* host, bin64_t start=0, bool split=false);
+    ~iterator();
+    bool deep () { return host->deep(half); }
+    bool solid () { 
+        return !deep() && (host->halves[half]==bins::FILLED || 
+                host->halves[half]==bins::EMPTY); 
+    }
+    void sibling () { half^=1; pos=pos.sibling(); }
+    bool end () { return half==1; }
+    void to (bool right);
+    void left() {to(0);}
+    void right() {to(1);}
+    /** Move to the next defined (non-deep, flat) cell.
+        If solid==true, move to a solid (0xffff/0x0) cell. */
+    bin64_t next (bool solid=false);
+    bin64_t bin() { return pos; }
+    void towards(bin64_t bin) {
+        bin64_t next = pos.towards(bin);
+        assert(next!=bin64_t::NONE);
+        to(next.is_right());
+    }
+    void parent() ;
+    bool defined() { return !host->deep(half); }
+    uint16_t& operator* () { return host->halves[half]; }
+};
+
+#endif

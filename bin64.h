@@ -22,6 +22,9 @@ struct bin64_t {
     operator uint64_t () const { return v; }
     bool operator == (bin64_t& b) const { return v==b.v; }
 
+    static bin64_t none () { return NONE; }
+    static bin64_t all () { return ALL; }
+
     uint64_t tail_bits () const {
         return v ^ (v+1);
     }
@@ -30,6 +33,10 @@ struct bin64_t {
         return (tail_bits()+1)>>1;
     }
 
+    bin64_t sibling () const {
+        // if (v==ALL) return NONE; 
+        return bin64_t(v^(tail_bit()<<1));
+    }
 
     int layer () const {
         int r = 0;
@@ -49,22 +56,44 @@ struct bin64_t {
     }
 
     uint64_t base_offset () const {
-        return v&~(tail_bits());
+        return (v&~(tail_bits()))>>1;
     }
 
     uint64_t offset () const {
         return v >> (layer()+1);
     }
 
+    bin64_t to (bool right) const {
+        if (!(v&1))
+            return NONE;
+        uint64_t tb = tail_bit()>>1;
+        if (right)
+            tb |= (tb<<1);
+        return bin64_t(v^tb);
+    }
+
     bin64_t left () const {
-        assert(layer());
-        return bin64_t( v ^ (tail_bit()>>1) );
+        return to(false);
     }
 
     bin64_t right () const {
-        assert(layer());
-        uint64_t tb = tail_bit();
-        return bin64_t( v ^ (tb|(tb>>1)) );
+        return to(true);
+    }
+
+    bool    within (bin64_t maybe_asc) {
+        uint64_t short_tail = maybe_asc.tail_bits();
+        if (tail_bits()>short_tail)
+            return false;
+        return (v&~short_tail) == (maybe_asc.v&~short_tail) ;
+    }
+
+    bin64_t towards (bin64_t desc) const {
+        if (!desc.within(*this))
+            return NONE;
+        if (desc.within(left()))
+            return left();
+        else
+            return right();
     }
 
     bin64_t parent () const {
@@ -76,6 +105,7 @@ struct bin64_t {
         uint64_t tb = tail_bit();
         return !(v&(tb<<1));
     }
+    bool is_right() const { return !is_left(); }
 
     /** The array must have 64 cells, as it is the max
      number of peaks possible (and there are no reason
@@ -96,3 +126,18 @@ struct bin64_t {
 
 
 #endif
+
+/**
+                 00111
+       0011                    1011
+  001      101         1001          1101
+0   10  100  110    1000  1010   1100   1110
+
+                  7
+      3                         11
+  1        5             9             13
+0   2    4    6       8    10      12     14
+
+once we have peak hashes, this struture is more natural than bin-v1
+
+*/
