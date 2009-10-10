@@ -1,0 +1,102 @@
+/*
+ *  transfertest.cpp
+ *  p2tp
+ *
+ *  Created by Victor Grishchenko on 10/7/09.
+ *  Copyright 2009 Delft Technical University. All rights reserved.
+ *
+ */
+#include <gtest/gtest.h>
+#include "p2tp.h"
+
+using namespace p2tp;
+
+const char* BTF = "big_test_file";
+
+Sha1Hash A,B,C,D,E,AB,CD,ABCD,E0,E000,ABCDE000,ROOT;
+
+
+TEST(TransferTest,TransferFile) {
+
+    AB = Sha1Hash(A,B);
+    CD = Sha1Hash(C,D);
+    ABCD = Sha1Hash(AB,CD);
+    E0 = Sha1Hash(E,Sha1Hash::ZERO);
+    E000 = Sha1Hash(E0,Sha1Hash::ZERO);
+    ABCDE000 = Sha1Hash(ABCD,E000);
+    ROOT = ABCDE000;
+    for (int i=0; i<60; i++)
+        ROOT = Sha1Hash(ROOT,Sha1Hash::ZERO);
+    
+    // submit a new file
+    FileTransfer* seed = new FileTransfer(Sha1Hash::ZERO,BTF);
+    EXPECT_TRUE(ROOT==seed->root_hash);
+    EXPECT_EQ(4100,seed->size);
+    EXPECT_EQ(5,seed->sizek);
+    EXPECT_EQ(4100,seed->complete);
+    EXPECT_EQ(4100,seed->seq_complete);
+    
+    // retrieve it
+    FileTransfer* leech = new FileTransfer(seed->root_hash,"copy");
+    // transfer peak hashes
+    for(int i=0; i<seed->peak_count; i++)
+        leech->OfferHash(seed->peaks[i],seed->peak_hashes[i]);
+    ASSERT_EQ(1<<12,leech->size);
+    ASSERT_EQ(4,leech->sizek);
+    ASSERT_EQ(0,leech->complete);
+    // transfer data and hashes
+    //        ABCDHASH
+    //    ABHASH    CDHASH
+    //  AAAA BBBB  CCCC DDDD  E
+    leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
+    leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
+    for (int i=0; i<4; i++) {
+        /*if (leech->complete()==trap) {
+            delete leech;
+            FileTransfer* leech = new FileTransfer(seed,"copy");
+        }*/
+        bin64_t next = leech->picker->Pick(seed->ack_out,0);
+        uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
+        size_t len = pread(seed->fd,buf,1024,next.base_offset());
+        bin64_t sibling = next.sibling();
+        leech->OfferHash(sibling, seed->hashes[sibling]);
+        leech->OfferData(next, buf, len);
+    }
+    EXPECT_EQ(4100,leech->size);
+    EXPECT_EQ(5,leech->sizek);
+    EXPECT_EQ(4100,leech->complete);
+    EXPECT_EQ(4100,leech->seq_complete);
+    
+    unlink("copy");
+    
+}
+
+
+int main (int argc, char** argv) {
+    
+	int f = open(BTF,O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    uint8_t buf[1024];
+    memset(buf,'A',1024);
+    A = Sha1Hash(buf,1024);
+    write(f,buf,1024);
+    memset(buf,'B',1024);
+    B = Sha1Hash(buf,1024);
+    write(f,buf,1024);
+    memset(buf,'C',1024);
+    C = Sha1Hash(buf,1024);
+    write(f,buf,1024);
+    memset(buf,'D',1024);
+    D = Sha1Hash(buf,1024);
+    write(f,buf,1024);
+    memset(buf,'E',4);
+    E = Sha1Hash(buf,4);
+    write(f,buf,4);
+	close(f);
+    
+	testing::InitGoogleTest(&argc, argv);
+	int ret = RUN_ALL_TESTS();
+    
+    unlink(BTF);
+    
+    return ret;
+}

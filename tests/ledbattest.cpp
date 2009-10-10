@@ -21,21 +21,21 @@ using namespace std;
 TEST(Datagram,LedbatTest) {
 
     int MAX_REORDERING = 3;
-    tint TARGET = 25*MSEC;
+    tint TARGET = 25*TINT_MSEC;
     float GAIN = 1.0/TARGET;
     int seq_off = 0;
     float cwnd = 1;
-    tint DELAY_BIN = SEC*30;
-    tint min_delay = NEVER;
-    tint rtt_avg = NEVER>>4, dev_avg = NEVER>>4;
+    tint DELAY_BIN = TINT_SEC*30;
+    tint min_delay = TINT_NEVER;
+    tint rtt_avg = TINT_NEVER>>4, dev_avg = TINT_NEVER>>4;
     tint last_bin_time = 0;
     tint last_drop_time = 0;
     int delay_bin = 0;
     deque<tint> history, delay_history;
-    tint min_delay_bins[4] = {NEVER,NEVER,
-        NEVER,NEVER};
-    tint cur_delays[4] = {NEVER,NEVER,
-        NEVER,NEVER};
+    tint min_delay_bins[4] = {TINT_NEVER,TINT_NEVER,
+        TINT_NEVER,TINT_NEVER};
+    tint cur_delays[4] = {TINT_NEVER,TINT_NEVER,
+        TINT_NEVER,TINT_NEVER};
     tint last_sec = 0;
     int sec_ackd = 0;
 
@@ -51,7 +51,7 @@ TEST(Datagram,LedbatTest) {
     uint8_t* garbage = (uint8_t*) malloc(1024);
     int socks[2] = {send_sock,ack_sock};
     int sock2read;
-    tint wait_time = 100*MSEC;
+    tint wait_time = 100*TINT_MSEC;
 
     while (sock2read = Datagram::Wait(2,socks,wait_time)) {
         tint now = Datagram::Time();
@@ -64,7 +64,7 @@ TEST(Datagram,LedbatTest) {
             ack.Push64(now);
             if (4+8!=ack.Send())
                 fprintf(stderr,"short write\n");
-            fprintf(stderr,"%lli rcvd%i\n",now/SEC,seq);
+            fprintf(stderr,"%lli rcvd%i\n",now/TINT_SEC,seq);
             // TODO: peer cwnd !!!
             continue;
         } 
@@ -102,8 +102,8 @@ TEST(Datagram,LedbatTest) {
             if (send_time/DELAY_BIN != last_bin_time) {
                 last_bin_time = send_time/DELAY_BIN;
                 delay_bin = (delay_bin+1) % 4;
-                min_delay_bins[delay_bin] = NEVER;
-                min_delay = NEVER;
+                min_delay_bins[delay_bin] = TINT_NEVER;
+                min_delay = TINT_NEVER;
                 for(int i=0;i<4;i++)
                     if (min_delay_bins[i]<min_delay)
                         min_delay = min_delay_bins[i];
@@ -113,7 +113,7 @@ TEST(Datagram,LedbatTest) {
             if (delay < min_delay)
                 min_delay = delay;
             cur_delays[(seq_off+seq)%4] = delay;
-            tint current_delay = NEVER;
+            tint current_delay = TINT_NEVER;
             for(int i=0; i<4; i++)
                 if (current_delay > cur_delays[i])
                     current_delay = cur_delays[i];  // FIXME avg
@@ -125,7 +125,7 @@ TEST(Datagram,LedbatTest) {
             fprintf(stderr,"ackd cwnd%f cur%lli min%lli seq%i off%i\n",
                     cwnd,current_delay,min_delay,seq_off+seq,seq);
 
-            if (now/SEC!=last_sec/SEC) {
+            if (now/TINT_SEC!=last_sec/TINT_SEC) {
                 fprintf(stderr,"%i KB/sec\n",sec_ackd);
                 sec_ackd = 0;
                 last_sec = now; // FIXME
@@ -162,7 +162,7 @@ TEST(Datagram,LedbatTest) {
         if (history.size()<cwnd)
             wait_time = rtt_avg/cwnd;
         else
-            wait_time = 100*MSEC;
+            wait_time = 100*TINT_MSEC;
     } // while
 }
 

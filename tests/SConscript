@@ -1,13 +1,6 @@
 env = Environment(CPPPATH = '.',CXXFLAGS="-g")
 
 env.Program( 
-    target='bintest',
-    source=['bintest.cpp'],
-    CPPPATH=['..'],
-    LIBS=['p2tp','stdc++','gtest','glog'],
-    LIBPATH='..' )
-
-env.Program( 
     target='binstest2',
     source=['binstest2.cpp'],
     CPPPATH=['..'],
@@ -51,8 +44,15 @@ env.Program(
 
 env.Program( 
     target='bin64test',
-    source=['bin64test.cpp','../bin64.h'],
+    source=['bin64test.cpp'],
     CPPPATH=['..'],
-    LIBS=['gtest'],
+    LIBS=['p2tp','gtest'],
+    LIBPATH='..' )
+
+env.Program( 
+    target='transfertest',
+    source=['transfertest.cpp'],
+    CPPPATH=['..'],
+    LIBS=['p2tp','gtest'],
     LIBPATH='..' )
 

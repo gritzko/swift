@@ -38,8 +38,8 @@ int Datagram::Recv () {
 int Datagram::Wait (int sockcnt, int* sockets, tint usec) {
 	LOG(INFO)<<"waiting for "<<sockcnt;
 	struct timeval timeout;
-	timeout.tv_sec = usec/SEC;
-	timeout.tv_usec = usec%SEC;
+	timeout.tv_sec = usec/TINT_SEC;
+	timeout.tv_usec = usec%TINT_SEC;
 	int max_sock_fd = 0;
 	fd_set bases, err;
 	FD_ZERO(&bases);
