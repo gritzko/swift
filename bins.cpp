@@ -35,6 +35,13 @@ bins::bins() :  height(4), blocks_allocated(0), cells(NULL),
     assert(!alloc_cell());
 }
 
+bins::bins (const bins& b) : height(b.height), ap(b.ap),
+blocks_allocated(b.blocks_allocated), cells_allocated(b.cells_allocated) {
+    size_t memsz = blocks_allocated*16*32;
+    cells = (uint32_t*) malloc(memsz);
+    memcpy(cells,b.cells,memsz);
+}
+
 void bins::dump (const char* note) {
     printf("%s\t",note);
     for(int i=0; i<(blocks_allocated<<5); i++) {
@@ -212,12 +219,13 @@ void iterator::parent () {
 }
 
 
-bin64_t bins::find (const bin64_t range, const uint8_t layer) {
+bin64_t bins::find (const bin64_t range, const uint8_t layer, fill_t seek) {
     iterator i(this,range,true);
+    fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( i.bin().layer()>layer && (i.deep() || *i!=FILLED) )
+        while ( i.bin().layer()>layer && (i.deep() || *i!=stop) )
             i.left();
-        if (i.bin().layer()==layer && !i.deep() && *i==EMPTY)
+        if (i.bin().layer()==layer && !i.deep() && *i==seek)
             return i.bin();
         while (i.bin().is_right() && i.bin()!=range)
             i.parent();
@@ -287,4 +295,23 @@ uint64_t*   bins::get_stripes (int& count) {
         stripes[count++] = i.bin().base_offset();
     
     return stripes;
+}
+
+
+void    bins::remove (bins& b) {
+    uint8_t start_lr = b.height>height ? b.height : height;
+    bin64_t top(start_lr,0);
+    iterator zis(this,top), zat(&b,top);
+    while (!zis.end()) {
+        while (zis.deep() || zat.deep()) {
+            zis.left(); zat.left();
+        }
+        
+        *zis &= ~*zat;
+        
+        while (zis.pos.is_right()) {
+            zis.parent(); zat.parent();
+        }
+        zis.sibling(); zat.sibling();
+    }
 }

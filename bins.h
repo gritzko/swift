@@ -20,11 +20,15 @@ public:
     
     bins();
     
+    bins(const bins& b);
+    
     uint16_t get (bin64_t bin); 
     
     void set (bin64_t bin, fill_t val=FILLED); 
     
-    bin64_t find (const bin64_t range, const uint8_t layer) ;
+    bin64_t find (const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
+    
+    void remove (bins& b);
     
     void dump(const char* note);
 

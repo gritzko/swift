@@ -19,28 +19,28 @@ class SeqPiecePicker : public PiecePicker {
 public:
     
     SeqPiecePicker (FileTransfer* file_) : file(file_) {
-        diho(file->ack_out);
     }
     
     virtual bin64_t Pick (bins& from, uint8_t layer) {
-        bins may_pick = ~ file->ack_out;
-        may_pick &= from;
-        may_pick -= hint_out;
-        bin64_t pick = may_pick.find(file->top,bins::FILLED);
-        if ( pick==bin64_t::NONE || pick.right_foot() > file->size() )
-            if (layer)
-                return Pick(from,layer-1);
-            else
-                return bin64_t::NONE;
-        return pick;
+        bins may_pick = from;
+        may_pick.remove (file->ack_out);
+        may_pick.remove (hint_out);
+        for (int l=layer; l>=0; l--) {
+            for(int i=0; i<file->peak_count; i++) {
+                bin64_t pick = may_pick.find(file->peaks[i],l,bins::FILLED);
+                if (pick!=bin64_t::NONE)
+                    return pick;
+            }
+        }
+        return bin64_t::NONE;
     }
     
     virtual void    Received (bin64_t b) {
-        diho.set(b,bins::FILLED);
+        hint_out.set(b,bins::EMPTY);
     }
     
     virtual void    Snubbed (bin64_t b) {
-        diho.set(b,bins::EMPTY);
+        hint_out.set(b,bins::EMPTY);
     }
     
 };

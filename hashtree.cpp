@@ -59,7 +59,7 @@ string	Sha1Hash::hex() {
 }*/
 
 
-Sha1Hash HashTree::deriveRoot () {
+/*Sha1Hash HashTree::deriveRoot () {
 	int i = peaks.size()-1;
 	bin p = peaks[i].first;
 	Sha1Hash hash = peaks[i].second;
@@ -161,4 +161,4 @@ HashTree::hashres_t	HashTree::offer (bin pos, const Sha1Hash& hash) {
 	
 }
 
-
+*/

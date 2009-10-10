@@ -9,7 +9,7 @@
 #include "bin64.h"
 #include <gtest/gtest.h>
 
-TEST(BinTest,InitGet) {
+TEST(Bin64Test,InitGet) {
 
     EXPECT_EQ(0x1,bin64_t(1,0));
     EXPECT_EQ(0xB,bin64_t(2,1));
@@ -23,7 +23,7 @@ TEST(BinTest,InitGet) {
 
 }
 
-TEST(BinTest,Navigation) {
+TEST(Bin64Test,Navigation) {
 
     bin64_t mid(4,18);
     EXPECT_EQ(bin64_t(5,9),mid.parent());
@@ -35,7 +35,7 @@ TEST(BinTest,Navigation) {
 
 }
 
-TEST(BinTest,Overflows) {
+TEST(Bin64Test,Overflows) {
     
     /*EXPECT_EQ(bin64_t::NONE.parent(),bin64_t::NONE);
     EXPECT_EQ(bin64_t::NONE.left(),bin64_t::NONE);
@@ -43,6 +43,37 @@ TEST(BinTest,Overflows) {
     EXPECT_EQ(bin64_t::NONE,bin64_t(0,2345).left());
     EXPECT_EQ(bin64_t::NONE,bin64_t::ALL.parent());
 */
+}
+
+TEST(Bin64Test, Advanced) {
+    
+    EXPECT_EQ(4,bin64_t(2,3).width());
+    EXPECT_FALSE(bin64_t(1,1234).is_base());
+    EXPECT_TRUE(bin64_t(0,12345).is_base());
+    EXPECT_EQ(bin64_t(0,2),bin64_t(1,1).left_foot());
+    bin64_t peaks[64];
+    int peak_count = bin64_t::peaks(7,peaks);
+    EXPECT_EQ(3,peak_count);
+    EXPECT_EQ(bin64_t(2,0),peaks[0]);
+    EXPECT_EQ(bin64_t(1,2),peaks[1]);
+    EXPECT_EQ(bin64_t(0,6),peaks[2]);
+    
+}
+
+TEST(Bin64Test, Iteration) {
+    bin64_t i(1,0);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(1,1),i);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(2,0),i);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(1,2),i);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(1,3),i);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(2,1),i);
+    i = i.next_dfsio(1);
+    EXPECT_EQ(bin64_t(3,0),i);
 }
 
 int main (int argc, char** argv) {

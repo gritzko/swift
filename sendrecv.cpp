@@ -303,7 +303,7 @@ void Channel::OnData (Datagram& dgram) {
 
 
 void	Channel::OnAck (Datagram& dgram) {
-	
+	// FIXME check whether it is in the range
 	bin pos = dgram.Pull32();
     DLOG(INFO)<<"#"<<id<<" .ACK"<<pos;
 	if (file().hashes.data_mass() && pos>file().hashes.data_mass()) {

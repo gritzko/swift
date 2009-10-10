@@ -26,10 +26,10 @@
 namespace p2tp {
 
 typedef int64_t tint;
-#define SEC ((tint)1000000)
-#define MSEC ((tint)1000)
-#define uSEC ((tint)1)
-#define NEVER ((tint)0x7fffffffffffffffLL)
+#define TINT_SEC ((tint)1000000)
+#define TINT_MSEC ((tint)1000)
+#define TINT_uSEC ((tint)1)
+#define TINT_NEVER ((tint)0x7fffffffffffffffLL)
 #define MAXDGRAMSZ 1400
 
 struct Datagram {

@@ -84,43 +84,40 @@ namespace p2tp {
 		
     public:
 		
+		/**	Open/submit/retrieve a file.	*/
+        FileTransfer(const Sha1Hash& _root_hash, const char *file_name);
+        
+		/**	Close everything. */
+		~FileTransfer();
+        
         /** Offer a hash; returns true if it verified; false otherwise.
          Once it cannot be verified (no sibling or parent), the hash
          is remembered, while returning false. */
-		bool            OfferHash (bin64_t pos, const Sha1Hash& hash);
+		void            OfferHash (bin64_t pos, const Sha1Hash& hash);
         /** Offer data; the behavior is the same as with a hash:
-            accept or remember or drop. */
-        bool            OfferData (bin64_t bin, uint8_t* data);
+            accept or remember or drop. Returns true => ACK is sent. */
+        bool            OfferData (bin64_t bin, uint8_t* data, size_t length);
         
-		const Sha1Hash& root_hash () const { return *root_hash; }
-        
-		size_t          size () const;
-		size_t          packet_size () const;
-        size_t          size_complete () const;
-        size_t          packets_complete () const;
-		
-		static FileTransfer* find (const Sha1Hash& hash);
+		static FileTransfer* Find (const Sha1Hash& hash);
 		static FileTransfer* file (int fd) { return fd<files.size() ? files[fd] : NULL; }
         
 		friend int      Open (const char* filename);
 		friend int      Open (const Sha1Hash& hash, const char* filename);
 		friend void     Close (int fdes);
         
-    private:
+    public:
 
 		static std::vector<FileTransfer*> files;
-        
-		/**	Open/submit/retrieve a file.	*/
-		FileTransfer (Sha1Hash hash, char* file_name);
-		/**	Close everything. */
-		~FileTransfer();
-		
+        		
 		/**	file descriptor. */
 		int				fd;
         /** File size, as derived from the hashes. */
+        size_t          size;
         size_t          sizek;
-		/**	Whether the file is completely downloaded. */
-		bool            complete;
+		/**	Part the file currently downloaded. */
+		size_t          complete;
+		size_t          completek;
+		size_t          seq_complete;
 		/**	A map for all packets obtained and succesfully checked. */
 		bins			ack_out;
 		/**	History of bin retrieval. */
@@ -130,20 +127,29 @@ namespace p2tp {
 		/** File for keeping the Merkle hash tree. */
         int             hashfd;
         /** Merkle hash tree: root */
-        Sha1Hash*       root_hash;
+        Sha1Hash        root_hash;
         /** Merkle hash tree: peak hashes */
-        Sha1Hash*       peak_hashes;
+        Sha1Hash        peak_hashes[64];
+        bin64_t         peaks[64];
+        int             peak_count;
         /** Merkle hash tree: the tree, as a bin64_t-indexed array */
         Sha1Hash*       hashes;
+        /** for recovering saved state */
+        bool            dry_run;
+        
     protected:
-        void            Resize(size_t bytes);
+        void            SetSize(size_t bytes);
+        void            Submit();
+        void            RecoverProgress();
+        void            OfferPeak (bin64_t pos, const Sha1Hash& hash);
+        Sha1Hash        DeriveRoot();
 
 		friend class Channel;
 	};
 	
 	
 	int		Open (const char* filename) ;
-	int		Open (const Sha1Hash& root_hash, const char* filename);	
+    int     Open (const Sha1Hash& hash, const char* filename) ;
 	void	Close (int fid) ;
     void    Loop (tint till);
     int     Bind (int port);
@@ -157,10 +163,10 @@ namespace p2tp {
         tint    dev_avg;
         int     cwnd;
         int     peer_cwnd;
-        virtual void OnDataSent(bin64_t b) = 0;
-        virtual void OnDataRecvd(bin64_t b) = 0;
-        virtual void OnAckRcvd(bin64_t b, tint peer_stamp) = 0;
-		virtual ~CongestionControl() = 0;
+        virtual void    OnDataSent(bin64_t b) = 0;
+        virtual void    OnDataRecvd(bin64_t b) = 0;
+        virtual void    OnAckRcvd(bin64_t b, tint peer_stamp) = 0;
+		virtual         ~CongestionController() = 0;
 	};
     
     class PiecePicker {
@@ -172,8 +178,16 @@ namespace p2tp {
     
     class PeerSelector {
     public:
-        virtual void PeerKnown (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
-        virtual sockaddr_in GetPeer (const Sha1Hash& for_root) = 0;
+        virtual void    PeerKnown (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
+        virtual struct sockaddr_in 
+                        GetPeer (const Sha1Hash& for_root) = 0;
+    };
+    
+    class DataStorer {
+    public:
+        DataStorer (const Sha1Hash& id, size_t size);
+        virtual size_t    ReadData (bin64_t pos,uint8_t** buf) = 0;
+        virtual size_t    WriteData (bin64_t pos, uint8_t* buf, size_t len) = 0;
     };
 	
 
@@ -195,8 +209,6 @@ namespace p2tp {
 		tint		SendSomething ();
 		void		SendHandshake ();
 
-		FileTransfer&		file () { return *FileTransfer::files[fd]; }
-	
 		void		OnAck (Datagram& dgram);
 		void		OnData (Datagram& dgram);
 		void		OnHint (Datagram& dgram);
@@ -211,8 +223,6 @@ namespace p2tp {
 
 		void		CleanStaleHints();
 		
-		state_t		state () const;
-
 		static int DecodeID(int scrambled);
 		static int EncodeID(int unscrambled);
 		static Channel* channel(int i) {return i<channels.size()?channels[i]:NULL;}

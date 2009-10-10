@@ -18,13 +18,14 @@
 #include <unistd.h>
 #include <glog/logging.h>
 #include "p2tp.h"
+#include "datagram.h"
 
 using namespace std;
 using namespace p2tp;
 
 p2tp::tint Channel::last_tick = 0;
 int Channel::MAX_REORDERING = 4;
-p2tp::tint Channel::TIMEOUT = TINT_1SEC*60;
+p2tp::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
 std::vector<File*> File::files(4);
 int* Channel::sockets_ = (int*)malloc(40);

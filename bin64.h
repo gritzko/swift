@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include <stdio.h>
+//#include <stdio.h>
 
 /** Bin numbers in the tail111 encoding: meaningless
     bits in the tail are set to 0111...11, while the
@@ -11,8 +11,8 @@
     at layer 1, offset 3 (i.e. fourth). */
 struct bin64_t {
     uint64_t v;
-    static const uint64_t NONE = 0xffffffffffffffffULL;
-    static const uint64_t ALL = 0x7fffffffffffffffULL;
+    static const uint64_t NONE;
+    static const uint64_t ALL;
 
     bin64_t() : v(NONE) {}
     bin64_t(const bin64_t&b) : v(b.v) {}
@@ -107,21 +107,25 @@ struct bin64_t {
     }
     bool is_right() const { return !is_left(); }
 
-    /** The array must have 64 cells, as it is the max
-     number of peaks possible (and there are no reason
-     to assume there will be less in any given case. */
-    static void GetPeaks(uint64_t length, bin64_t* peaks) {
-        int pp=0;
-        uint8_t layer = 0;
-        while (length) {
-            if (length&1) 
-                peaks[pp++] = bin64_t(layer,length^1);
-            length>>=1;
-            layer++;
-        }
-        peaks[pp] = NONE;
+    bin64_t left_foot () const {
+        return bin64_t(0,base_offset());
     }
-
+    
+    bool    is_base () const {
+        return !(v & 1);
+    }
+    
+    bin64_t next_dfsio (uint8_t floor);
+    
+    bin64_t width () const {
+        return (tail_bits()+1)>>1;
+    }
+    
+    /** The array must have 64 cells, as it is the max
+     number of peaks possible +1 (and there are no reason
+     to assume there will be less in any given case. */
+    static int peaks (uint64_t length, bin64_t* peaks) ;
+    
 };
 
 

@@ -27,11 +27,13 @@ struct Sha1Hash {
 	bool	operator == (const Sha1Hash& b) const
 		{ return 0==memcmp(bits,b.bits,SIZE); }
 	bool	operator != (const Sha1Hash& b) const { return !(*this==b); }
+    const char* operator * () const { return (char*) bits; }
 	
 	const static Sha1Hash ZERO;
 	const static size_t SIZE;
 };
 
+/*
 typedef std::pair<bin,Sha1Hash> binhash;
 
 struct HashTree {
@@ -67,6 +69,6 @@ public:
 	
 	const std::vector<binhash>& peak_hashes() const { return peaks; }
 	
-};
+};*/
 
 #endif
