@@ -25,7 +25,7 @@ TEST(TransferTest,TransferFile) {
     E000 = Sha1Hash(E0,Sha1Hash::ZERO);
     ABCDE000 = Sha1Hash(ABCD,E000);
     ROOT = ABCDE000;
-    for (int i=0; i<60; i++)
+    for (bin64_t pos(3,0); pos!=bin64_t::ALL; pos=pos.parent())
         ROOT = Sha1Hash(ROOT,Sha1Hash::ZERO);
     
     // submit a new file
@@ -51,9 +51,10 @@ TEST(TransferTest,TransferFile) {
     leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
     leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
     for (int i=0; i<4; i++) {
-        /*if (leech->complete()==trap) {
+        /*if (leech->seq_complete==3) {
             delete leech;
-            FileTransfer* leech = new FileTransfer(seed,"copy");
+            leech = new FileTransfer(seed,"copy");
+            EXPECT_EQ(3,leech->complete);
         }*/
         bin64_t next = leech->picker->Pick(seed->ack_out,0);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);

@@ -3,9 +3,13 @@
 #include <assert.h>
 #include <stdint.h>
 
-//#include <stdio.h>
 
-/** Bin numbers in the tail111 encoding: meaningless
+
+/** Numbering for (aligned) logarithmical bins.
+    Each number stands for an interval
+    [o*2^l,(o+1)*2^l), where l is the layer and o
+    is the offset.
+    Bin numbers in the tail111 encoding: meaningless
     bits in the tail are set to 0111...11, while the
     head denotes the offset. Thus, 1101 is the bin
     at layer 1, offset 3 (i.e. fourth). */
@@ -87,10 +91,11 @@ struct bin64_t {
         return (v&~short_tail) == (maybe_asc.v&~short_tail) ;
     }
 
-    bin64_t towards (bin64_t desc) const {
-        if (!desc.within(*this))
+    /** Left or right, depending whether the destination is. */
+    bin64_t towards (bin64_t dest) const {
+        if (!dest.within(*this))
             return NONE;
-        if (desc.within(left()))
+        if (dest.within(left()))
             return left();
         else
             return right();
@@ -111,10 +116,12 @@ struct bin64_t {
         return bin64_t(0,base_offset());
     }
     
+    /** Whether layer is 0. */
     bool    is_base () const {
         return !(v & 1);
     }
     
+    /** Depth-first in-order binary tree traversal. */
     bin64_t next_dfsio (uint8_t floor);
     
     bin64_t width () const {

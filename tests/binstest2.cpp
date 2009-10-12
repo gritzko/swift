@@ -174,6 +174,22 @@ TEST(BinsTest,Alloc) {
 
 }
 
+TEST(BinsTest,Remove) {
+    
+    bins b;
+    b.set(bin64_t(5,0));
+    bins c;
+    c.set(bin64_t(2,0));
+    c.set(bin64_t(2,2));
+    b.remove(c);
+    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(2,0)));
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(2,1)));
+    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(2,2)));
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(2,3)));
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(4,1)));
+    
+}
+
 /*TEST(BinsTest,AddSub) {
 	bins b;
 	b|=15;
