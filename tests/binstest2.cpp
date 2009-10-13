@@ -188,6 +188,28 @@ TEST(BinsTest,Remove) {
     EXPECT_EQ(bins::FILLED,b.get(bin64_t(2,3)));
     EXPECT_EQ(bins::FILLED,b.get(bin64_t(4,1)));
     
+    bins b16, b1024, b8192;
+    b16.set(bin64_t(3,1));
+    b1024.set(bin64_t(3,1));
+    b1024.set(bin64_t(4,2));
+    b1024.set(bin64_t(8,3));
+    b8192.set(bin64_t(8,3));
+    b8192.set(bin64_t(10,7));
+    
+    b1024.remove(b16);
+    b1024.remove(b8192);
+    
+    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(3,1)));
+    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(5,0)));
+    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(9,1)));
+    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(12,1)));
+    EXPECT_EQ(bins::FILLED,b1024.get(bin64_t(4,2)));
+    
+    b8192.set(bin64_t(2,3));
+    b16.remove(b8192);
+    EXPECT_EQ(bins::EMPTY,b16.get(bin64_t(2,3)));
+    EXPECT_EQ(bins::FILLED,b16.get(bin64_t(2,2)));
+    
 }
 
 /*TEST(BinsTest,AddSub) {

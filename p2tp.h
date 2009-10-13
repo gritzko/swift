@@ -108,8 +108,9 @@ namespace p2tp {
     public:
 
 		static std::vector<FileTransfer*> files;
-        static const char* HASH_FILE_TEPMLATE;
-        static const char* PEAK_FILE_TEPMLATE;
+        static const char* HASH_FILE_TEMPLATE;
+        static const char* PEAK_FILE_TEMPLATE;
+        static int instance;
         		
 		/**	file descriptor. */
 		int				fd;

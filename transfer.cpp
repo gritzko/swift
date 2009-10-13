@@ -13,8 +13,9 @@
 using namespace p2tp;
 
 std::vector<FileTransfer*> FileTransfer::files(20);
-const char* FileTransfer::HASH_FILE_TEPMLATE = "/tmp/.%s.hashes";
-const char* FileTransfer::PEAK_FILE_TEPMLATE = "/tmp/.%s.peaks";
+const char* FileTransfer::HASH_FILE_TEMPLATE = "/tmp/.%s.%i.hashes";
+const char* FileTransfer::PEAK_FILE_TEMPLATE = "/tmp/.%s.%i.peaks";
+int FileTransfer::instance = 0;
 #define BINHASHSIZE (sizeof(bin64_t)+sizeof(Sha1Hash))
 
 #include "ext/seq_picker.cpp"
@@ -22,7 +23,8 @@ const char* FileTransfer::PEAK_FILE_TEPMLATE = "/tmp/.%s.peaks";
 
 FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
     root_hash(_root_hash), fd(0), hashfd(0), dry_run(false), 
-    peak_count(0), hashes(NULL), error(NULL)
+    peak_count(0), hashes(NULL), error(NULL), size(0), sizek(0),
+    complete(0), completek(0), seq_complete(0)
 {
 	fd = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd<0)
@@ -36,7 +38,7 @@ FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
 
 void FileTransfer::LoadPeaks () {
     char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEPMLATE,root_hash.hex().c_str());
+    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
     int peakfd = open(file_name,O_RDONLY);
     if (peakfd<0)
         return;
@@ -73,7 +75,7 @@ void            FileTransfer::RecoverProgress () {
 
 void    FileTransfer::SavePeaks () {
     char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEPMLATE,root_hash.hex().c_str());
+    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
     int peakfd = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     for(int i=0; i<peak_count; i++) {
         write(peakfd,&(peaks[i]),sizeof(bin64_t));
@@ -95,7 +97,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
         if (ftruncate(fd, bytes))
             return; // remain in the 0-state
     // mmap the hash file into memory
-    sprintf(file_name,HASH_FILE_TEPMLATE,root_hash.hex().c_str());
+    sprintf(file_name,HASH_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
 	hashfd = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     size_t expected_size = Sha1Hash::SIZE * sizek * 2;
 	struct stat hash_file_st;
@@ -103,7 +105,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
     if ( hash_file_st.st_size != expected_size )
         ftruncate(hashfd, expected_size);
     hashes = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE, 
-                               MAP_PRIVATE, hashfd, 0);
+                               MAP_SHARED, hashfd, 0);
     if (hashes==MAP_FAILED) {
         hashes = NULL;
         size = sizek = complete = completek = seq_complete = 0;
@@ -183,7 +185,7 @@ bool            FileTransfer::OfferData (bin64_t pos, uint8_t* data, size_t leng
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
 	// walk to the nearest proven hash   FIXME 0-layer peak
     ack_out.set(pos,bins::FILLED);
-    pwrite(fd,data,length,pos.base_offset());
+    pwrite(fd,data,length,pos.base_offset()<<10);
     complete += length;
     completek++;
     if (length<1024) {

@@ -46,6 +46,7 @@ TEST(TransferTest,TransferFile) {
     
     // retrieve it
     unlink("copy");
+    FileTransfer::instance = 1;
     FileTransfer* leech = new FileTransfer(seed->root_hash,"copy");
     // transfer peak hashes
     for(int i=0; i<seed->peak_count; i++)
@@ -60,11 +61,14 @@ TEST(TransferTest,TransferFile) {
     leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
     leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
     for (int i=0; i<5; i++) {
-        /*if (leech->seq_complete==3) {
+        if (i==2) {
             delete leech;
-            leech = new FileTransfer(seed,"copy");
-            EXPECT_EQ(3,leech->complete);
-        }*/
+            FileTransfer::instance = 1;
+            leech = new FileTransfer(seed->root_hash,"copy");
+            EXPECT_EQ(2,leech->completek);
+            //leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
+            //leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
+        }
         bin64_t next = leech->picker->Pick(seed->ack_out,0);
         ASSERT_NE(bin64_t::NONE,next);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
@@ -78,8 +82,6 @@ TEST(TransferTest,TransferFile) {
     EXPECT_EQ(4100,leech->complete);
     EXPECT_EQ(4100,leech->seq_complete);
     
-    unlink("copy");
-    
 }
 /*
  FIXME
@@ -89,9 +91,16 @@ TEST(TransferTest,TransferFile) {
 
 int main (int argc, char** argv) {
     
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.hashes");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.peaks");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.0.hashes");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.0.peaks");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.1.hashes");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.1.peaks");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.2.hashes");
+    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.2.peaks");
     
+    unlink(BTF);
+    unlink("copy");
+        
 	int f = open(BTF,O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     uint8_t buf[1024];
     memset(buf,'A',1024);
@@ -113,8 +122,6 @@ int main (int argc, char** argv) {
     
 	testing::InitGoogleTest(&argc, argv);
 	int ret = RUN_ALL_TESTS();
-    
-    unlink(BTF);
     
     return ret;
 }
