@@ -108,6 +108,8 @@ namespace p2tp {
     public:
 
 		static std::vector<FileTransfer*> files;
+        static const char* HASH_FILE_TEPMLATE;
+        static const char* PEAK_FILE_TEPMLATE;
         		
 		/**	file descriptor. */
 		int				fd;
@@ -136,6 +138,8 @@ namespace p2tp {
         Sha1Hash*       hashes;
         /** for recovering saved state */
         bool            dry_run;
+        /** Error encountered */
+        char*           error;
         
     protected:
         void            SetSize(size_t bytes);
@@ -143,6 +147,8 @@ namespace p2tp {
         void            RecoverProgress();
         void            OfferPeak (bin64_t pos, const Sha1Hash& hash);
         Sha1Hash        DeriveRoot();
+        void            SavePeaks();
+        void            LoadPeaks();
 
 		friend class Channel;
 	};

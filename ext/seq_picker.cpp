@@ -18,7 +18,7 @@ class SeqPiecePicker : public PiecePicker {
     
 public:
     
-    SeqPiecePicker (FileTransfer* file_) : file(file_) {
+    SeqPiecePicker (FileTransfer* file_) : file(file_), hint_out() {
     }
     
     virtual bin64_t Pick (bins& from, uint8_t layer) {
