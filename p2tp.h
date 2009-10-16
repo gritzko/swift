@@ -58,7 +58,13 @@ Messages
 
 namespace p2tp {
 
-    typedef std::pair<tint,bin64_t> tintbin;
+    struct tintbin {
+        tint    time;
+        bin64_t bin;
+        tintbin(const tintbin& b) : time(b.time), bin(b.bin) {}
+        tintbin() : time(0), bin(bin64_t::NONE) {}
+        tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
+    };
     
 	typedef std::deque<tintbin> tbqueue;
     typedef std::deque<bin64_t> binqueue;
@@ -67,7 +73,7 @@ namespace p2tp {
 		P2TP_HANDSHAKE = 0, 
 		P2TP_DATA = 1, 
 		P2TP_ACK = 2, 
-		P2TP_ACKTS = 8, 
+		P2TP_ACK_TS = 8, 
 		P2TP_HINT = 3, 
 		P2TP_HASH = 4, 
 		P2TP_PEX_ADD = 5,
@@ -99,7 +105,20 @@ namespace p2tp {
         bool            OfferData (bin64_t bin, uint8_t* data, size_t length);
         
 		static FileTransfer* Find (const Sha1Hash& hash);
-		static FileTransfer* file (int fd) { return fd<files.size() ? files[fd] : NULL; }
+		static FileTransfer* file (int fd) { 
+            return fd<files.size() ? files[fd] : NULL; 
+        }
+        
+        int             GetPeakCount () const { return peak_count; }
+        bin64_t         GetPeak (int i) const { return peaks[i]; }
+        const Sha1Hash& GetPeakHash (int i) const { return peak_hashes[i]; }
+        bin64_t         GetPeakFor (bin64_t pos) const;
+        const Sha1Hash& GetHash (bin64_t pos) const { 
+            assert(pos<sizek*2);
+            return hashes[pos];
+        }
+        const Sha1Hash& GetRootHash () const { return root_hash; }
+        
         
 		friend int      Open (const char* filename);
 		friend int      Open (const Sha1Hash& hash, const char* filename);
@@ -124,7 +143,7 @@ namespace p2tp {
 		/**	A map for all packets obtained and succesfully checked. */
 		bins			ack_out;
 		/**	History of bin retrieval. */
-		binqueue		ack_history;
+		binqueue		data_in;
         /** Piece picker strategy. */
         PiecePicker*    picker;
 		/** File for keeping the Merkle hash tree. */
@@ -172,7 +191,7 @@ namespace p2tp {
         int     peer_cwnd;
         virtual void    OnDataSent(bin64_t b) = 0;
         virtual void    OnDataRecvd(bin64_t b) = 0;
-        virtual void    OnAckRcvd(bin64_t b, tint peer_stamp) = 0;
+        virtual void    OnAckRcvd(const tintbin& tsack) = 0;
 		virtual         ~CongestionController() = 0;
 	};
     
@@ -185,9 +204,10 @@ namespace p2tp {
     
     class PeerSelector {
     public:
-        virtual void    PeerKnown (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
-        virtual struct sockaddr_in 
-                        GetPeer (const Sha1Hash& for_root) = 0;
+        virtual void    PeerKnown 
+            (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
+        virtual struct sockaddr_in GetPeer 
+            (const Sha1Hash& for_root) = 0;
     };
     
     class DataStorer {
@@ -213,26 +233,32 @@ namespace p2tp {
 		static void	Recv (int socket);
 		void		Recv (Datagram& dgram);
 		tint		Send ();
-		tint		SendSomething ();
-		void		SendHandshake ();
 
 		void		OnAck (Datagram& dgram);
+		void		OnAckTs (Datagram& dgram);
 		void		OnData (Datagram& dgram);
 		void		OnHint (Datagram& dgram);
 		void		OnHash (Datagram& dgram);
+		void		OnPex (Datagram& dgram);
 		
 		void		AddHandshake (Datagram& dgram);
-		bin 		AddData (Datagram& dgram);
+		bin64_t		AddData (Datagram& dgram);
 		void		AddAck (Datagram& dgram);
 		void		AddHint (Datagram& dgram);
-		void		AddUncleHashes (Datagram& dgram, bin pos);
+		void		AddUncleHashes (Datagram& dgram, bin64_t pos);
 		void		AddPeakHashes (Datagram& dgram);
 
-		void		CleanStaleHints();
-		
+        const std::string id_string () const;
+        /** A channel is "established" if had already sent and received packets. */
+        bool        is_established () { return peer_channel_id && own_id_mentioned; }
+        
 		static int DecodeID(int scrambled);
 		static int EncodeID(int unscrambled);
-		static Channel* channel(int i) {return i<channels.size()?channels[i]:NULL;}
+		static Channel* channel(int i) {
+            return i<channels.size()?channels[i]:NULL;
+        }
+        
+        FileTransfer& file() { return *file_; }
 		
 		/*friend int Connect (int fd, int sock, 
 							const struct sockaddr_in& addr, uint32_t peerch=0);
@@ -248,23 +274,28 @@ namespace p2tp {
 		/**	The UDP socket fd. */
 		int			socket;
 		/**	Descriptor of the file in question. */
-		FileTransfer*	file;
+		FileTransfer*	file_;
 		/**	Peer channel id; zero if we are trying to open a channel. */
 		uint32_t	peer_channel_id;
+        bool        own_id_mentioned;
 		/**	Peer's progress, based on acknowledgements. */
 		bins		ack_in;
 		/**	Last data received; needs to be acked immediately. */
-		bin64_t		data_in;
+		tintbin		data_in_;
         /** Index in the history array. */
-		int			ack_out;
+		uint32_t	ack_out_;
 		/**	Transmit schedule: in most cases filled with the peer's hints */
-		tbqueue		hint_in;
+		binqueue    hint_in;
 		/** Hints sent (to detect and reschedule ignored hints). */
 		tbqueue		hint_out;
 		/** The congestion control strategy. */
 		CongestionController	*cc;
         /** For repeats. */
 		tint		last_send_time, last_recv_time;
+        
+        /** Get a rewuest for one packet from the queue of peer's requests. */
+        bin64_t		DequeueHint();
+        void        CleanStaleHints();
         
         static PeerSelector* peer_selector;
         

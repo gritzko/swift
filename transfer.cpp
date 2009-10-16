@@ -20,6 +20,7 @@ int FileTransfer::instance = 0;
 
 #include "ext/seq_picker.cpp"
 
+// FIXME: separate Bootstrap() and Download(), then Size(), Progress(), SeqProgress()
 
 FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
     root_hash(_root_hash), fd(0), hashfd(0), dry_run(false), 
@@ -150,9 +151,14 @@ void            FileTransfer::Submit () {
 void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {    
 	if (!size)  // only peak hashes are accepted at this point
 		return OfferPeak(pos,hash);
-	if (pos>=sizek*2)
-		return;
-    if (ack_out.get(pos)!=bins::EMPTY)
+    int pi=0;
+    while (pi<peak_count && !pos.within(peaks[pi]))
+        pi++;
+    if (pi==peak_count)
+        return;
+    if (pos==peaks[pi] && hash!=peak_hashes[pi])
+        return;
+    else if (ack_out.get(pos.parent())!=bins::EMPTY)
         return; // have this hash already, even accptd data
 	hashes[pos] = hash;
 }
@@ -165,23 +171,23 @@ bool            FileTransfer::OfferData (bin64_t pos, uint8_t* data, size_t leng
         return false;
     if (ack_out.get(pos)==bins::FILLED)
         return true; // ???
-    int peak=0;
-    while (peak<peak_count && !pos.within(peaks[peak]))
-        peak++;
-    if (peak==peak_count)
+    int pi=0;
+    while (pi<peak_count && !pos.within(peaks[pi]))
+        pi++;
+    if (pi==peak_count)
         return false;
-    Sha1Hash hash(data,length);
-    if (pos==peaks[peak]) {
-        if (hash!=peak_hashes[peak])
-            return false;
-    } else {
-        hashes[pos] = hash;
-        for(bin64_t p = pos.parent(); p.within(peaks[peak]) && ack_out.get(p)==bins::EMPTY; p=p.parent()) {
-            Sha1Hash phash = Sha1Hash(hashes[p.left()],hashes[p.right()]) ;
-            if (hashes[p]!=phash)
-                return false; // hash mismatch
-        }
+    bin64_t peak = peaks[pi];
+    
+    Sha1Hash hash(data,length);       
+    bin64_t p = pos;
+    while ( p!=peak && ack_out.get(p)==bins::EMPTY ) {
+        hashes[p] = hash;
+        p = p.parent();
+        hash = Sha1Hash(hashes[p.left()],hashes[p.right()]) ;
     }
+    if (hash!=hashes[p])
+        return false;
+    
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
 	// walk to the nearest proven hash   FIXME 0-layer peak
     ack_out.set(pos,bins::FILLED);

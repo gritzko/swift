@@ -58,16 +58,14 @@ TEST(TransferTest,TransferFile) {
     //           ABCD            E000
     //     AB         CD       E0    0
     //  AAAA BBBB  CCCC DDDD  E  0  0  0
-    leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
+    // calculated leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
     leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
     for (int i=0; i<5; i++) {
-        if (i==2) {
+        if (i==2) { // now: stop, save, start
             delete leech;
             FileTransfer::instance = 1;
             leech = new FileTransfer(seed->root_hash,"copy");
             EXPECT_EQ(2,leech->completek);
-            //leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
-            //leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
         }
         bin64_t next = leech->picker->Pick(seed->ack_out,0);
         ASSERT_NE(bin64_t::NONE,next);
@@ -75,6 +73,10 @@ TEST(TransferTest,TransferFile) {
         size_t len = pread(seed->fd,buf,1024,next.base_offset()<<10); // FIXME TEST FOR ERROR
         bin64_t sibling = next.sibling();
         leech->OfferHash(sibling, seed->hashes[sibling]); // i=4 => out of bounds
+        uint8_t memo = *buf;
+        *buf = 'z';
+        EXPECT_FALSE(leech->OfferData(next, buf, len));
+        *buf = memo;
         EXPECT_TRUE(leech->OfferData(next, buf, len));
     }
     EXPECT_EQ(4100,leech->size);
@@ -86,7 +88,6 @@ TEST(TransferTest,TransferFile) {
 /*
  FIXME
  - always rehashes (even fresh files)
- - different heights => bins::remove is buggy
  */
 
 int main (int argc, char** argv) {
