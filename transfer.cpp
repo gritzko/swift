@@ -23,23 +23,29 @@ int FileTransfer::instance = 0;
 // FIXME: separate Bootstrap() and Download(), then Size(), Progress(), SeqProgress()
 
 FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
-    root_hash(_root_hash), fd(0), hashfd(0), dry_run(false), 
-    peak_count(0), hashes(NULL), error(NULL), size(0), sizek(0),
-    complete(0), completek(0), seq_complete(0)
+    root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false), 
+    peak_count_(0), hashes_(NULL), error_(NULL), size_(0), sizek_(0),
+    complete_(0), completek_(0), seq_complete_(0)
 {
-	fd = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-	if (fd<0)
+	fd_ = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	if (fd_<0)
         return;
-    if (root_hash==Sha1Hash::ZERO) // fresh submit, hash it
+    if (root_hash_==Sha1Hash::ZERO) // fresh submit, hash it
         Submit();
     else
         RecoverProgress();
-    picker = new SeqPiecePicker(this);
+    picker_ = new SeqPiecePicker(this);
 }
+
+
+bin64_t         FileTransfer::PickBinForRequest (bins& from, uint8_t layer) {
+    return picker_->Pick(from,layer);
+}
+
 
 void FileTransfer::LoadPeaks () {
     char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
+    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
     int peakfd = open(file_name,O_RDONLY);
     if (peakfd<0)
         return;
@@ -56,169 +62,177 @@ void FileTransfer::LoadPeaks () {
 /** Basically, simulated receiving every single packet, except
     for some optimizations. */
 void            FileTransfer::RecoverProgress () {
-    dry_run = true;
+    dry_run_ = true;
     LoadPeaks();
-    if (!size)
+    if (!size())
         return;
     // at this point, we may use mmapd hashes already
     // so, lets verify hashes and the data we've got
-    lseek(fd,0,SEEK_SET);
-    for(int p=0; p<sizek; p++) {
+    lseek(fd_,0,SEEK_SET);
+    for(int p=0; p<size_kilo(); p++) {
         uint8_t buf[1<<10];
-        size_t rd = read(fd,buf,1<<10);
+        size_t rd = read(fd_,buf,1<<10);
         OfferData(bin64_t(0,p), buf, rd);
         if (rd<(1<<10))
             break;
     }
-    dry_run = false;
+    dry_run_ = false;
 }
 
 
 void    FileTransfer::SavePeaks () {
     char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
+    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
     int peakfd = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    for(int i=0; i<peak_count; i++) {
-        write(peakfd,&(peaks[i]),sizeof(bin64_t));
-        write(peakfd,*peak_hashes[i],Sha1Hash::SIZE);
+    for(int i=0; i<peak_count(); i++) {
+        write(peakfd,&(peaks_[i]),sizeof(bin64_t));
+        write(peakfd,*peak_hashes_[i],Sha1Hash::SIZE);
     }
     close(peakfd);
 }
 
 
 void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
-    size = bytes;
-    completek = complete = seq_complete = 0;
-	sizek = (size>>10) + ((size&1023) ? 1 : 0);
+    size_ = bytes;
+    completek_ = complete_ = seq_complete_ = 0;
+	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
     
     char file_name[1024];
 	struct stat st;
-	fstat(fd, &st);
+	fstat(fd_, &st);
     if (st.st_size!=bytes)
-        if (ftruncate(fd, bytes))
+        if (ftruncate(fd_, bytes))
             return; // remain in the 0-state
     // mmap the hash file into memory
-    sprintf(file_name,HASH_FILE_TEMPLATE,root_hash.hex().c_str(),instance);
-	hashfd = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    size_t expected_size = Sha1Hash::SIZE * sizek * 2;
+    sprintf(file_name,HASH_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
+	hashfd_ = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    size_t expected_size = Sha1Hash::SIZE * sizek_ * 2;
 	struct stat hash_file_st;
-	fstat(hashfd, &hash_file_st);
+	fstat(hashfd_, &hash_file_st);
     if ( hash_file_st.st_size != expected_size )
-        ftruncate(hashfd, expected_size);
-    hashes = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE, 
-                               MAP_SHARED, hashfd, 0);
-    if (hashes==MAP_FAILED) {
-        hashes = NULL;
-        size = sizek = complete = completek = seq_complete = 0;
-        error = strerror(errno);
+        ftruncate(hashfd_, expected_size);
+    hashes_ = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE, 
+                               MAP_SHARED, hashfd_, 0);
+    if (hashes_==MAP_FAILED) {
+        hashes_ = NULL;
+        size_ = sizek_ = complete_ = completek_ = seq_complete_ = 0;
+        error_ = strerror(errno); // FIXME dprintf()
         perror("hash tree mmap failed");
         return;
     }
-    for(int i=0; i<peak_count; i++)
-        hashes[peaks[i]] = peak_hashes[i];
+    for(int i=0; i<peak_count_; i++)
+        hashes_[peaks_[i]] = peak_hashes_[i];
 }  
 
 
 void            FileTransfer::Submit () {
 	struct stat st; // TODO:   AppendData()   and   streaming
-	fstat(fd, &st);
-    size = st.st_size;
-	sizek = (size>>10) + ((size&1023) ? 1 : 0);
-    hashes = (Sha1Hash*) malloc(Sha1Hash::SIZE*sizek*2);
-    peak_count = bin64_t::peaks(sizek,peaks);
-    for (int p=0; p<peak_count; p++) {
-        for(bin64_t b=peaks[p].left_foot(); b.within(peaks[p]); b=b.next_dfsio(0)) 
+	fstat(fd_, &st);
+    size_ = st.st_size;
+	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
+    hashes_ = (Sha1Hash*) malloc(Sha1Hash::SIZE*sizek_*2);
+    peak_count_ = bin64_t::peaks(sizek_,peaks_);
+    for (int p=0; p<peak_count_; p++) {
+        for(bin64_t b=peaks_[p].left_foot(); b.within(peaks_[p]); b=b.next_dfsio(0)) 
             if (b.is_base()) {
                 uint8_t kilo[1<<10];
-                size_t rd = pread(fd,kilo,1<<10,b.base_offset()<<10);
-                hashes[b] = Sha1Hash(kilo,rd);
+                size_t rd = pread(fd_,kilo,1<<10,b.base_offset()<<10);
+                hashes_[b] = Sha1Hash(kilo,rd);
             } else
-                hashes[b] = Sha1Hash(hashes[b.left()],hashes[b.right()]);
-        peak_hashes[p] = hashes[peaks[p]];
-        ack_out.set(peaks[p],bins::FILLED);
+                hashes_[b] = Sha1Hash(hashes_[b.left()],hashes_[b.right()]);
+        peak_hashes_[p] = hashes_[peaks_[p]];
+        ack_out_.set(peaks_[p],bins::FILLED);
     }
-    root_hash = DeriveRoot();
-    Sha1Hash *hash_tmp = hashes;
+    root_hash_ = DeriveRoot();
+    Sha1Hash *hash_tmp = hashes_;
     SetSize(st.st_size);
     SavePeaks();
-    seq_complete = complete = size;
-    completek = sizek;
-    memcpy(hashes,hash_tmp,sizek*Sha1Hash::SIZE*2);
+    seq_complete_ = complete_ = size_;
+    completek_ = sizek_;
+    memcpy(hashes_,hash_tmp,sizek_*Sha1Hash::SIZE*2);
     free(hash_tmp);
 }
 
 
 void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {    
-	if (!size)  // only peak hashes are accepted at this point
+	if (!size_)  // only peak hashes are accepted at this point
 		return OfferPeak(pos,hash);
     int pi=0;
-    while (pi<peak_count && !pos.within(peaks[pi]))
+    while (pi<peak_count_ && !pos.within(peaks_[pi]))
         pi++;
-    if (pi==peak_count)
+    if (pi==peak_count_)
         return;
-    if (pos==peaks[pi] && hash!=peak_hashes[pi])
+    if (pos==peaks_[pi] && hash!=peak_hashes_[pi])
         return;
-    else if (ack_out.get(pos.parent())!=bins::EMPTY)
+    else if (ack_out_.get(pos.parent())!=bins::EMPTY)
         return; // have this hash already, even accptd data
-	hashes[pos] = hash;
+	hashes_[pos] = hash;
+}
+
+
+bin64_t         FileTransfer::data_in (int offset) {
+    if (offset>data_in_.size())
+        return bin64_t::NONE;
+    return data_in_[offset];
 }
 
 
 bool            FileTransfer::OfferData (bin64_t pos, uint8_t* data, size_t length) {
     if (!pos.is_base())
         return false;
-    if (length<1024 && pos!=bin64_t(0,sizek-1))
+    if (length<1024 && pos!=bin64_t(0,sizek_-1))
         return false;
-    if (ack_out.get(pos)==bins::FILLED)
+    if (ack_out_.get(pos)==bins::FILLED)
         return true; // ???
     int pi=0;
-    while (pi<peak_count && !pos.within(peaks[pi]))
+    while (pi<peak_count_ && !pos.within(peaks_[pi]))
         pi++;
-    if (pi==peak_count)
+    if (pi==peak_count_)
         return false;
-    bin64_t peak = peaks[pi];
+    bin64_t peak = peaks_[pi];
     
     Sha1Hash hash(data,length);       
     bin64_t p = pos;
-    while ( p!=peak && ack_out.get(p)==bins::EMPTY ) {
-        hashes[p] = hash;
+    while ( p!=peak && ack_out_.get(p)==bins::EMPTY ) {
+        hashes_[p] = hash;
         p = p.parent();
-        hash = Sha1Hash(hashes[p.left()],hashes[p.right()]) ;
+        hash = Sha1Hash(hashes_[p.left()],hashes_[p.right()]) ;
     }
-    if (hash!=hashes[p])
+    if (hash!=hashes_[p])
         return false;
     
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
 	// walk to the nearest proven hash   FIXME 0-layer peak
-    ack_out.set(pos,bins::FILLED);
-    pwrite(fd,data,length,pos.base_offset()<<10);
-    complete += length;
-    completek++;
+    ack_out_.set(pos,bins::FILLED);
+    pwrite(fd_,data,length,pos.base_offset()<<10);
+    complete_ += length;
+    completek_++;
     if (length<1024) {
-        size -= 1024 - length;
-        ftruncate(fd, size);
+        size_ -= 1024 - length;
+        ftruncate(fd_, size_);
     }
-    while (ack_out.get(bin64_t(0,seq_complete>>10))==bins::FILLED)
-        seq_complete+=1024;
-    if (seq_complete>size)
-        seq_complete = size;
+    while (ack_out_.get(bin64_t(0,seq_complete_>>10))==bins::FILLED)
+        seq_complete_+=1024;
+    if (seq_complete_>size_)
+        seq_complete_ = size_;
+    data_in_.push_back(pos);
     return true;
 }
 
 
 Sha1Hash        FileTransfer::DeriveRoot () {
-	int c = peak_count-1;
-	bin64_t p = peaks[c];
-	Sha1Hash hash = peak_hashes[c];
+	int c = peak_count_-1;
+	bin64_t p = peaks_[c];
+	Sha1Hash hash = peak_hashes_[c];
 	c--;
 	while (p!=bin64_t::ALL) {
 		if (p.is_left()) {
 			p = p.parent();
 			hash = Sha1Hash(hash,Sha1Hash::ZERO);
 		} else {
-			if (c<0 || peaks[c]!=p.sibling())
+			if (c<0 || peaks_[c]!=p.sibling())
 				return Sha1Hash::ZERO;
-			hash = Sha1Hash(peak_hashes[c],hash);
+			hash = Sha1Hash(peak_hashes_[c],hash);
 			p = p.parent();
 			c--;
 		}
@@ -229,18 +243,18 @@ Sha1Hash        FileTransfer::DeriveRoot () {
 
 
 void            FileTransfer::OfferPeak (bin64_t pos, const Sha1Hash& hash) {
-    assert(!size);
-    if (peak_count) {
-        bin64_t last_peak = peaks[peak_count-1];
+    assert(!size_);
+    if (peak_count_) {
+        bin64_t last_peak = peaks_[peak_count_-1];
         if ( pos.layer()>=last_peak.layer() || 
              pos.base_offset()!=last_peak.base_offset()+last_peak.width() )
-            peak_count = 0;
+            peak_count_ = 0;
     }
-    peaks[peak_count] = pos;
-    peak_hashes[peak_count++] = hash;
+    peaks_[peak_count_] = pos;
+    peak_hashes_[peak_count_++] = hash;
     // check whether peak hash candidates add up to the root hash
     Sha1Hash mustbe_root = DeriveRoot();
-    if (mustbe_root!=root_hash)
+    if (mustbe_root!=root_hash_)
         return;
     // bingo, we now know the file size (rounded up to a KByte)
     SetSize( (pos.base_offset()+pos.width()) << 10		 );
@@ -249,15 +263,15 @@ void            FileTransfer::OfferPeak (bin64_t pos, const Sha1Hash& hash) {
 
 
 FileTransfer::~FileTransfer () {
-    munmap(hashes,sizek*2*Sha1Hash::SIZE);
-    close(hashfd);
-    close(fd);
+    munmap(hashes_,sizek_*2*Sha1Hash::SIZE);
+    close(hashfd_);
+    close(fd_);
 }
 
                            
 FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
     for(int i=0; i<files.size(); i++)
-        if (files[i] && files[i]->root_hash==root_hash)
+        if (files[i] && files[i]->root_hash_==root_hash)
             return files[i];
     return NULL;
 }
@@ -270,11 +284,11 @@ int      p2tp::Open (const char* filename) {
 
 int      p2tp::Open (const Sha1Hash& hash, const char* filename) {
     FileTransfer* ft = new FileTransfer(hash, filename);
-    if (ft->fd>0) {
-        if (FileTransfer::files.size()<ft->fd)
-            FileTransfer::files.resize(ft->fd);
-        FileTransfer::files[ft->fd] = ft;
-        return ft->fd;
+    if (ft->fd_>0) {
+        if (FileTransfer::files.size()<ft->fd_)
+            FileTransfer::files.resize(ft->fd_);
+        FileTransfer::files[ft->fd_] = ft;
+        return ft->fd_;
     } else {
         delete ft;
         return -1;
@@ -282,7 +296,7 @@ int      p2tp::Open (const Sha1Hash& hash, const char* filename) {
 }
 
 
-void     Close (int fdes) {
+void     p2tp::Close (int fdes) {
     // FIXME delete all channels
     delete FileTransfer::files[fdes];
     FileTransfer::files[fdes] = NULL;
@@ -329,18 +343,18 @@ void     Close (int fdes) {
  // read root hash
  char hashbuf[128];
  uint64_t binbuf;
- lseek(hashfd,0,SEEK_SET);
- read(hashfd,&binbuf,sizeof(bin64_t));
- read(hashfd,hashbuf,Sha1Hash::SIZE);
+ lseek(hashfd_,0,SEEK_SET);
+ read(hashfd_,&binbuf,sizeof(bin64_t));
+ read(hashfd_,hashbuf,Sha1Hash::SIZE);
  Sha1Hash mustberoot(false,(const char*)hashbuf);
  if ( binbuf!=bin64_t::ALL || mustberoot != this->root_hash ) {
- ftruncate(hashfd,Sha1Hash::SIZE*64);
+ ftruncate(hashfd_,Sha1Hash::SIZE*64);
  return;
  }
  // read peak hashes
  for(int i=1; i<64 && !this->size; i++){
- read(hashfd,&binbuf,sizeof(bin64_t));
- read(hashfd,hashbuf,Sha1Hash::SIZE);
+ read(hashfd_,&binbuf,sizeof(bin64_t));
+ read(hashfd_,hashbuf,Sha1Hash::SIZE);
  Sha1Hash mustbepeak(false,(const char*)hashbuf);
  if (mustbepeak==Sha1Hash::ZERO)
  break;

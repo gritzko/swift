@@ -32,57 +32,58 @@ TEST(TransferTest,TransferFile) {
     
     // submit a new file
     FileTransfer* seed = new FileTransfer(Sha1Hash::ZERO,BTF);
-    EXPECT_TRUE(A==seed->hashes[0]);
-    EXPECT_TRUE(E==seed->hashes[bin64_t(0,4)]);
-    EXPECT_TRUE(ABCD==seed->hashes[bin64_t(2,0)]);
-    EXPECT_TRUE(ROOT==seed->root_hash);
-    EXPECT_TRUE(ABCD==seed->peak_hashes[0]);
-    EXPECT_TRUE(E==seed->peak_hashes[1]);
-    EXPECT_TRUE(ROOT==seed->root_hash);
-    EXPECT_EQ(4100,seed->size);
-    EXPECT_EQ(5,seed->sizek);
-    EXPECT_EQ(4100,seed->complete);
-    EXPECT_EQ(4100,seed->seq_complete);
+    EXPECT_TRUE(A==seed->hash(0));
+    EXPECT_TRUE(E==seed->hash(bin64_t(0,4)));
+    EXPECT_TRUE(ABCD==seed->hash(bin64_t(2,0)));
+    EXPECT_TRUE(ROOT==seed->root_hash());
+    EXPECT_TRUE(ABCD==seed->peak_hash(0));
+    EXPECT_TRUE(E==seed->peak_hash(1));
+    EXPECT_TRUE(ROOT==seed->root_hash());
+    EXPECT_EQ(4100,seed->size());
+    EXPECT_EQ(5,seed->size_kilo());
+    EXPECT_EQ(4100,seed->complete());
+    EXPECT_EQ(4100,seed->seq_complete());
     
     // retrieve it
     unlink("copy");
     FileTransfer::instance = 1;
-    FileTransfer* leech = new FileTransfer(seed->root_hash,"copy");
+    FileTransfer* leech = new FileTransfer(seed->root_hash(),"copy");
     // transfer peak hashes
-    for(int i=0; i<seed->peak_count; i++)
-        leech->OfferHash(seed->peaks[i],seed->peak_hashes[i]);
-    ASSERT_EQ(5<<10,leech->size);
-    ASSERT_EQ(5,leech->sizek);
-    ASSERT_EQ(0,leech->complete);
+    for(int i=0; i<seed->peak_count(); i++)
+        leech->OfferHash(seed->peak(i),seed->peak_hash(i));
+    ASSERT_EQ(5<<10,leech->size());
+    ASSERT_EQ(5,leech->size_kilo());
+    ASSERT_EQ(0,leech->complete());
     // transfer data and hashes
     //           ABCD            E000
     //     AB         CD       E0    0
     //  AAAA BBBB  CCCC DDDD  E  0  0  0
     // calculated leech->OfferHash(bin64_t(1,0), seed->hashes[bin64_t(1,0)]);
-    leech->OfferHash(bin64_t(1,1), seed->hashes[bin64_t(1,1)]);
+    leech->OfferHash(bin64_t(1,1), seed->hash(bin64_t(1,1)));
     for (int i=0; i<5; i++) {
         if (i==2) { // now: stop, save, start
             delete leech;
             FileTransfer::instance = 1;
-            leech = new FileTransfer(seed->root_hash,"copy");
-            EXPECT_EQ(2,leech->completek);
+            leech = new FileTransfer(seed->root_hash(),"copy");
+            EXPECT_EQ(2,leech->complete_kilo());
         }
-        bin64_t next = leech->picker->Pick(seed->ack_out,0);
+        bin64_t next = leech->PickBinForRequest(seed->ack_out(),0);
         ASSERT_NE(bin64_t::NONE,next);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
-        size_t len = pread(seed->fd,buf,1024,next.base_offset()<<10); // FIXME TEST FOR ERROR
+        size_t len = pread(seed->file_descriptor(),buf,1024,next.base_offset()<<10); // FIXME TEST FOR ERROR
         bin64_t sibling = next.sibling();
-        leech->OfferHash(sibling, seed->hashes[sibling]); // i=4 => out of bounds
+        if (sibling.base_offset()<seed->size_kilo())
+            leech->OfferHash(sibling, seed->hash(sibling));
         uint8_t memo = *buf;
         *buf = 'z';
         EXPECT_FALSE(leech->OfferData(next, buf, len));
         *buf = memo;
         EXPECT_TRUE(leech->OfferData(next, buf, len));
     }
-    EXPECT_EQ(4100,leech->size);
-    EXPECT_EQ(5,leech->sizek);
-    EXPECT_EQ(4100,leech->complete);
-    EXPECT_EQ(4100,leech->seq_complete);
+    EXPECT_EQ(4100,leech->size());
+    EXPECT_EQ(5,leech->size_kilo());
+    EXPECT_EQ(4100,leech->complete());
+    EXPECT_EQ(4100,leech->seq_complete());
     
 }
 /*

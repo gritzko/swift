@@ -104,62 +104,70 @@ namespace p2tp {
             accept or remember or drop. Returns true => ACK is sent. */
         bool            OfferData (bin64_t bin, uint8_t* data, size_t length);
         
-		static FileTransfer* Find (const Sha1Hash& hash);
+        bin64_t         PickBinForRequest (bins& from, uint8_t layer) ;		static FileTransfer* Find (const Sha1Hash& hash);
 		static FileTransfer* file (int fd) { 
             return fd<files.size() ? files[fd] : NULL; 
         }
         
-        int             GetPeakCount () const { return peak_count; }
-        bin64_t         GetPeak (int i) const { return peaks[i]; }
-        const Sha1Hash& GetPeakHash (int i) const { return peak_hashes[i]; }
-        bin64_t         GetPeakFor (bin64_t pos) const;
-        const Sha1Hash& GetHash (bin64_t pos) const { 
-            assert(pos<sizek*2);
-            return hashes[pos];
+        int             peak_count () const { return peak_count_; }
+        bin64_t         peak (int i) const { return peaks_[i]; }
+        const Sha1Hash& peak_hash (int i) const { return peak_hashes_[i]; }
+        bin64_t         peak_for (bin64_t pos) const;
+        const Sha1Hash& hash (bin64_t pos) const { 
+            assert(pos<sizek_*2);
+            return hashes_[pos];
         }
-        const Sha1Hash& GetRootHash () const { return root_hash; }
-        
+        const Sha1Hash& root_hash () const { return root_hash_; }
+        bin64_t         data_in (int offset);
+        uint64_t        size () const { return size_; }
+        uint64_t        size_kilo () const { return sizek_; }
+        uint64_t        complete () const { return complete_; }
+        uint64_t        complete_kilo () const { return completek_; }
+        uint64_t        seq_complete () const { return seq_complete_; }
+        bins&           ack_out ()  { return ack_out_; }
+        int             file_descriptor () const { return fd_; } 
         
 		friend int      Open (const char* filename);
 		friend int      Open (const Sha1Hash& hash, const char* filename);
 		friend void     Close (int fdes);
         
-    public:
+        static int instance; // FIXME this smells
+        
+    private:
 
 		static std::vector<FileTransfer*> files;
         static const char* HASH_FILE_TEMPLATE;
         static const char* PEAK_FILE_TEMPLATE;
-        static int instance;
         		
 		/**	file descriptor. */
-		int				fd;
+		int				fd_;
         /** File size, as derived from the hashes. */
-        size_t          size;
-        size_t          sizek;
+        size_t          size_;
+        size_t          sizek_;
 		/**	Part the file currently downloaded. */
-		size_t          complete;
-		size_t          completek;
-		size_t          seq_complete;
+		size_t          complete_;
+		size_t          completek_;
+		size_t          seq_complete_;
 		/**	A map for all packets obtained and succesfully checked. */
-		bins			ack_out;
+		bins			ack_out_;
 		/**	History of bin retrieval. */
-		binqueue		data_in;
+		binqueue		data_in_;
         /** Piece picker strategy. */
-        PiecePicker*    picker;
+        PiecePicker*    picker_;
 		/** File for keeping the Merkle hash tree. */
-        int             hashfd;
+        int             hashfd_;
         /** Merkle hash tree: root */
-        Sha1Hash        root_hash;
+        Sha1Hash        root_hash_;
         /** Merkle hash tree: peak hashes */
-        Sha1Hash        peak_hashes[64];
-        bin64_t         peaks[64];
-        int             peak_count;
+        Sha1Hash        peak_hashes_[64];
+        bin64_t         peaks_[64];
+        int             peak_count_;
         /** Merkle hash tree: the tree, as a bin64_t-indexed array */
-        Sha1Hash*       hashes;
+        Sha1Hash*       hashes_;
         /** for recovering saved state */
-        bool            dry_run;
+        bool            dry_run_;
         /** Error encountered */
-        char*           error;
+        char*           error_;
         
     protected:
         void            SetSize(size_t bytes);
@@ -185,10 +193,12 @@ namespace p2tp {
 
 	class CongestionController {
     public:
-        tint    rtt_avg;
-        tint    dev_avg;
-        int     cwnd;
-        int     peer_cwnd;
+        virtual tint    rtt_avg() = 0;
+        virtual tint    dev_avg() = 0;
+        virtual tint    next_send_time() = 0;
+        virtual int     cwnd() = 0;
+        virtual int     peer_cwnd() = 0;
+        virtual int     free_cwnd() = 0;
         virtual void    OnDataSent(bin64_t b) = 0;
         virtual void    OnDataRecvd(bin64_t b) = 0;
         virtual void    OnAckRcvd(const tintbin& tsack) = 0;
@@ -231,6 +241,8 @@ namespace p2tp {
 		~Channel();
 		
 		static void	Recv (int socket);
+        static void Loop (tint till);
+        
 		void		Recv (Datagram& dgram);
 		tint		Send ();
 
@@ -240,6 +252,7 @@ namespace p2tp {
 		void		OnHint (Datagram& dgram);
 		void		OnHash (Datagram& dgram);
 		void		OnPex (Datagram& dgram);
+		void		OnHandshake (Datagram& dgram);
 		
 		void		AddHandshake (Datagram& dgram);
 		bin64_t		AddData (Datagram& dgram);
@@ -302,6 +315,8 @@ namespace p2tp {
 		static int  MAX_REORDERING;
 		static tint TIMEOUT;
 		static std::vector<Channel*> channels;
+        int    sockets[4];
+        int    sock_count;
 		static tint last_tick;
         
 	};

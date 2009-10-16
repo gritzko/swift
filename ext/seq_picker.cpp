@@ -13,21 +13,21 @@ using namespace p2tp;
 
 class SeqPiecePicker : public PiecePicker {
     
-    bins hint_out;
-    FileTransfer* file;
+    bins hint_out_;
+    FileTransfer* file_;
     
 public:
     
-    SeqPiecePicker (FileTransfer* file_) : file(file_), hint_out() {
+    SeqPiecePicker (FileTransfer* file_to_pick_from) : file_(file_to_pick_from), hint_out_() {
     }
     
     virtual bin64_t Pick (bins& from, uint8_t layer) {
         bins may_pick = from;
-        may_pick.remove (file->ack_out);
-        may_pick.remove (hint_out);
+        may_pick.remove (file_->ack_out());
+        may_pick.remove (hint_out_);
         for (int l=layer; l>=0; l--) {
-            for(int i=0; i<file->peak_count; i++) {
-                bin64_t pick = may_pick.find(file->peaks[i],l,bins::FILLED);
+            for(int i=0; i<file_->peak_count(); i++) {
+                bin64_t pick = may_pick.find(file_->peak(i),l,bins::FILLED);
                 if (pick!=bin64_t::NONE)
                     return pick;
             }
@@ -36,11 +36,11 @@ public:
     }
     
     virtual void    Received (bin64_t b) {
-        hint_out.set(b,bins::EMPTY);
+        hint_out_.set(b,bins::EMPTY);
     }
     
     virtual void    Snubbed (bin64_t b) {
-        hint_out.set(b,bins::EMPTY);
+        hint_out_.set(b,bins::EMPTY);
     }
     
 };
