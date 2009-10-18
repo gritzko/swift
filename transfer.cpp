@@ -22,7 +22,7 @@ int FileTransfer::instance = 0;
 
 // FIXME: separate Bootstrap() and Download(), then Size(), Progress(), SeqProgress()
 
-FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
+FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false), 
     peak_count_(0), hashes_(NULL), error_(NULL), size_(0), sizek_(0),
     complete_(0), completek_(0), seq_complete_(0)
@@ -30,16 +30,14 @@ FileTransfer::FileTransfer (const Sha1Hash& _root_hash, const char* filename) :
 	fd_ = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd_<0)
         return;
+    if (files.size()<fd_+1)
+        files.resize(fd_+1);
+    files[fd_] = this;
     if (root_hash_==Sha1Hash::ZERO) // fresh submit, hash it
         Submit();
     else
         RecoverProgress();
     picker_ = new SeqPiecePicker(this);
-}
-
-
-bin64_t         FileTransfer::PickBinForRequest (bins& from, uint8_t layer) {
-    return picker_->Pick(from,layer);
 }
 
 
@@ -154,6 +152,14 @@ void            FileTransfer::Submit () {
 }
 
 
+bin64_t         FileTransfer::peak_for (bin64_t pos) const {
+    int pi=0;
+    while (pi<peak_count_ && !pos.within(peaks_[pi]))
+        pi++;
+    return pi==peak_count_ ? bin64_t(bin64_t::NONE) : peaks_[pi];
+}
+
+
 void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {    
 	if (!size_)  // only peak hashes are accepted at this point
 		return OfferPeak(pos,hash);
@@ -177,19 +183,16 @@ bin64_t         FileTransfer::data_in (int offset) {
 }
 
 
-bool            FileTransfer::OfferData (bin64_t pos, uint8_t* data, size_t length) {
+bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_t length) {
     if (!pos.is_base())
         return false;
     if (length<1024 && pos!=bin64_t(0,sizek_-1))
         return false;
     if (ack_out_.get(pos)==bins::FILLED)
         return true; // ???
-    int pi=0;
-    while (pi<peak_count_ && !pos.within(peaks_[pi]))
-        pi++;
-    if (pi==peak_count_)
+    bin64_t peak = peak_for(pos);
+    if (peak==bin64_t::NONE)
         return false;
-    bin64_t peak = peaks_[pi];
     
     Sha1Hash hash(data,length);       
     bin64_t p = pos;
@@ -266,6 +269,7 @@ FileTransfer::~FileTransfer () {
     munmap(hashes_,sizek_*2*Sha1Hash::SIZE);
     close(hashfd_);
     close(fd_);
+    files[fd_] = NULL;
 }
 
                            
@@ -277,31 +281,19 @@ FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
 }
 
 
-int      p2tp::Open (const char* filename) {
-    return Open(Sha1Hash::ZERO,filename);
-}
-
-
-int      p2tp::Open (const Sha1Hash& hash, const char* filename) {
-    FileTransfer* ft = new FileTransfer(hash, filename);
-    if (ft->fd_>0) {
-        if (FileTransfer::files.size()<ft->fd_)
-            FileTransfer::files.resize(ft->fd_);
-        FileTransfer::files[ft->fd_] = ft;
-        return ft->fd_;
+int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
+    FileTransfer* ft = new FileTransfer(filename, hash);
+    int fdes = ft->file_descriptor();
+    if (fdes>0) {
+        if (FileTransfer::files.size()<fdes)
+            FileTransfer::files.resize(fdes);
+        FileTransfer::files[fdes] = ft;
+        return fdes;
     } else {
         delete ft;
         return -1;
     }
 }
-
-
-void     p2tp::Close (int fdes) {
-    // FIXME delete all channels
-    delete FileTransfer::files[fdes];
-    FileTransfer::files[fdes] = NULL;
-}
-
 
 
 /*

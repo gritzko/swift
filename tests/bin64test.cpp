@@ -76,6 +76,14 @@ TEST(Bin64Test, Iteration) {
     EXPECT_EQ(bin64_t(3,0),i);
 }
 
+TEST(Bin64Test, Bits) {
+    bin64_t all = bin64_t::ALL, none = bin64_t::NONE, big = bin64_t(40,18);
+    uint32_t a32 = all.to32(), n32 = none.to32(), b32 = big.to32();
+    EXPECT_EQ(0x7fffffff,a32);
+    EXPECT_EQ(0xffffffff,n32);
+    EXPECT_EQ(bin64_t::NONE32,b32);
+}
+
 int main (int argc, char** argv) {
 	
 	testing::InitGoogleTest(&argc, argv);

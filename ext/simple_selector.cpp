@@ -7,28 +7,33 @@
  *
  */
 
+#include <queue>
 #include "p2tp.h"
 
 using namespace p2tp;
 
 class SimpleSelector : public PeerSelector {
-    typedef std::pair<sockaddr_in,uint32_t> memo_t;
-    std::queue<memo_t>  peers;
+    typedef std::pair<Address,Sha1Hash> memo_t;
+    typedef std::deque<memo_t>  peer_queue_t;
+    peer_queue_t    peers;
 public:
-    virtual void PeerKnown (const Sha1Hash& root, struct sockaddr_in& addr) {
-        peers.push_front(memo_t(addr,root.fingerprint()));
+    SimpleSelector () {
     }
-    virtual sockaddr_in GetPeer (const Sha1Hash& for_root) {
-        uint32_t fp = for_root.fingerprint();
-        for(std::queue<memo_t>::iterator i=peers.begin(); i!=peers.end(); i++)
-            if (i->second==fp) {
+    void AddPeer (const Datagram::Address& addr, const Sha1Hash& root) {
+        peers.push_front(memo_t(addr,root)); //,root.fingerprint() !!!
+    }
+    Address GetPeer (const Sha1Hash& for_root) {
+        //uint32_t fp = for_root.fingerprint();
+        for(peer_queue_t::iterator i=peers.begin(); i!=peers.end(); i++)
+            if (i->second==for_root) {
                 i->second = 0;
                 sockaddr_in ret = i->first;
                 while (peers.begin()->second==0)
                     peers.pop_front();
                 return ret;
             }
+        return Address();
     }
 };
 
-static Channel::peer_selector = new SimpleSelector();
+PeerSelector* Channel::peer_selector = new SimpleSelector();

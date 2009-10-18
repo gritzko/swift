@@ -41,7 +41,7 @@ Sha1Hash::Sha1Hash(bool hex, const char* hash) {
 	memcpy(bits,hash,SIZE);
 }
 
-string	Sha1Hash::hex() {
+string	Sha1Hash::hex() const {
 	char hex[HASHSZ*2+1];
 	for(int i=0; i<HASHSZ; i++)
 		sprintf(hex+i*2, "%02x", bits[i]);

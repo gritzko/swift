@@ -68,6 +68,7 @@ namespace p2tp {
     
 	typedef std::deque<tintbin> tbqueue;
     typedef std::deque<bin64_t> binqueue;
+    typedef Datagram::Address Address;
 
 	typedef enum { 
 		P2TP_HANDSHAKE = 0, 
@@ -91,7 +92,7 @@ namespace p2tp {
     public:
 		
 		/**	Open/submit/retrieve a file.	*/
-        FileTransfer(const Sha1Hash& _root_hash, const char *file_name);
+        FileTransfer(const char *file_name, const Sha1Hash& _root_hash=Sha1Hash::ZERO);
         
 		/**	Close everything. */
 		~FileTransfer();
@@ -102,9 +103,9 @@ namespace p2tp {
 		void            OfferHash (bin64_t pos, const Sha1Hash& hash);
         /** Offer data; the behavior is the same as with a hash:
             accept or remember or drop. Returns true => ACK is sent. */
-        bool            OfferData (bin64_t bin, uint8_t* data, size_t length);
+        bool            OfferData (bin64_t bin, const uint8_t* data, size_t length);
         
-        bin64_t         PickBinForRequest (bins& from, uint8_t layer) ;		static FileTransfer* Find (const Sha1Hash& hash);
+        static FileTransfer* Find (const Sha1Hash& hash);
 		static FileTransfer* file (int fd) { 
             return fd<files.size() ? files[fd] : NULL; 
         }
@@ -126,10 +127,7 @@ namespace p2tp {
         uint64_t        seq_complete () const { return seq_complete_; }
         bins&           ack_out ()  { return ack_out_; }
         int             file_descriptor () const { return fd_; } 
-        
-		friend int      Open (const char* filename);
-		friend int      Open (const Sha1Hash& hash, const char* filename);
-		friend void     Close (int fdes);
+        PiecePicker*    picker () { return picker_; }
         
         static int instance; // FIXME this smells
         
@@ -179,16 +177,12 @@ namespace p2tp {
         void            LoadPeaks();
 
 		friend class Channel;
+        friend size_t  Size (int fdes);
+        friend size_t  Complete (int fdes);
+        friend size_t  SeqComplete (int fdes);
+        friend int     Open (const char* filename, const Sha1Hash& hash) ;
+        friend void    Close (int fd) ;
 	};
-	
-	
-	int		Open (const char* filename) ;
-    int     Open (const Sha1Hash& hash, const char* filename) ;
-	void	Close (int fid) ;
-    void    Loop (tint till);
-    int     Bind (int port);
-    void    Shutdown (int fd);
-    void    HeardOfPeer (const Sha1Hash& root, struct sockaddr_in address);
 	
 
 	class CongestionController {
@@ -214,10 +208,8 @@ namespace p2tp {
     
     class PeerSelector {
     public:
-        virtual void    PeerKnown 
-            (const Sha1Hash& root, struct sockaddr_in& addr) = 0;
-        virtual struct sockaddr_in GetPeer 
-            (const Sha1Hash& for_root) = 0;
+        virtual void AddPeer (const Datagram::Address& addr, const Sha1Hash& root) = 0;
+        virtual Datagram::Address GetPeer (const Sha1Hash& for_root) = 0;
     };
     
     class DataStorer {
@@ -236,8 +228,7 @@ namespace p2tp {
         hash or a fragment of it into every datagram.) */
 	class Channel {
 	public:
-		Channel	(int filedes, int socket, struct sockaddr_in peer,
-				 uint32_t peer_channel, uint64_t supports=0);
+		Channel	(FileTransfer* file, int socket, struct sockaddr_in peer);
 		~Channel();
 		
 		static void	Recv (int socket);
@@ -273,19 +264,15 @@ namespace p2tp {
         
         FileTransfer& file() { return *file_; }
 		
-		/*friend int Connect (int fd, int sock, 
-							const struct sockaddr_in& addr, uint32_t peerch=0);
-		friend int Init (int portno);
-		friend std::ostream& operator << (std::ostream& os, const Channel& s);*/
 		
 	private:
 		
 		/** Channel id: index in the channel array. */
 		uint32_t	id;
 		/**	Socket address of the peer. */
-		struct sockaddr_in	peer;
+        Datagram::Address	peer;
 		/**	The UDP socket fd. */
-		int			socket;
+		int			socket_;
 		/**	Descriptor of the file in question. */
 		FileTransfer*	file_;
 		/**	Peer channel id; zero if we are trying to open a channel. */
@@ -312,16 +299,49 @@ namespace p2tp {
         
         static PeerSelector* peer_selector;
         
-		static int  MAX_REORDERING;
-		static tint TIMEOUT;
+		static int      MAX_REORDERING;
+		static tint     TIMEOUT;
 		static std::vector<Channel*> channels;
-        int    sockets[4];
-        int    sock_count;
-		static tint last_tick;
+        static int      sockets[8];
+        static int      socket_count;
+		static tint     last_tick;
         
+        friend int     Listen (Datagram::Address addr);
+        friend void    Shutdown (int sock_des);
+        friend void    AddPeer (Datagram::Address address, const Sha1Hash& root);
 	};
 
 	
+
+    /*************** The top-level API ****************/
+    /** Start listening a port. Returns socket descriptor. */
+    int     Listen (Datagram::Address addr);
+    /** Run send/receive loop for the specified amount of time. */
+    void    Loop (tint till);
+    /** Stop listening to a port. */
+    void    Shutdown (int sock_des);
+
+    /** Open a file, start a transmission; fill it with content for a given root hash;
+        in case the hash is omitted, the file is a fresh submit. */
+    int     Open (const char* filename, const Sha1Hash& hash=Sha1Hash::ZERO) ;
+    /** Close a file and a transmission. */
+    void	Close (int fd) ;
+    /** Add a possible peer which participares in a given transmission. In the case
+        root hash is zero, the peer might be talked to regarding any transmission
+        (likely, a tracker, cache or an archive). */
+    void    AddPeer (Datagram::Address address, const Sha1Hash& root=Sha1Hash::ZERO);
+
+    /** Returns size of the file in bytes, 0 if unknown. Might be rounded up to a kilobyte
+        before the transmission is complete. */
+    size_t  Size (int fdes);
+    /** Returns the amount of retrieved and verified data, in bytes. 
+        A 100% complete transmission has Size()==Complete(). */
+    size_t  Complete (int fdes);
+    /** Returns the number of bytes that are complete sequentially, starting from the
+        beginning, till the first not-yet-retrieved packet. */
+    size_t  SeqComplete (int fdes);
+
+    
 	//uint32_t Width (const tbinvec& v);
 }
 

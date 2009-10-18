@@ -17,6 +17,8 @@ struct bin64_t {
     uint64_t v;
     static const uint64_t NONE;
     static const uint64_t ALL;
+    static const uint32_t NONE32;
+    static const uint32_t ALL32;
 
     bin64_t() : v(NONE) {}
     bin64_t(const bin64_t&b) : v(b.v) {}
@@ -24,6 +26,7 @@ struct bin64_t {
     bin64_t(uint8_t layer, uint64_t offset) : 
         v( (offset<<(layer+1)) | ((1ULL<<layer)-1) ) {}
     operator uint64_t () const { return v; }
+    uint32_t to32() const ;
     bool operator == (bin64_t& b) const { return v==b.v; }
 
     static bin64_t none () { return NONE; }

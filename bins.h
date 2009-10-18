@@ -22,20 +22,21 @@ public:
     
     bins(const bins& b);
     
-    uint16_t get (bin64_t bin); 
+    uint16_t    get (bin64_t bin); 
     
-    void set (bin64_t bin, fill_t val=FILLED); 
+    void        set (bin64_t bin, fill_t val=FILLED); 
     
-    bin64_t find (const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
+    bin64_t     find (const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
     
-    void remove (bins& b);
+    void        remove (bins& b);
     
-    void dump(const char* note);
+    void        dump(const char* note);
 
     uint64_t*   get_stripes (int& count);
 
     uint32_t    size() { return cells_allocated; }
-    // TODO: bitwise operators
+    
+    bool        empty () const { return !deep(0) && !halves[0]; }
     
 private:
     

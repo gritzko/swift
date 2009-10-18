@@ -40,7 +40,7 @@ TEST(Datagram, BinaryTest) {
 	int datalen = strlen(text)+1+2+4+8;
 	ASSERT_EQ(datalen,d.Send());
     int socks[1] = {socket};
-	socket = Datagram::Wait(1,socks);
+	ASSERT_EQ (socket, Datagram::Wait(1,socks));
 	Datagram rcv(socket);
 	ASSERT_EQ(datalen,rcv.Recv());
 	char* rbuf;

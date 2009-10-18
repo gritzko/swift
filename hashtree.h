@@ -23,7 +23,7 @@ struct Sha1Hash {
 	Sha1Hash(const char* bits);
 	Sha1Hash(bool hex, const char* hash);
 	
-	std::string	hex();
+	std::string	hex() const;
 	bool	operator == (const Sha1Hash& b) const
 		{ return 0==memcmp(bits,b.bits,SIZE); }
 	bool	operator != (const Sha1Hash& b) const { return !(*this==b); }

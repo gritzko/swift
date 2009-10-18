@@ -39,21 +39,32 @@ struct Datagram {
 	
     struct Address {
         struct sockaddr_in  addr;
-        Address() {
+        static uint32_t LOCALHOST;
+        void init(uint32_t ipv4=0, uint16_t port=0) {
             memset(&addr,0,sizeof(struct sockaddr_in)); 
-        }
-        Address(const char* ip, uint16_t port) {
             addr.sin_family = AF_INET;
             addr.sin_port = htons(port);
+            addr.sin_addr.s_addr = htonl(ipv4);
+        }
+        Address() { init(); }
+        Address(const char* ip, uint16_t port) {
+            init(LOCALHOST,port);
             inet_aton(ip,&(addr.sin_addr));
         }
         Address(uint16_t port) {
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(port);
-            addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            init(LOCALHOST,port);
+        }
+        Address(uint32_t ipv4addr, uint16_t port) {
+            init(ipv4addr,port);
         }
         Address(const struct sockaddr_in& address) : addr(address) {}
-        operator sockaddr_in () {return addr;}
+        operator sockaddr_in () const {return addr;}
+        bool operator == (const Address& b) { 
+            return addr.sin_family==b.addr.sin_family &&
+            addr.sin_port==b.addr.sin_port && 
+            addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
+        }
+        bool operator != (const Address& b) { return !(*this==b); }
     };
     
 	Address addr;
@@ -61,7 +72,7 @@ struct Datagram {
 	int offset, length;
 	uint8_t	buf[MAXDGRAMSZ*2];
     
-	static int Bind(int port);
+	static int Bind(Address address);
 	static void Close(int port);
 	static tint Time();
 	static int Wait (int sockcnt, int* sockets, tint usec=0);

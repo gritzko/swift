@@ -10,236 +10,163 @@
 #include <glog/logging.h>
 #include "p2tp.h"
 
+#include "ext/dummy_controller.cpp"
+
 using namespace std;
 using namespace p2tp;
 
-
 void	Channel::AddPeakHashes (Datagram& dgram) {
-	const std::vector<binhash>& peaks = file().hashes.peak_hashes();
-	for(int i=0; i<peaks.size(); i++) {
+	for(int i=0; i<file().peak_count(); i++) {
 		dgram.Push8(P2TP_HASH);
-		dgram.Push32(peaks[i].first);
-		dgram.PushHash(peaks[i].second);
-        DLOG(INFO)<<"#"<<id<<" +pHASH"<<peaks[i].first;
+		dgram.Push32((uint32_t)file().peak(i));
+		dgram.PushHash(file().peak_hash(i));
+        DLOG(INFO)<<"#"<<id<<" +pHASH"<<file().peak(i);
 	}
 }
 
 
-void	Channel::AddUncleHashes (Datagram& dgram, bin pos) {
-	bin root = pos;
-	while (root.parent()<=file().hashes.data_mass() && ack_in.clean(root.parent()))
-		root = root.parent();
-	while (root!=pos) {
-		root = root.child(pos);
-		bin uncle = root.sibling();
+void	Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
+    bin64_t peak = file().peak_for(pos);
+    while (pos!=peak && ack_in.get(pos.parent())==bins::EMPTY) {
+        bin64_t uncle = pos.sibling();
 		dgram.Push8(P2TP_HASH);
-		dgram.Push32(uncle);
-		dgram.PushHash( file().hashes[uncle] );
+		dgram.Push32((uint32_t)uncle);
+		dgram.PushHash( file().hash(uncle) );
         DLOG(INFO)<<"#"<<id<<" +uHASH"<<uncle;
-	}
+        pos = pos.parent();
+    }
 }
 
 
-bin		Channel::SenderPiecePick () { // TODO: resilience
+bin64_t		Channel::DequeueHint () { // TODO: resilience
 	while (!hint_in.empty()) {
-		bin hint = hint_in.front().pos;
+		bin64_t hint = hint_in.front();
 		hint_in.pop_front();
-		if (ack_in.contains(hint))
+		if (ack_in.get(hint)==bins::FILLED)
 			continue;
-		if (hint.layer()) {
-			bin l=hint.left(), r=hint.right();
-			//if (false)//rand()&1)
+		if ( file().ack_out().get(hint)==bins::EMPTY )
+			continue;
+		if (!hint.is_base()) {
+			bin64_t l=hint.left(), r=hint.right();
+			//if (rand()&1)
 			//	swap(l,r);
-			hint_in.push_front(tintbin(Datagram::now,r));
-			hint_in.push_front(tintbin(Datagram::now,l));
+			hint_in.push_front(r);
+			hint_in.push_front(l);
 			continue;
 		}
-		if ( !file().ack_out.contains(hint) )
-			continue;
 		return hint;
 	}
-	return 0;
+	return bin64_t::NONE;
 }
 
 
-
-Channel::state_t	Channel::state () const {
-	if (!peer_channel_id)
-		return HS_REQ_OUT;
-	if (cc_.avg_rtt()==0)
-		return HS_RES_OUT;
-	return HS_DONE;
-}
-
-
-void	Channel::CleanStaleDataOut (bin ack_pos) {
-
-	if (ack_pos)
-		for(int i=0; i<data_out.size() && i<MAX_REORDERING*2; i++)
-			if (data_out[i].pos && ack_pos.contains(data_out[i].pos)) {
-				cc_.RttSample(Datagram::now-data_out[i].time);
-				cc_.OnCongestionEvent(CongestionControl::ACK_EV);
-				data_out[i].pos = 0;
-			}
-	while (!data_out.empty() && data_out[0].pos==0)
-		data_out.pop_front();
-
-	tint timed_out = Datagram::now - cc_.safe_avg_rtt();
-	while (!data_out.empty() && data_out.front().time < timed_out) {
-		DLOG(INFO)<<*this<<" loss: "<<data_out.front().pos;
-		// reordering is a loss, collision is a loss
-		cc_.OnCongestionEvent(CongestionControl::LOSS_EV);
-		data_out.pop_front();
-	}
-	
-}
-
-
-void	Channel::CleanStaleHintOut () {
-	while ( !hint_out.empty() && file().ack_out.contains(hint_out.front().pos) ) 
-		hint_out.pop_front();
-	tint timed_out = Datagram::now - cc_.safe_avg_rtt()*4; //FIXME: timeout
+void	Channel::CleanStaleHints () {
+	while ( !hint_out.empty() && file().ack_out().get(hint_out.front().bin)==bins::FILLED ) 
+		hint_out.pop_front();  // FIXME must normally clear fulfilled entries
+	tint timed_out = Datagram::now - cc->rtt_avg()*8;
 	while ( !hint_out.empty() && hint_out.front().time < timed_out ) {
-		file().hint_out -= hint_out.front().pos;
-		hint_out.pop_front(); // TODO: ignore count
+        file().picker()->Snubbed(hint_out.front().bin);
+		hint_out.pop_front();
 	}
 }
 
-void	Channel::CleanStaleHintIn () {
-	// do I need it?
-}
 
-
-void	Channel::SendHandshake () {
-	Datagram dgram(socket_,peer);
-	dgram.Push32(peer_channel_id);
+void	Channel::AddHandshake (Datagram& dgram) {
 	dgram.Push8(P2TP_HANDSHAKE);
 	dgram.Push32(EncodeID(id));
 	if (!peer_channel_id) { // initiating
 		dgram.Push8(P2TP_HASH);
-		dgram.Push32(bin::ALL);
-		dgram.PushHash(file().hashes.root);
-		AddAck(dgram);
-	} else { // responding
-		AddAck(dgram);
+		dgram.Push32(bin64_t::ALL32);
+		dgram.PushHash(file().root_hash());
 	}
-    DLOG(INFO)<<"#"<<id<<" sending a handshake to "<<*this;
-	PCHECK( dgram.Send() != -1 )<<"error sending";
-	last_send_time = Datagram::now;
+    AddAck(dgram);
+    //DLOG(INFO)<<"#"<<id<<" sending a handshake to "<<this->id_string();
 }
 
 
-void		Channel::SendData () {
-	CleanStaleDataOut(0);
-	int round = 0;
+tint	Channel::Send () {
     Datagram dgram(socket_,peer);
     dgram.Push32(peer_channel_id);
-    AddAck(dgram);
-    AddHint(dgram);
-	while (cc_.cwnd()>data_out.size()) {
-		AddData(dgram); // always the last: might be tail block
-		if (dgram.size()==4 && Datagram::now-last_send_time<TIMEOUT/2) 
-			break; // nothing to send
-        DLOG(INFO)<<"#"<<id<<" sending "<<dgram.size()<<" bytes";
-		PCHECK( dgram.Send() != -1 )<<"error sending";
-		last_send_time = Datagram::now;
-		round++;
-        dgram.Clear();
-        dgram.Push32(peer_channel_id);
-	}
-	DLOG(INFO)<<"#"<<id<<" sent "<<round<<" rounds";
-}
-
-
-void	Channel::Send () {
-	if (state()==HS_DONE)
-		SendData();
-	else
-		SendHandshake();
-}
-
-
-bin		Channel::ReceiverPiecePick (int limit) {
-	bins diff(ack_in);
-	diff -= file().ack_out;
-	diff -= file().hint_out;
-	if (diff.empty()) {
-		//uninteresting = true;
-		return 0;
-	}
-	bin need = *(diff.begin());
-	while (need.width()>std::max(1,limit))
-		need = need.left();
-	return need;
+    if ( is_established() ) {
+        AddAck(dgram);
+        AddHint(dgram);
+        if (cc->free_cwnd() && Datagram::now>=cc->next_send_time()) {
+            bin64_t data = AddData(dgram);
+            cc->OnDataSent(data);
+        }
+    } else {
+        AddHandshake(dgram);
+    }
+    DLOG(INFO)<<"#"<<id<<" sending "<<dgram.size()<<" bytes";
+	PCHECK( dgram.Send() != -1 )<<"error sending";
+	last_send_time = Datagram::now;
+    return cc->next_send_time();
 }
 
 
 void	Channel::AddHint (Datagram& dgram) {
-	CleanStaleHintOut();
-	int onesec = TINT_1SEC/cc_.data_in_rate();
-	if (Width(hint_out)<onesec) {
-		bin hint = ReceiverPiecePick(onesec);
-		if (hint) {
-			dgram.Push8(P2TP_HINT);
-			dgram.Push32(hint);
-			hint_out.push_back(tintbin(Datagram::now,hint));
-			file().hint_out |= hint;  // FIXME: incapsulate File data
-            DLOG(INFO)<<"#"<<id<<" +HINT"<<hint;
-		}
-	}
+	CleanStaleHints();
+    uint64_t outstanding = 0;
+    for(tbqueue::iterator i=hint_out.begin(); i!=hint_out.end(); i++)
+        outstanding += i->bin.width();
+	uint64_t kbps = TINT_SEC * cc->peer_cwnd() / cc->rtt_avg();
+    if (outstanding>kbps) // have enough
+        return;
+    uint8_t layer = 0;
+    while( (1<<layer) < kbps ) layer++;
+    bin64_t hint = file().picker()->Pick(ack_in,layer);
+    if (hint==bin64_t::NONE)
+        return;
+    dgram.Push8(P2TP_HINT);
+    dgram.Push32(hint);
+    hint_out.push_back(tintbin(Datagram::now,hint));
+    DLOG(INFO)<<"#"<<id<<" +HINT"<<hint;
 }
 
 
-bin		Channel::AddData (Datagram& dgram) {
-	if (!file().history.size()) // know nothing
-		return 0;
-	bin tosend = hash_out ? hash_out : SenderPiecePick();
-	hash_out = 0;
-    if (tosend==0) {
-        LOG(WARNING)<<*this<<" no idea what to send";
-		cc_.OnCongestionEvent(CongestionControl::LOSS_EV);
-		return 0;
+bin64_t		Channel::AddData (Datagram& dgram) {
+	if (!file().size()) // know nothing
+		return bin64_t::NONE;
+	bin64_t tosend = DequeueHint();
+    if (tosend==bin64_t::NONE) {
+        //LOG(WARNING)<<this->id_string()<<" no idea what to send";
+		cc->OnDataSent(bin64_t::NONE);
+		return bin64_t::NONE;
 	}
-	if (peer_status()==File::EMPTY && file().history.size()) //FIXME
+	if (ack_in.empty() && file().size())
 		AddPeakHashes(dgram);
 	AddUncleHashes(dgram,tosend);
 	uint8_t buf[1024];
-	size_t r = pread(fd,buf,1024,tosend.offset()<<10); // TODO: ??? corrupted data, retries
+	size_t r = pread(file().file_descriptor(),buf,1024,tosend.base_offset()<<10); // TODO: ??? corrupted data, retries
 	if (r<0) {
 		PLOG(ERROR)<<"error on reading";
 		return 0;
 	}
-	if (dgram.space()<r+4+1) {
-		hash_out = tosend;
-		return -tosend; // FIXME
-	}
+	assert(dgram.space()>=r+4+1);
 	dgram.Push8(P2TP_DATA);
 	dgram.Push32(tosend);
 	dgram.Push(buf,r);
-	data_out.push_back(tintbin(Datagram::Time(),tosend));
     DLOG(INFO)<<"#"<<id<<" +DATA"<<tosend;
 	return tosend;
 }
 
 
 void	Channel::AddAck (Datagram& dgram) {
-	int ackspace = min(4,dgram.space()/5);
-	if (data_in_) {
-		dgram.Push8(P2TP_ACK);
-		dgram.Push32(data_in_);
-        DLOG(INFO)<<"#"<<id<<" +!ACK"<<data_in_;
-		ackspace--;
+	if (data_in_.time) {
+		dgram.Push8(P2TP_ACK_TS);
+		dgram.Push32(data_in_.bin);
+		dgram.Push64(data_in_.time);
+        data_in_.time = 0;
+        DLOG(INFO)<<"#"<<id<<" +!ACK"<<data_in_.bin;
 	}
-	while (ack_out<file().history.size() && ackspace) {
-		bin h=file().history[ack_out++];
-		if (!file().ack_out.contains(h.parent()) && h!=data_in_) {
-			dgram.Push8(P2TP_ACK);
-			dgram.Push32(h);
-            DLOG(INFO)<<"#"<<id<<" +ACK"<<h;
-			ackspace--;
-		}
-	}
-	data_in_ = 0;
+    bin64_t h=file().data_in(ack_out_);
+    int count=0;
+    while (h!=bin64_t::NONE && count++<4) {
+        dgram.Push8(P2TP_ACK);
+        dgram.Push32(h);
+        DLOG(INFO)<<"#"<<id<<" +ACK"<<h;
+        h=file().data_in(++ack_out_);
+    }
 }
 
 
@@ -247,12 +174,15 @@ void	Channel::Recv (Datagram& dgram) {
 	while (dgram.size()) {
 		uint8_t type = dgram.Pull8();
 		switch (type) {
+            case P2TP_HANDSHAKE: OnHandshake(dgram); break;
 			case P2TP_DATA:		OnData(dgram); break;
+			case P2TP_ACK_TS:	OnAckTs(dgram); break;
 			case P2TP_ACK:		OnAck(dgram); break;
 			case P2TP_HASH:		OnHash(dgram); break;
 			case P2TP_HINT:		OnHint(dgram); break;
+            case P2TP_PEX_ADD:  OnPex(dgram); break;
 			default:
-				LOG(ERROR) << *this << " malformed datagram";
+				//LOG(ERROR) << this->id_string() << " malformed datagram";
 				return;
 		}
 	}
@@ -260,71 +190,135 @@ void	Channel::Recv (Datagram& dgram) {
 
 
 void	Channel::OnHash (Datagram& dgram) {
-	bin pos = dgram.Pull32();
+	bin64_t pos = dgram.Pull32();
 	Sha1Hash hash = dgram.PullHash();
-	if (file().OfferHash(pos,hash))
-        DLOG(INFO)<<"#"<<id<<" .HASH"<<(int)pos;
+	file().OfferHash(pos,hash);
+    DLOG(INFO)<<"#"<<id<<" .HASH"<<(int)pos;
 }
 
 
 void Channel::OnData (Datagram& dgram) {
-	bin pos = dgram.Pull32();
-	uint8_t* data;
-	size_t length = dgram.Pull(&data,1024);
+	bin64_t pos = dgram.Pull32();
     DLOG(INFO)<<"#"<<id<<" .DATA"<<pos;
-	if (pos.layer()) 
-		RETLOG("non-base layer DATA pos");
-	if (file().ack_out.contains(pos)) 
-		RETLOG("duplicate transmission: "<<pos);
-	if (file().status()==File::EMPTY)
-		RETLOG("DATA for an empty file");
-	if (pos.offset()>=file().packet_size())
-		RETLOG("DATA pos out of bounds");
-	Sha1Hash hash(data,length);
-	if (file().OfferHash(pos, hash)) {
-		//memcpy(file->data+offset*KILO,
-		//channel->datagram->data+channel->datagram->offset,KILO);
-		pwrite(fd,data,length,pos.offset()*1024); // TODO; if (last) ftruncate
-		if (pos==file().hashes.data_mass()) {
-			int lendiff = 1024-length;
-			ftruncate(fd, file().size()-lendiff);
-		}
-		data_in_ = pos;
-		file().ack_out |= pos;
-		file().history.push_back(file().ack_out.get(pos));
-		if (file().history.size()==file().packet_size()+1) // FIXME: encapsulate
-			file().status_ = File::DONE;
-		cc_.OnCongestionEvent(CongestionControl::DATA_EV);
-		//DLOG(INFO)<<*this<<" DATA< "<<pos;
-		CleanStaleHintOut();
-	} else
-		LOG(ERROR)<<"data hash is not accepted "<<pos<<" len "<<length;
+    file().OfferData(pos, *dgram, dgram.size());
+	cc->OnDataRecvd(pos);
+	CleanStaleHints();
 }
 
 
 void	Channel::OnAck (Datagram& dgram) {
-	// FIXME check whether it is in the range
-	bin pos = dgram.Pull32();
+	// note: no bound checking
+	bin64_t pos = dgram.Pull32();
     DLOG(INFO)<<"#"<<id<<" .ACK"<<pos;
-	if (file().hashes.data_mass() && pos>file().hashes.data_mass()) {
-		LOG(WARNING) << "out-of-bounds ACK";
-		return;
-	}
-	ack_in |= pos;
-	
-	CleanStaleDataOut(pos);
-	
-	if (peer_status_==File::EMPTY) {
-		peer_status_ = File::IN_PROGRESS;
-	} else if (peer_status_==File::IN_PROGRESS) {
-		// FIXME: FINISHED  ack_in_.filled(file().size())
-	}
+	ack_in.set(pos);
+}
+
+
+void	Channel::OnAckTs (Datagram& dgram) {
+	bin64_t pos = dgram.Pull32();
+    tint ts = dgram.Pull64();
+    DLOG(INFO)<<"#"<<id<<" ,ACK"<<pos;
+    //dprintf("%lli #%i +ack %lli +ts %lli",Datagram::now,id,pos,ts);
+	ack_in.set(pos);
+	cc->OnAckRcvd(tintbin(ts,pos));
 }
 
 
 void	Channel::OnHint (Datagram& dgram) {
-	bin hint = dgram.Pull32();
-	hint_in.push_back(tintbin(Datagram::now,hint));
+	bin64_t hint = dgram.Pull32();
+	hint_in.push_back(hint);
 }
 
 
+void Channel::OnHandshake (Datagram& dgram) {
+    peer_channel_id = dgram.Pull32();
+    // FUTURE: channel forking
+}
+
+
+void Channel::OnPex (Datagram& dgram) {
+    uint32_t addr = dgram.Pull32();
+    uint16_t port = dgram.Pull16();
+    if (peer_selector)
+        peer_selector->AddPeer(Datagram::Address(addr,port),file().root_hash());
+}
+
+
+void	Channel::Recv (int socket) {
+	Datagram data(socket);
+	data.Recv();
+	if (data.size()<4) 
+		RETLOG("datagram shorter than 4 bytes");
+	uint32_t mych = data.Pull32();
+	Sha1Hash hash;
+	Channel* channel;
+	if (!mych) { // handshake initiated
+		if (data.size()<1+4+1+4+Sha1Hash::SIZE) 
+			RETLOG ("incorrect size initial handshake packet");
+		uint8_t hashid = data.Pull8();
+		if (hashid!=P2TP_HASH) 
+			RETLOG ("no hash in the initial handshake");
+		bin pos = data.Pull32();
+		if (pos!=bin64_t::ALL32) 
+			RETLOG ("that is not the root hash");
+		hash = data.PullHash();
+		FileTransfer* file = FileTransfer::Find(hash);
+		if (!file) 
+			RETLOG ("hash unknown, no such file");
+		channel = new Channel(file, socket, data.address());
+	} else {
+		mych = DecodeID(mych);
+		if (mych>=channels.size()) 
+			RETLOG ("invalid channel id");
+		channel = channels[mych];
+		if (!channel) 
+			RETLOG ("channel is closed");
+		if (channel->peer != data.address()) 
+			RETLOG ("invalid peer address");
+		channel->Recv(data);
+	}
+	channel->Send();
+}
+
+
+bool tblater (const tintbin& a, const tintbin& b) {
+    return a.time > b.time;
+}
+
+
+void    Channel::Loop (tint time) {  
+	
+	tint untiltime = Datagram::Time()+time;
+    tbqueue send_queue;
+    for(int i=0; i<channels.size(); i++)
+        if (channels[i])
+            send_queue.push_back(tintbin(Datagram::now,i));
+	
+    while ( Datagram::now <= untiltime ) {
+		
+        tintbin next_send = send_queue.front();
+        pop_heap(send_queue.begin(), send_queue.end(), tblater);
+        send_queue.pop_back();
+        tint wake_on = min(next_send.time,untiltime);
+		tint towait = min(wake_on-Datagram::now,TINT_SEC); // towait<0?
+        
+		int rd = Datagram::Wait(socket_count,sockets,towait);
+		if (rd!=-1)
+			Recv(rd);
+        
+        int chid = (int)(next_send.bin);
+        Channel* sender = channels[chid];
+        if (sender) {
+            tint next_time = sender->Send();
+            if (next_time!=TINT_NEVER) {
+                send_queue.push_back(tintbin(next_time,chid));
+                push_heap(send_queue.begin(),send_queue.end(),tblater);
+            } else {
+                delete sender;
+                channels[chid] = NULL;
+            }
+        }
+		
+    }
+	
+}

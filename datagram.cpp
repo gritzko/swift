@@ -13,10 +13,11 @@
 namespace p2tp {
 
 tint Datagram::now = Datagram::Time();
+uint32_t Datagram::Address::LOCALHOST = INADDR_LOOPBACK;
 
 int Datagram::Send () {
 	int r = sendto(sock,buf+offset,length-offset,0,
-				   (struct sockaddr*)&(addr),sizeof(struct sockaddr_in));
+				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
 	offset=0;
 	length=0;
 	now = Time();
@@ -71,8 +72,8 @@ tint Datagram::Time () {
 	return now=ret;
 }
 
-int Datagram::Bind (int portno) {
-    struct sockaddr_in addr;
+int Datagram::Bind (Address addr_) {
+    struct sockaddr_in addr = addr_;
 	int fd, len = sizeof(struct sockaddr_in), 
         sndbuf=1<<20, rcvbuf=1<<20;
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -90,11 +91,11 @@ int Datagram::Bind (int portno) {
         return -3;
     }
     printf("BUFS: %i %i\n",sndbuf,rcvbuf);
-    memset(&addr, 0, sizeof(struct sockaddr_in));
+    /*memset(&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
     addr.sin_port = htons(portno);
-    addr.sin_addr.s_addr = INADDR_ANY;
-	if (::bind(fd, (struct sockaddr*)&addr, len) != 0) {
+    addr.sin_addr.s_addr = INADDR_ANY;*/
+	if (::bind(fd, (sockaddr*)&addr, len) != 0) {
         PLOG(ERROR)<<"bind fails";
         return -4;
     }
