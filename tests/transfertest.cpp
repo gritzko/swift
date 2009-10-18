@@ -31,7 +31,7 @@ TEST(TransferTest,TransferFile) {
     }
     
     // submit a new file
-    FileTransfer* seed = new FileTransfer(Sha1Hash::ZERO,BTF);
+    FileTransfer* seed = new FileTransfer(BTF);
     EXPECT_TRUE(A==seed->hash(0));
     EXPECT_TRUE(E==seed->hash(bin64_t(0,4)));
     EXPECT_TRUE(ABCD==seed->hash(bin64_t(2,0)));
@@ -47,7 +47,7 @@ TEST(TransferTest,TransferFile) {
     // retrieve it
     unlink("copy");
     FileTransfer::instance = 1;
-    FileTransfer* leech = new FileTransfer(seed->root_hash(),"copy");
+    FileTransfer* leech = new FileTransfer("copy",seed->root_hash());
     // transfer peak hashes
     for(int i=0; i<seed->peak_count(); i++)
         leech->OfferHash(seed->peak(i),seed->peak_hash(i));
@@ -64,10 +64,10 @@ TEST(TransferTest,TransferFile) {
         if (i==2) { // now: stop, save, start
             delete leech;
             FileTransfer::instance = 1;
-            leech = new FileTransfer(seed->root_hash(),"copy");
+            leech = new FileTransfer("copy",seed->root_hash());
             EXPECT_EQ(2,leech->complete_kilo());
         }
-        bin64_t next = leech->PickBinForRequest(seed->ack_out(),0);
+        bin64_t next = leech->picker()->Pick(seed->ack_out(),0);
         ASSERT_NE(bin64_t::NONE,next);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
         size_t len = pread(seed->file_descriptor(),buf,1024,next.base_offset()<<10); // FIXME TEST FOR ERROR
