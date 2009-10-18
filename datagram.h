@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 //#include <sys/mman.h>
 #include <string.h>
 #include <unistd.h>
@@ -31,28 +32,50 @@ typedef int64_t tint;
 #define TINT_uSEC ((tint)1)
 #define TINT_NEVER ((tint)0x7fffffffffffffffLL)
 #define MAXDGRAMSZ 1400
-
+#define INVALID_SOCKET -1
+    
+    
 struct Datagram {
-	struct sockaddr_in addr;
+	
+    struct Address {
+        struct sockaddr_in  addr;
+        Address() {
+            memset(&addr,0,sizeof(struct sockaddr_in)); 
+        }
+        Address(const char* ip, uint16_t port) {
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(port);
+            inet_aton(ip,&(addr.sin_addr));
+        }
+        Address(uint16_t port) {
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(port);
+            addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        }
+        Address(const struct sockaddr_in& address) : addr(address) {}
+        operator sockaddr_in () {return addr;}
+    };
+    
+	Address addr;
 	int sock;
 	int offset, length;
-	uint8_t	buf[MAXDGRAMSZ];
-	
+	uint8_t	buf[MAXDGRAMSZ*2];
+    
 	static int Bind(int port);
 	static void Close(int port);
 	static tint Time();
 	static int Wait (int sockcnt, int* sockets, tint usec=0);
 	static tint now;
 	
-	Datagram (int socket, struct sockaddr_in& addr_) : addr(addr_), offset(0), 
+	Datagram (int socket, const Address addr_) : addr(addr_), offset(0), 
 		length(0), sock(socket) {}
 	Datagram (int socket) : offset(0), length(0), sock(socket) { 
-		memset(&addr,0,sizeof(struct sockaddr_in)); 
 	}
 	
 	int space () const { return MAXDGRAMSZ-length; }
 	int size() const { return length-offset; }
 	std::string str() const { return std::string((char*)buf+offset,size()); }
+    const uint8_t* operator * () const { return buf+offset; }
 	
 	int Push (const uint8_t* data, int l) { // scatter-gather one day
 		int toc = l<space() ? l : space();
@@ -70,7 +93,7 @@ struct Datagram {
 	
 	int Send ();
 	int Recv ();
-	const struct sockaddr_in& address() const { return addr; }
+	const Address& address() const { return addr; }
     void Clear() { offset=length=0; }
 
 	void	PushString (std::string str) {
@@ -124,7 +147,7 @@ struct Datagram {
 		offset += Sha1Hash::SIZE;
 		return Sha1Hash(false,(char*)buf+offset-Sha1Hash::SIZE);
 	}
-	std::string	to_string () const ;
+	//std::string	to_string () const ;
 	
 };
 

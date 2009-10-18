@@ -20,7 +20,7 @@ TEST(Datagram, BinaryTest) {
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(7001);
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	Datagram d(socket,addr);
+	Datagram d(socket,addr); //Datagram::Address(7001));
 	const char * text = "text";
 	const uint8_t num8 = 0xab;
 	const uint16_t num16 = 0xabcd;
@@ -64,15 +64,15 @@ TEST(Datagram,TwoPortTest) {
 	int sock2 = Datagram::Bind(10002);
 	ASSERT_TRUE(sock1>0);
 	ASSERT_TRUE(sock2>0);
-	struct sockaddr_in addr1, addr2;
+	/*struct sockaddr_in addr1, addr2;
 	addr1.sin_family = AF_INET;
 	addr1.sin_port = htons(10001);
 	addr1.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	addr2.sin_family = AF_INET;
 	addr2.sin_port = htons(10002);
-	addr2.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr2.sin_addr.s_addr = htonl(INADDR_LOOPBACK);*/
 	
-	Datagram send(sock1,addr2);
+	Datagram send(sock1,Datagram::Address(10002));
 	send.Push32(1234);
 	send.Send();
 	

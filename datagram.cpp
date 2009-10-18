@@ -114,7 +114,7 @@ std::string sock2str (struct sockaddr_in addr) {
 	return std::string(ipch);
 }
 
-
+/*
 std::string Datagram::to_string () const { // TODO: pretty-print P2TP
 	std::string addrs = sock2str(addr);
 	char hex[MAXDGRAMSZ*2];
@@ -122,6 +122,6 @@ std::string Datagram::to_string () const { // TODO: pretty-print P2TP
 		sprintf(hex+i*2,"%02x",buf[i]);
 	std::string hexs(hex+offset*2,(length-offset)*2);
 	return addrs + '\t' + hexs;
-}
+}*/
 
 }
