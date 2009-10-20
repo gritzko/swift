@@ -131,7 +131,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
 	}
 	if (hashmaphandle_ == NULL || hashes_ == NULL)
 #else
-    hashes_ = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE,
+    hashes_ = (Sha1Hash*) mmap (NULL, expected_size_, PROT_READ|PROT_WRITE,
                                MAP_SHARED, hashfd_, 0);
     if (hashes_==MAP_FAILED)
 #endif
