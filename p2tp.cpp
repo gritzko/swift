@@ -3,7 +3,7 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/6/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 
@@ -32,7 +32,7 @@ int Channel::socket_count = 0;
 
 
 Channel::Channel	(FileTransfer* file, int socket, struct sockaddr_in peer_addr) :
-	file_(file), peer(peer_addr), peer_channel_id(0), 
+	file_(file), peer(peer_addr), peer_channel_id(0),
 	socket_(socket) // FIXME
 {
 	this->id = channels.size();
@@ -71,8 +71,8 @@ void    p2tp::Shutdown (int sock_des) {
 }
 
 
-void    p2tp::Loop (tint till) { 
-    Channel::Loop(till); 
+void    p2tp::Loop (tint till) {
+    Channel::Loop(till);
 }
 
 
@@ -122,6 +122,5 @@ size_t  p2tp::SeqComplete (int fdes) {
  is mostly zeroed; intialization happens as
  conversation progresses
  </ul>
- <b>Note:</b> 
+ <b>Note:</b>
  */
-

@@ -3,18 +3,24 @@
  *  p2tp
  *
  *  Created by Victor Grishchenko on 10/6/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
+#ifdef _MSC_VER
+#include "compat/unixio.h"
+#else
 #include <sys/mman.h>
+#endif
 #include <errno.h>
+#include <string>
+#include <sstream>
 #include "p2tp.h"
+#include "compat/util.h"
 
 using namespace p2tp;
 
 std::vector<FileTransfer*> FileTransfer::files(20);
-const char* FileTransfer::HASH_FILE_TEMPLATE = "/tmp/.%s.%i.hashes";
-const char* FileTransfer::PEAK_FILE_TEMPLATE = "/tmp/.%s.%i.peaks";
+
 int FileTransfer::instance = 0;
 #define BINHASHSIZE (sizeof(bin64_t)+sizeof(Sha1Hash))
 
@@ -23,7 +29,7 @@ int FileTransfer::instance = 0;
 // FIXME: separate Bootstrap() and Download(), then Size(), Progress(), SeqProgress()
 
 FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
-    root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false), 
+    root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false),
     peak_count_(0), hashes_(NULL), error_(NULL), size_(0), sizek_(0),
     complete_(0), completek_(0), seq_complete_(0)
 {
@@ -42,9 +48,8 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
 
 
 void FileTransfer::LoadPeaks () {
-    char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
-    int peakfd = open(file_name,O_RDONLY);
+    std::string file_name = GetTempFilename(root_hash_,instance,std::string(".peaks"));
+    int peakfd = open(file_name.c_str(),O_RDONLY,0);
     if (peakfd<0)
         return;
     bin64_t peak;
@@ -79,9 +84,8 @@ void            FileTransfer::RecoverProgress () {
 
 
 void    FileTransfer::SavePeaks () {
-    char file_name[1024];
-    sprintf(file_name,PEAK_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
-    int peakfd = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    std::string file_name = GetTempFilename(root_hash_,instance,std::string(".peaks"));
+    int peakfd = open(file_name.c_str(),O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     for(int i=0; i<peak_count(); i++) {
         write(peakfd,&(peaks_[i]),sizeof(bin64_t));
         write(peakfd,*peak_hashes_[i],Sha1Hash::SIZE);
@@ -94,24 +98,44 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
     size_ = bytes;
     completek_ = complete_ = seq_complete_ = 0;
 	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
-    
-    char file_name[1024];
+
 	struct stat st;
 	fstat(fd_, &st);
     if (st.st_size!=bytes)
         if (ftruncate(fd_, bytes))
             return; // remain in the 0-state
     // mmap the hash file into memory
-    sprintf(file_name,HASH_FILE_TEMPLATE,root_hash().hex().c_str(),instance);
-	hashfd_ = open(file_name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    size_t expected_size = Sha1Hash::SIZE * sizek_ * 2;
+    std::string file_name = GetTempFilename(root_hash_,instance,std::string(".hashes"));
+	hashfd_ = open(file_name.c_str(),O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    size_t expected_size_ = Sha1Hash::SIZE * sizek_ * 2;
 	struct stat hash_file_st;
 	fstat(hashfd_, &hash_file_st);
-    if ( hash_file_st.st_size != expected_size )
-        ftruncate(hashfd_, expected_size);
-    hashes_ = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE, 
+    if ( hash_file_st.st_size != expected_size_ )
+        ftruncate(hashfd_, expected_size_);
+#ifdef _MSC_VER
+    HANDLE hashhandle = (HANDLE)_get_osfhandle(hashfd_);
+    hashmaphandle_ = CreateFileMapping(hashhandle,
+					      NULL,
+					      PAGE_READWRITE,
+					      0,
+					      0,
+					      NULL);
+	if (hashmaphandle_ != NULL)
+	{
+		hashes_ = (Sha1Hash*)MapViewOfFile(hashmaphandle_,
+							 FILE_MAP_WRITE,
+						     0,
+						     0,
+						     0);
+
+	}
+	if (hashmaphandle_ == NULL || hashes_ == NULL)
+#else
+    hashes_ = (Sha1Hash*) mmap (NULL, expected_size, PROT_READ|PROT_WRITE,
                                MAP_SHARED, hashfd_, 0);
-    if (hashes_==MAP_FAILED) {
+    if (hashes_==MAP_FAILED)
+#endif
+    {
         hashes_ = NULL;
         size_ = sizek_ = complete_ = completek_ = seq_complete_ = 0;
         error_ = strerror(errno); // FIXME dprintf()
@@ -120,7 +144,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
     }
     for(int i=0; i<peak_count_; i++)
         hashes_[peaks_[i]] = peak_hashes_[i];
-}  
+}
 
 
 void            FileTransfer::Submit () {
@@ -131,7 +155,7 @@ void            FileTransfer::Submit () {
     hashes_ = (Sha1Hash*) malloc(Sha1Hash::SIZE*sizek_*2);
     peak_count_ = bin64_t::peaks(sizek_,peaks_);
     for (int p=0; p<peak_count_; p++) {
-        for(bin64_t b=peaks_[p].left_foot(); b.within(peaks_[p]); b=b.next_dfsio(0)) 
+        for(bin64_t b=peaks_[p].left_foot(); b.within(peaks_[p]); b=b.next_dfsio(0))
             if (b.is_base()) {
                 uint8_t kilo[1<<10];
                 size_t rd = pread(fd_,kilo,1<<10,b.base_offset()<<10);
@@ -160,7 +184,7 @@ bin64_t         FileTransfer::peak_for (bin64_t pos) const {
 }
 
 
-void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {    
+void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {
 	if (!size_)  // only peak hashes are accepted at this point
 		return OfferPeak(pos,hash);
     int pi=0;
@@ -193,8 +217,8 @@ bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_
     bin64_t peak = peak_for(pos);
     if (peak==bin64_t::NONE)
         return false;
-    
-    Sha1Hash hash(data,length);       
+
+    Sha1Hash hash(data,length);
     bin64_t p = pos;
     while ( p!=peak && ack_out_.get(p)==bins::EMPTY ) {
         hashes_[p] = hash;
@@ -203,7 +227,7 @@ bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_
     }
     if (hash!=hashes_[p])
         return false;
-    
+
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
 	// walk to the nearest proven hash   FIXME 0-layer peak
     ack_out_.set(pos,bins::FILLED);
@@ -249,7 +273,7 @@ void            FileTransfer::OfferPeak (bin64_t pos, const Sha1Hash& hash) {
     assert(!size_);
     if (peak_count_) {
         bin64_t last_peak = peaks_[peak_count_-1];
-        if ( pos.layer()>=last_peak.layer() || 
+        if ( pos.layer()>=last_peak.layer() ||
              pos.base_offset()!=last_peak.base_offset()+last_peak.width() )
             peak_count_ = 0;
     }
@@ -265,20 +289,38 @@ void            FileTransfer::OfferPeak (bin64_t pos, const Sha1Hash& hash) {
 }
 
 
-FileTransfer::~FileTransfer () {
+FileTransfer::~FileTransfer ()
+{
+#ifdef _MSC_VER
+	UnmapViewOfFile(hashes_);
+	CloseHandle(hashmaphandle_);
+#else
     munmap(hashes_,sizek_*2*Sha1Hash::SIZE);
     close(hashfd_);
     close(fd_);
     files[fd_] = NULL;
+#endif
 }
 
-                           
+
 FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
     for(int i=0; i<files.size(); i++)
         if (files[i] && files[i]->root_hash_==root_hash)
             return files[i];
     return NULL;
 }
+
+
+
+std::string FileTransfer::GetTempFilename(Sha1Hash& root_hash, int instance, std::string postfix)
+{
+	std::string tempfile = gettmpdir();
+	std::stringstream ss;
+	ss << instance;
+	tempfile += std::string(".") + root_hash.hex() + std::string(".") + ss.str() + postfix;
+	return tempfile;
+}
+
 
 
 int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
@@ -306,7 +348,7 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
  break;
  x = x.left();
  }
- 
+
  if (x.layer()==10) {
  if (recheck_data) {
  uint8_t data[1024];
@@ -319,16 +361,16 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
  ack_out->set(x,bins::FILLED);
  }
  }
- 
+
  while (x.is_right() && x!=peaks[i])
  x = x.parent();
  x = x.sibling();
  } while (x!=end);
  }
- 
- 
- 
- 
+
+
+
+
  // open file
  if ( hash_file_st.st_size < (sizeof(bin64_t)+Sha1Hash::SIZE)*64 )
  return;
@@ -354,6 +396,6 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
  }
  if (!size)
  return;
- 
- 
+
+
  */

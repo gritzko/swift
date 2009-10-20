@@ -3,7 +3,7 @@
  *  bin++
  *
  *  Created by Victor Grishchenko on 3/9/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #include "bin64.h"
@@ -36,7 +36,7 @@ TEST(Bin64Test,Navigation) {
 }
 
 TEST(Bin64Test,Overflows) {
-    
+
     /*EXPECT_EQ(bin64_t::NONE.parent(),bin64_t::NONE);
     EXPECT_EQ(bin64_t::NONE.left(),bin64_t::NONE);
     EXPECT_EQ(bin64_t::NONE.right(),bin64_t::NONE);
@@ -46,7 +46,7 @@ TEST(Bin64Test,Overflows) {
 }
 
 TEST(Bin64Test, Advanced) {
-    
+
     EXPECT_EQ(4,bin64_t(2,3).width());
     EXPECT_FALSE(bin64_t(1,1234).is_base());
     EXPECT_TRUE(bin64_t(0,12345).is_base());
@@ -57,7 +57,7 @@ TEST(Bin64Test, Advanced) {
     EXPECT_EQ(bin64_t(2,0),peaks[0]);
     EXPECT_EQ(bin64_t(1,2),peaks[1]);
     EXPECT_EQ(bin64_t(0,6),peaks[2]);
-    
+
 }
 
 TEST(Bin64Test, Iteration) {
@@ -85,8 +85,8 @@ TEST(Bin64Test, Bits) {
 }
 
 int main (int argc, char** argv) {
-	
+
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
-	
+
 }

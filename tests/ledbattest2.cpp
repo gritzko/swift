@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#ifdef _MSC_VER
+	#include "compat/stdint.h"
+    #include <winsock2.h>
+#else
+   #include <sys/socket.h>
+   #include <netinet/in.h>
+   #include <arpa/inet.h>
+#endif
 #include <vector>
 #include <deque>
 #include "datagram.h"
@@ -74,7 +79,7 @@ TEST(Datagram,LedbatTest) {
             fprintf(stderr,"%lli rcvd%i\n",now/TINT_SEC,seq);
             // TODO: peer cwnd !!!
             continue;
-        } 
+        }
         if (sock2read==send_sock) {        // process an acknowledgement
             Datagram ack(send_sock);
             ack.Recv();

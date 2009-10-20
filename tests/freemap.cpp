@@ -3,13 +3,19 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/22/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #include <time.h>
 #include <gtest/gtest.h>
 #include <set>
 #include "bins.h"
+
+#ifdef _MSC_VER
+	#define RANDOM  rand
+#else
+	#define RANDOM	random
+#endif
 
 int bins_stripe_count (bins& b) {
     int stripe_count;
@@ -19,7 +25,7 @@ int bins_stripe_count (bins& b) {
 }
 
 uint8_t rand_norm (uint8_t lim) {
-    long rnd = random() & ((1<<lim)-1);
+    long rnd = RANDOM() & ((1<<lim)-1);
     uint8_t bits = 0;
     while (rnd) {
         bits += rnd&1;

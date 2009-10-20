@@ -3,7 +3,7 @@
  *  p2tp
  *
  *  Created by Victor Grishchenko on 7/13/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #include <stdint.h>

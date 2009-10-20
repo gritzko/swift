@@ -1,8 +1,11 @@
 #ifndef BIN64_H
 #define BIN64_H
 #include <assert.h>
-#include <stdint.h>
-
+#ifdef _MSC_VER
+    #include "compat/stdint.h"
+#else
+    #include <stdint.h>
+#endif
 
 
 /** Numbering for (aligned) logarithmical bins.
@@ -23,7 +26,7 @@ struct bin64_t {
     bin64_t() : v(NONE) {}
     bin64_t(const bin64_t&b) : v(b.v) {}
     bin64_t(const uint64_t val) : v(val) {}
-    bin64_t(uint8_t layer, uint64_t offset) : 
+    bin64_t(uint8_t layer, uint64_t offset) :
         v( (offset<<(layer+1)) | ((1ULL<<layer)-1) ) {}
     operator uint64_t () const { return v; }
     uint32_t to32() const ;
@@ -41,7 +44,7 @@ struct bin64_t {
     }
 
     bin64_t sibling () const {
-        // if (v==ALL) return NONE; 
+        // if (v==ALL) return NONE;
         return bin64_t(v^(tail_bit()<<1));
     }
 
@@ -55,7 +58,7 @@ struct bin64_t {
         // courtesy of Sean Eron Anderson
         // http://graphics.stanford.edu/~seander/bithacks.html
         static const int DeBRUIJN[32] = {
-          0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+          0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
           31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
         };
         r += DeBRUIJN[((uint32_t)(tail*0x077CB531U))>>27];
@@ -118,24 +121,24 @@ struct bin64_t {
     bin64_t left_foot () const {
         return bin64_t(0,base_offset());
     }
-    
+
     /** Whether layer is 0. */
     bool    is_base () const {
         return !(v & 1);
     }
-    
+
     /** Depth-first in-order binary tree traversal. */
     bin64_t next_dfsio (uint8_t floor);
-    
+
     bin64_t width () const {
         return (tail_bits()+1)>>1;
     }
-    
+
     /** The array must have 64 cells, as it is the max
      number of peaks possible +1 (and there are no reason
      to assume there will be less in any given case. */
     static int peaks (uint64_t length, bin64_t* peaks) ;
-    
+
 };
 
 

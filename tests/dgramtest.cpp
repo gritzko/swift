@@ -3,18 +3,19 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/13/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #include <gtest/gtest.h>
 #include <glog/logging.h>
 #include "datagram.h"
+#include "p2tp.h" // Arno: for LibraryInit
 
 using namespace p2tp;
 
 
-TEST(Datagram, BinaryTest) {	
-	int socket = Datagram::Bind(7001);
+TEST(Datagram, BinaryTest) {
+	SOCKET socket = Datagram::Bind(7001);
 	ASSERT_TRUE(socket>0);
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
@@ -39,9 +40,11 @@ TEST(Datagram, BinaryTest) {
 	EXPECT_STREQ("74657874ababcdabcdef01000abcdefabcdeff",buf);
 	int datalen = strlen(text)+1+2+4+8;
 	ASSERT_EQ(datalen,d.Send());
-    int socks[1] = {socket};
-	ASSERT_EQ (socket, Datagram::Wait(1,socks));
-	Datagram rcv(socket);
+    SOCKET socks[1] = {socket};
+    // Arno: timeout 0 gives undeterministic behaviour on win32
+	SOCKET waitsocket = Datagram::Wait(1,socks,1000000);
+	ASSERT_EQ(socket,waitsocket);
+	Datagram rcv(waitsocket);
 	ASSERT_EQ(datalen,rcv.Recv());
 	char* rbuf;
 	int pl = rcv.Pull((uint8_t**)&rbuf,strlen(text));
@@ -71,26 +74,29 @@ TEST(Datagram,TwoPortTest) {
 	addr2.sin_family = AF_INET;
 	addr2.sin_port = htons(10002);
 	addr2.sin_addr.s_addr = htonl(INADDR_LOOPBACK);*/
-	
+
 	Datagram send(sock1,Datagram::Address(10002));
 	send.Push32(1234);
 	send.Send();
-	
-    int socks[2] = {sock1,sock2};
-	EXPECT_EQ(sock2,Datagram::Wait(2,socks));
+
+    SOCKET socks[2] = {sock1,sock2};
+    // Arno: timeout 0 gives undeterministic behaviour on win32
+	EXPECT_EQ(sock2,Datagram::Wait(2,socks,1000000));
 	Datagram recv(sock2);
 	recv.Recv();
 	uint32_t test = recv.Pull32();
 	ASSERT_EQ(1234,test);
-	
+
 	Datagram::Close(sock1);
 	Datagram::Close(sock2);
 }
 
 int main (int argc, char** argv) {
-	
+
+	p2tp::LibraryInit();
+
 	testing::InitGoogleTest(&argc, argv);
     google::InitGoogleLogging(argv[0]);
 	return RUN_ALL_TESTS();
-	
+
 }

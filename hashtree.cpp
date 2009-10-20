@@ -3,14 +3,16 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/6/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 
 #include "hashtree.h"
 #include <openssl/sha.h>
 #include <string.h>
+#ifndef _MSC_VER
 #include <sys/mman.h>
+#endif
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -158,7 +160,7 @@ HashTree::hashres_t	HashTree::offer (bin pos, const Sha1Hash& hash) {
 		return ACCEPT;
 	} else
 		return REJECT;
-	
+
 }
 
 */

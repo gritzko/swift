@@ -3,45 +3,49 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/9/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #ifndef DATAGRAM_H
 #define DATAGRAM_H
-#include <stdint.h>
+
+#ifdef _MSC_VER
+    #include "compat/stdint.h"
+    #include <winsock2.h>
+	#include "compat/unixio.h"
+#else
+    typedef int SOCKET;
+    #include <stdint.h>
+    #include <arpa/inet.h>
+    #include <sys/select.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/select.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-//#include <sys/mman.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <string>
 #include "hashtree.h"
+#include "compat/hirestimeofday.h"
+
 
 namespace p2tp {
 
-typedef int64_t tint;
-#define TINT_SEC ((tint)1000000)
-#define TINT_MSEC ((tint)1000)
-#define TINT_uSEC ((tint)1)
-#define TINT_NEVER ((tint)0x7fffffffffffffffLL)
 #define MAXDGRAMSZ 1400
+#ifndef _MSC_VER
 #define INVALID_SOCKET -1
-    
-    
+#endif
+
 struct Datagram {
-	
+
     struct Address {
         struct sockaddr_in  addr;
         static uint32_t LOCALHOST;
         void init(uint32_t ipv4=0, uint16_t port=0) {
-            memset(&addr,0,sizeof(struct sockaddr_in)); 
+            memset(&addr,0,sizeof(struct sockaddr_in));
             addr.sin_family = AF_INET;
             addr.sin_port = htons(port);
             addr.sin_addr.s_addr = htonl(ipv4);
@@ -59,35 +63,35 @@ struct Datagram {
         }
         Address(const struct sockaddr_in& address) : addr(address) {}
         operator sockaddr_in () const {return addr;}
-        bool operator == (const Address& b) { 
+        bool operator == (const Address& b) {
             return addr.sin_family==b.addr.sin_family &&
-            addr.sin_port==b.addr.sin_port && 
+            addr.sin_port==b.addr.sin_port &&
             addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
         }
         bool operator != (const Address& b) { return !(*this==b); }
     };
-    
+
 	Address addr;
-	int sock;
+	SOCKET sock;
 	int offset, length;
 	uint8_t	buf[MAXDGRAMSZ*2];
-    
-	static int Bind(Address address);
+
+	static SOCKET Bind(Address address);
 	static void Close(int port);
 	static tint Time();
-	static int Wait (int sockcnt, int* sockets, tint usec=0);
+	static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
 	static tint now;
-	
-	Datagram (int socket, const Address addr_) : addr(addr_), offset(0), 
+
+	Datagram (SOCKET socket, const Address addr_) : addr(addr_), offset(0),
 		length(0), sock(socket) {}
-	Datagram (int socket) : offset(0), length(0), sock(socket) { 
+	Datagram (SOCKET socket) : offset(0), length(0), sock(socket) {
 	}
-	
+
 	int space () const { return MAXDGRAMSZ-length; }
 	int size() const { return length-offset; }
 	std::string str() const { return std::string((char*)buf+offset,size()); }
     const uint8_t* operator * () const { return buf+offset; }
-	
+
 	int Push (const uint8_t* data, int l) { // scatter-gather one day
 		int toc = l<space() ? l : space();
 		memcpy(buf+length,data,toc);
@@ -101,7 +105,7 @@ struct Datagram {
 		offset += toc;
 		return toc;
 	}
-	
+
 	int Send ();
 	int Recv ();
 	const Address& address() const { return addr; }
@@ -129,7 +133,7 @@ struct Datagram {
 	void	PushHash (const Sha1Hash& hash) {
 		Push(hash.bits, Sha1Hash::SIZE);
 	}
-	
+
 	uint8_t	Pull8() {
 		if (size()<1) return 0;
 		return buf[offset++];
@@ -159,7 +163,7 @@ struct Datagram {
 		return Sha1Hash(false,(char*)buf+offset-Sha1Hash::SIZE);
 	}
 	//std::string	to_string () const ;
-	
+
 };
 
 std::string sock2str (struct sockaddr_in addr);

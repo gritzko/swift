@@ -3,7 +3,7 @@
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/28/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #ifndef BINS_H

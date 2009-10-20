@@ -3,11 +3,16 @@
  *  p2tp
  *
  *  Created by Victor Grishchenko on 10/7/09.
- *  Copyright 2009 Delft Technical University. All rights reserved.
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 #include <gtest/gtest.h>
+#include <glog/logging.h>
 #include "p2tp.h"
+#include "compat/util.h"
+#ifdef _MSC_VER
+#include "compat/unixio.h"
+#endif
 
 using namespace p2tp;
 
@@ -29,7 +34,7 @@ TEST(TransferTest,TransferFile) {
         ROOT = Sha1Hash(ROOT,Sha1Hash::ZERO);
         //printf("m %lli %s\n",(uint64_t)pos.parent(),ROOT.hex().c_str());
     }
-    
+
     // submit a new file
     FileTransfer* seed = new FileTransfer(BTF);
     EXPECT_TRUE(A==seed->hash(0));
@@ -43,7 +48,7 @@ TEST(TransferTest,TransferFile) {
     EXPECT_EQ(5,seed->size_kilo());
     EXPECT_EQ(4100,seed->complete());
     EXPECT_EQ(4100,seed->seq_complete());
-    
+
     // retrieve it
     unlink("copy");
     FileTransfer::instance = 1;
@@ -84,7 +89,7 @@ TEST(TransferTest,TransferFile) {
     EXPECT_EQ(5,leech->size_kilo());
     EXPECT_EQ(4100,leech->complete());
     EXPECT_EQ(4100,leech->seq_complete());
-    
+
 }
 /*
  FIXME
@@ -92,18 +97,26 @@ TEST(TransferTest,TransferFile) {
  */
 
 int main (int argc, char** argv) {
-    
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.0.hashes");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.0.peaks");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.1.hashes");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.1.peaks");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.2.hashes");
-    unlink("/tmp/.70196e6065a42835b1f08227ac3e2fb419cf78c8.2.peaks");
-    
+
+	google::InitGoogleLogging(argv[0]);
+
+	std::string tempdir = gettmpdir();
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.hashes")).c_str());
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.peaks")).c_str());
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.1.hashes")).c_str());
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.1.peaks")).c_str());
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.2.hashes")).c_str());
+    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.2.peaks")).c_str());
+
     unlink(BTF);
     unlink("copy");
-        
+
 	int f = open(BTF,O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	if (f < 0)
+	{
+		PLOG(FATAL)<< "Error opening " << BTF << "\n";
+		return -1;
+	}
     uint8_t buf[1024];
     memset(buf,'A',1024);
     A = Sha1Hash(buf,1024);
@@ -121,9 +134,9 @@ int main (int argc, char** argv) {
     E = Sha1Hash(buf,4);
     write(f,buf,4);
 	close(f);
-    
+
 	testing::InitGoogleTest(&argc, argv);
 	int ret = RUN_ALL_TESTS();
-    
+
     return ret;
 }
