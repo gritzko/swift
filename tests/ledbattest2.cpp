@@ -51,9 +51,13 @@ TEST(Datagram,LedbatTest) {
     tint last_sec = 0;
     int sec_ackd = 0;
 
-    int send_sock = Datagram::Bind(send_port); // bind sending socket
-    int ack_sock = Datagram::Bind(ack_port);  // bind receiving socket
+    // bind sending socket
+    SOCKET send_sock = Datagram::Bind(Datagram::Address(INADDR_ANY,send_port));
+    // bind receiving socket
+    SOCKET ack_sock = Datagram::Bind(Datagram::Address(INADDR_ANY,ack_port));
     struct sockaddr_in send_to, ack_to;
+    memset(&send_to, 0, sizeof(struct sockaddr_in));
+    memset(&ack_to, 0, sizeof(struct sockaddr_in));
     send_to.sin_family = AF_INET;
     send_to.sin_port = htons(ack_port);
     send_to.sin_addr.s_addr = dest_addr;
@@ -61,8 +65,8 @@ TEST(Datagram,LedbatTest) {
     ack_to.sin_port = htons(send_port);
     ack_to.sin_addr.s_addr = dest_addr;
     uint8_t* garbage = (uint8_t*) malloc(1024);
-    int socks[2] = {send_sock,ack_sock};
-    int sock2read;
+    SOCKET socks[2] = {send_sock,ack_sock};
+    SOCKET sock2read;
     tint wait_time = 100*TINT_MSEC;
 
     while ((sock2read = Datagram::Wait(2,socks,wait_time)) != -1) {
@@ -181,6 +185,7 @@ TEST(Datagram,LedbatTest) {
 int main (int argc, char** argv) {
 
     int opt;
+    p2tp::LibraryInit();
     printf("Warning: use the script to set up dummynet!\n");
     testing::InitGoogleTest(&argc, argv);
     google::InitGoogleLogging(argv[0]);
