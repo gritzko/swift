@@ -7,7 +7,7 @@
 #include <iostream>
 #include "compat/hirestimeofday.h"
 
-#ifndef _MSC_VER
+#ifndef _WIN32
 #include <sys/time.h>
 #endif
 
@@ -23,7 +23,7 @@ HiResTimeOfDay* HiResTimeOfDay::Instance()
 }
 
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <windows.h>
 #include <sys/timeb.h>
 
@@ -114,13 +114,13 @@ tint HiResTimeOfDay::getTimeUSec(void)
   
 // ARNOTODO: move to p2tp.cpp
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 static WSADATA _WSAData;
 #endif
   
 void LibraryInit(void)
 {
-#ifdef _MSC_VER
+#ifdef _WIN32
 	// win32 requires you to initialize the Winsock DLL with the desired
 	// specification version
 	WORD wVersionRequested;

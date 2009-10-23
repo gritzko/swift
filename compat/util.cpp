@@ -6,7 +6,7 @@
 #include "util.h"
 #include <vector>
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <windows.h>
 #include <Tchar.h>
 #endif
@@ -16,7 +16,7 @@ namespace p2tp
 
 std::string gettmpdir(void)
 {
-#ifdef _MSC_VER
+#ifdef _WIN32
   DWORD result = ::GetTempPath(0, _T(""));
   if (result == 0)
 	throw std::runtime_error("Could not get system temp path");

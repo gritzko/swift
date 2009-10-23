@@ -1,7 +1,7 @@
 #ifndef BIN64_H
 #define BIN64_H
 #include <assert.h>
-#ifdef _MSC_VER
+#ifdef _WIN32
     #include "compat/stdint.h"
 #else
     #include <stdint.h>

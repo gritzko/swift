@@ -8,7 +8,7 @@
 #ifndef HIRESTIMEOFDAY_H
 #define HIRESTIMEOFDAY_H
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "compat/stdint.h"
 #include <windows.h>
 #else
@@ -33,7 +33,7 @@ public:
     static HiResTimeOfDay* Instance();
 
 private:
-#ifdef _MSC_VER
+#ifdef _WIN32
 	tint     epochstart; // in usec
 	LARGE_INTEGER epochcounter;
     LARGE_INTEGER last;

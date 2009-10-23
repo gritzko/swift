@@ -8,7 +8,7 @@
  */
 #include <iostream>
 
-#ifdef _MSC_VER
+#ifdef _WIN32
     #include <winsock2.h>
     typedef int socklen_t;
 #else
@@ -37,7 +37,7 @@ int Datagram::Recv () {
 	length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
 					   (struct sockaddr*)&(addr), &addrlen);
 	if (length<0)
-#ifdef _MSC_VER
+#ifdef _WIN32
 		PLOG(ERROR)<<"on recv" << WSAGetLastError() << "\n";
 #else
 		PLOG(ERROR)<<"on recv";
@@ -71,7 +71,7 @@ SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
 			if (FD_ISSET(sockets[i],&bases))
 				return sockets[i];
 	} else if (sel<0)
-#ifdef _MSC_VER
+#ifdef _WIN32
 		PLOG(ERROR)<<"select fails" << WSAGetLastError() << "\n";
 #else
 		PLOG(ERROR)<<"select fails";
@@ -96,7 +96,7 @@ SOCKET Datagram::Bind (Address addr_) {
 		PLOG(ERROR)<<"socket fails";
         return -1;
     }
-#ifdef _MSC_VER
+#ifdef _WIN32
 	u_long enable = 1;
 	ioctlsocket(fd, FIONBIO, &enable);
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&sndbuf, sizeof(int)) != 0 ) {
@@ -132,7 +132,7 @@ SOCKET Datagram::Bind (Address addr_) {
 }
 
 void Datagram::Close (int sock) { // remove from fd_set
-#ifdef _MSC_VER
+#ifdef _WIN32
 	if (closesocket(sock)!=0)
 #else
 	if (::close(sock)!=0)
@@ -143,7 +143,7 @@ void Datagram::Close (int sock) { // remove from fd_set
 
 std::string sock2str (struct sockaddr_in addr) {
 	char ipch[32];
-#ifdef _MSC_VER
+#ifdef _WIN32
 	//Vista only: InetNtop(AF_INET,&(addr.sin_addr),ipch,32);
 	// IPv4 only:
 	struct in_addr inaddr;

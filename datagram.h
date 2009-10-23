@@ -9,7 +9,7 @@
 #ifndef DATAGRAM_H
 #define DATAGRAM_H
 
-#ifdef _MSC_VER
+#ifdef _WIN32
     #include "compat/stdint.h"
     #include <winsock2.h>
 	#include "compat/unixio.h"
@@ -35,7 +35,7 @@
 namespace p2tp {
 
 #define MAXDGRAMSZ 1400
-#ifndef _MSC_VER
+#ifndef _WIN32
 #define INVALID_SOCKET -1
 #endif
 

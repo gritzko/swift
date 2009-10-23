@@ -6,7 +6,7 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "compat/unixio.h"
 #else
 #include <sys/mman.h>
@@ -112,7 +112,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
 	fstat(hashfd_, &hash_file_st);
     if ( hash_file_st.st_size != expected_size_ )
         ftruncate(hashfd_, expected_size_);
-#ifdef _MSC_VER
+#ifdef _WIN32
     HANDLE hashhandle = (HANDLE)_get_osfhandle(hashfd_);
     hashmaphandle_ = CreateFileMapping(hashhandle,
 					      NULL,
@@ -291,7 +291,7 @@ void            FileTransfer::OfferPeak (bin64_t pos, const Sha1Hash& hash) {
 
 FileTransfer::~FileTransfer ()
 {
-#ifdef _MSC_VER
+#ifdef _WIN32
 	UnmapViewOfFile(hashes_);
 	CloseHandle(hashmaphandle_);
 #else

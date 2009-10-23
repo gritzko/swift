@@ -10,7 +10,7 @@
 #include "hashtree.h"
 #include <openssl/sha.h>
 #include <string.h>
-#ifndef _MSC_VER
+#ifndef _WIN32
 #include <sys/mman.h>
 #endif
 #include <sys/stat.h>

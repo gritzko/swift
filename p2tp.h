@@ -49,7 +49,7 @@ Messages
 #ifndef P2TP_H
 #define P2TP_H
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "compat/stdint.h"
 #else
 #include <stdint.h>
@@ -159,7 +159,7 @@ namespace p2tp {
         PiecePicker*    picker_;
 		/** File for keeping the Merkle hash tree. */
         int             hashfd_;
-#ifdef _MSC_VER
+#ifdef _WIN32
         HANDLE			hashmaphandle_;
 #endif
         /** Merkle hash tree: root */
