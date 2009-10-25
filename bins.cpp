@@ -315,3 +315,60 @@ void    bins::remove (bins& b) {
         zis.sibling(); zat.sibling();
     }
 }
+
+
+binheap::binheap() {
+    size_ = 32;
+    heap_ = (bin64_t*) malloc(size_*sizeof(bin64_t));
+    filled_ = 0;
+}
+
+bool bincomp (const bin64_t& a, const bin64_t& b) {
+    register uint64_t ab = a.base_offset(), bb = b.base_offset();
+    if (ab==bb)
+        return a.tail_bit() < b.tail_bit();
+    else
+        return ab > bb;
+}
+
+bool bincomp_rev (const bin64_t& a, const bin64_t& b) {
+    register uint64_t ab = a.base_offset(), bb = b.base_offset();
+    if (ab==bb)
+        return a.tail_bit() > b.tail_bit();
+    else
+        return ab < bb;
+}
+
+bin64_t binheap::pop() {
+    if (!filled_)
+        return bin64_t::NONE;
+    bin64_t ret = heap_[0];
+    std::pop_heap(heap_, heap_+filled_--,bincomp);
+    while (filled_ && heap_[0].within(ret))
+        std::pop_heap(heap_, heap_+filled_--,bincomp);
+    return ret;
+}
+
+void    binheap::extend() {
+    std::sort(heap_,heap_+filled_,bincomp_rev);
+    int solid = 0;
+    for(int i=1; i<filled_; i++)
+        if (!heap_[i].within(heap_[solid]))
+            heap_[++solid] = heap_[i];
+    filled_ = solid+1;
+    if (2*filled_>size_) {
+        size_ <<= 1;
+        heap_ = (bin64_t*) realloc(heap_,size_*sizeof(bin64_t));
+    }
+}
+
+void    binheap::push(bin64_t val) {
+    if (filled_==size_)
+        extend();
+    heap_[filled_++] = val;
+    std::push_heap(heap_, heap_+filled_,bincomp);
+}
+
+binheap::~binheap() {
+    free(heap_);
+}

@@ -128,4 +128,19 @@ public:
     uint16_t& operator* () { return host->halves[half]; }
 };
 
+
+class binheap {
+    bin64_t     *heap_;
+    uint32_t    filled_;
+    uint32_t    size_;
+public:
+    binheap();
+    bin64_t pop();
+    void    push(bin64_t);
+    bool    empty() const { return !filled_; }
+    void    extend();
+    ~binheap();
+};
+
+
 #endif
