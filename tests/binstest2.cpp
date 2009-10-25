@@ -212,6 +212,38 @@ TEST(BinsTest,Remove) {
     
 }
 
+TEST(BinsTest,FindFiltered) {
+    
+    bins data, filter;
+    data.set(bin64_t(2,0));
+    data.set(bin64_t(2,2));
+    data.set(bin64_t(1,7));
+    filter.set(bin64_t(2,1));
+    filter.set(bin64_t(1,4));
+    filter.set(bin64_t(0,13));
+    
+    bin64_t x = data.find_filtered(filter,bin64_t(4,0),0);
+    EXPECT_EQ(bin64_t(0,12),x);
+    
+}
+
+TEST(BinsTest,SetRange) {
+    bins data, add;
+    data.set(bin64_t(2,0));
+    data.set(bin64_t(2,2));
+    data.set(bin64_t(1,7));
+    add.set(bin64_t(2,1));
+    add.set(bin64_t(1,4));
+    add.set(bin64_t(0,13));
+    add.set(bin64_t(5,118));
+    data.set_range(add, bin64_t(3,0));
+    EXPECT_TRUE(bins::is_mixed(data.get(bin64_t(3,0))));
+    EXPECT_EQ(bins::EMPTY,data.get(bin64_t(2,0)));
+    EXPECT_EQ(bins::FILLED,data.get(bin64_t(2,1)));
+    EXPECT_EQ(bins::EMPTY,data.get(bin64_t(1,6)));
+    EXPECT_EQ(bins::FILLED,data.get(bin64_t(1,7)));
+}
+
 TEST(BinheapTest,Eat) {
     
     binheap b;

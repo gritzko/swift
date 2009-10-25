@@ -317,6 +317,42 @@ void    bins::remove (bins& b) {
 }
 
 
+bin64_t     bins::find_filtered 
+    (bins& filter, const bin64_t range, const uint8_t layer, fill_t seek)  
+{
+    iterator i(this,range,true), j(&filter,range,true);
+    fill_t stop = seek==EMPTY ? FILLED : EMPTY;
+    while (true) {
+        while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=EMPTY) )
+            i.left(), j.left(); // TODO may optimize a lot here 
+        if (i.bin().layer()==layer && !i.deep() && *i==seek && *j==EMPTY)
+            return i.bin();
+        while (i.bin().is_right() && i.bin()!=range)
+            i.parent(), j.parent();
+        if (i.bin()==range)
+            break;
+        i.parent(), j.parent();
+        i.right(), j.right();
+    }
+    return bin64_t::NONE;    
+}
+
+void        bins::set_range (bins& origin, bin64_t range) { // FIXME unite with remove(); do bitwise()
+    iterator zis(this,range,true), zat(&origin,range,true);
+    while (zis.pos.within(range)) {
+        while (zis.deep() || zat.deep()) {
+            zis.left(); zat.left();
+        }
+        
+        *zis = *zat;
+        
+        while (zis.pos.is_right()) {
+            zis.parent(); zat.parent();
+        }
+        zis.sibling(); zat.sibling();
+    }
+}
+
 binheap::binheap() {
     size_ = 32;
     heap_ = (bin64_t*) malloc(size_*sizeof(bin64_t));
