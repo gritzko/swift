@@ -26,7 +26,9 @@ DEBUG = True
 TestDir='tests'
 
 target = 'p2tp'
-source = [ 'bin64.cpp','hashtree.cpp','datagram.cpp','bins.cpp', 'transfer.cpp', 'compat/hirestimeofday.cpp', 'compat/util.cpp']
+source = [ 'bin64.cpp','hashtree.cpp','datagram.cpp','bins.cpp',
+    'transfer.cpp', 'p2tp.cpp', 'sendrecv.cpp', 
+    'compat/hirestimeofday.cpp', 'compat/util.cpp']
 
 env = Environment()
 if sys.platform == "win32":
@@ -83,7 +85,7 @@ else:
 	    cpppath = ""
 	    print "To use external libs, set CPPPATH environment variable to list of colon-separated include dirs"
 	env.Append(CPPPATH=".:"+cpppath)
-        env.Append(LINKFLAGS="--static")
+    #env.Append(LINKFLAGS="--static")
 
 	#if DEBUG:
 	#	env.Append(CXXFLAGS="-g")

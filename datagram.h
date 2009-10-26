@@ -34,6 +34,13 @@
 
 namespace p2tp {
 
+typedef int64_t tint;
+#define TINT_HOUR ((tint)1000000*60*60)
+#define TINT_MIN ((tint)1000000*60)
+#define TINT_SEC ((tint)1000000)
+#define TINT_MSEC ((tint)1000)
+#define TINT_uSEC ((tint)1)
+#define TINT_NEVER ((tint)0x7fffffffffffffffLL)
 #define MAXDGRAMSZ 1400
 #ifndef _WIN32
 #define INVALID_SOCKET -1
@@ -62,13 +69,21 @@ struct Datagram {
             init(ipv4addr,port);
         }
         Address(const struct sockaddr_in& address) : addr(address) {}
+        uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }
+        uint16_t port () const { return ntohs(addr.sin_port); }
         operator sockaddr_in () const {return addr;}
-        bool operator == (const Address& b) {
+        bool operator == (const Address& b) const { 
             return addr.sin_family==b.addr.sin_family &&
             addr.sin_port==b.addr.sin_port &&
             addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
         }
-        bool operator != (const Address& b) { return !(*this==b); }
+        std::string str () const {
+            char s[32];
+            sprintf(s,"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
+                    (ipv4()>>8)&0xff,ipv4()&0xff,port());
+            return std::string(s);
+        }
+        bool operator != (const Address& b) const { return !(*this==b); }
     };
 
 	Address addr;
@@ -79,8 +94,9 @@ struct Datagram {
 	static SOCKET Bind(Address address);
 	static void Close(int port);
 	static tint Time();
+    static char* TimeStr(tint time=0);
 	static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
-	static tint now;
+	static tint now, epoch;
 
 	Datagram (SOCKET socket, const Address addr_) : addr(addr_), offset(0),
 		length(0), sock(socket) {}
@@ -167,6 +183,7 @@ struct Datagram {
 };
 
 std::string sock2str (struct sockaddr_in addr);
+#define dprintf(...) printf(__VA_ARGS__)
 
 }
 

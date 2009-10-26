@@ -31,7 +31,7 @@ int FileTransfer::instance = 0;
 FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false),
     peak_count_(0), hashes_(NULL), error_(NULL), size_(0), sizek_(0),
-    complete_(0), completek_(0), seq_complete_(0)
+    complete_(0), completek_(0), seq_complete_(0) //, data_in_off_(0)
 {
 	fd_ = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd_<0)
@@ -163,7 +163,8 @@ void            FileTransfer::Submit () {
             } else
                 hashes_[b] = Sha1Hash(hashes_[b.left()],hashes_[b.right()]);
         peak_hashes_[p] = hashes_[peaks_[p]];
-        ack_out_.set(peaks_[p],bins::FILLED);
+        //ack_out_.set(peaks_[p],bins::FILLED);
+        OnDataIn(peaks_[p]);
     }
     root_hash_ = DeriveRoot();
     Sha1Hash *hash_tmp = hashes_;
@@ -200,13 +201,6 @@ void            FileTransfer::OfferHash (bin64_t pos, const Sha1Hash& hash) {
 }
 
 
-bin64_t         FileTransfer::data_in (int offset) {
-    if (offset>data_in_.size())
-        return bin64_t::NONE;
-    return data_in_[offset];
-}
-
-
 bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_t length) {
     if (!pos.is_base())
         return false;
@@ -230,7 +224,7 @@ bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_
 
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
 	// walk to the nearest proven hash   FIXME 0-layer peak
-    ack_out_.set(pos,bins::FILLED);
+    OnDataIn(pos);
     pwrite(fd_,data,length,pos.base_offset()<<10);
     complete_ += length;
     completek_++;
@@ -242,8 +236,42 @@ bool            FileTransfer::OfferData (bin64_t pos, const uint8_t* data, size_
         seq_complete_+=1024;
     if (seq_complete_>size_)
         seq_complete_ = size_;
-    data_in_.push_back(pos);
     return true;
+}
+
+
+/*bin64_t         FileTransfer::RevealAck (uint64_t& offset) {
+    if (offset<data_in_off_)
+        offset = data_in_off_;
+    for(int off=offset-data_in_off_; off<data_in_.size(); off++) {
+        offset++;
+        if (data_in_[off]!=bin64_t::NONE) {
+            bin64_t parent = data_in_[off].parent();
+            if (ack_out_.get(parent)!=bins::FILLED)
+                return data_in_[off];
+            else
+                data_in_[off] = bin64_t::NONE;
+        }
+    }
+    return bin64_t::NONE;
+}*/
+
+
+void            FileTransfer::OnDataIn (bin64_t pos) {
+    ack_out_.set(pos,bins::FILLED);
+    /*bin64_t closed = pos;
+    while (ack_out_.get(closed.parent())==bins::FILLED) // TODO optimize
+        closed = closed.parent();
+    data_in_.push_back(closed);
+    // rotating the queue
+    bin64_t parent = data_in_.front().parent();
+    if (ack_out_.get(parent)!=bins::FILLED)
+        data_in_.push_back(data_in_.front());
+    data_in_.front() = bin64_t::NONE;
+    while ( !data_in_.empty() && data_in_.front()==bin64_t::NONE) {
+        data_in_.pop_front();
+        data_in_off_++;
+    }*/
 }
 
 
@@ -305,11 +333,17 @@ FileTransfer::~FileTransfer ()
 
 FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
     for(int i=0; i<files.size(); i++)
-        if (files[i] && files[i]->root_hash_==root_hash)
+        if (files[i] && files[i]->root_hash()==root_hash)
             return files[i];
     return NULL;
 }
 
+
+void FileTransfer::OnPexIn (const Address& addr) {
+    pex_in_.push_back(addr);
+    if (pex_in_.size()>1000)
+        pex_in_.pop_front(); 
+}
 
 
 std::string FileTransfer::GetTempFilename(Sha1Hash& root_hash, int instance, std::string postfix)
@@ -322,8 +356,7 @@ std::string FileTransfer::GetTempFilename(Sha1Hash& root_hash, int instance, std
 }
 
 
-
-int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
+/*int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
     FileTransfer* ft = new FileTransfer(filename, hash);
     int fdes = ft->file_descriptor();
     if (fdes>0) {
@@ -335,6 +368,14 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
         delete ft;
         return -1;
     }
+}*/
+
+
+uint32_t        FileTransfer::RevealChannel (int& offset) {
+    while (offset<Channel::channels.size() && 
+           (!Channel::channels[offset] || Channel::channels[offset]->file_!=this) )
+           offset++;
+    return offset < Channel::channels.size() ? offset : -1;
 }
 
 

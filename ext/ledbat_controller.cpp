@@ -18,8 +18,8 @@ public:
     int cwnd_, peer_cwnd_, in_flight_;
     bin64_t last_bin_sent_;
 public:
-    LedbatController () : dev_avg_(0), rtt_avg_(TINT_SEC), last_send_time_(0),
-    last_recv_time_(0), cwnd_(1), peer_cwnd_(1), in_flight_(0) {
+    LedbatController (int chid) : dev_avg_(0), rtt_avg_(TINT_SEC), last_send_time_(0),
+    last_recv_time_(0), cwnd_(1), peer_cwnd_(1), in_flight_(0), CongestionController(chid) {
     }
     
     tint    rtt_avg () {
@@ -31,6 +31,7 @@ public:
     }
     
     int     cwnd () {
+        // check for timeouts
         return cwnd_;
     }
     
@@ -39,7 +40,7 @@ public:
     }
     
     int     free_cwnd ( ){
-        return cwnd_ - in_flight_;
+        return cwnd() - in_flight_;
     }
     
     tint    next_send_time ( ){
@@ -63,7 +64,8 @@ public:
     void OnAckRcvd(bin64_t b, tint peer_stamp) {
         if (last_bin_sent_!=b)
             return;
-        rtt_avg_ = (rtt_avg_*7 + (Datagram::now-last_send_time_)) >> 3; // van Jac
+        if (peer_stamp!=TINT_NEVER)
+            rtt_avg_ = (rtt_avg_*7 + (Datagram::now-last_send_time_)) >> 3; // van Jac
         in_flight_--;
     }
     

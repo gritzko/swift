@@ -4,6 +4,7 @@
  *
  * Defines UNIX like I/O calls and parameters for Win32
  */
+#ifdef _WIN32
 
 #ifndef UNIXIO_H_
 #define UNIXIO_H_
@@ -23,3 +24,5 @@ size_t pwrite(int fildes, const void *buf, size_t nbyte, long offset);
 int inet_aton(const char *cp, struct in_addr *inp);
 
 #endif /* UNIXIO_H_ */
+
+#endif // WIN32

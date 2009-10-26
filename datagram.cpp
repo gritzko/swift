@@ -20,14 +20,33 @@
 namespace p2tp {
 
 tint Datagram::now = Datagram::Time();
+tint Datagram::epoch = now;
 uint32_t Datagram::Address::LOCALHOST = INADDR_LOOPBACK;
 
+char* Datagram::TimeStr (tint time) {
+    static char ret_str[128];
+    if (time==0)
+        time = now;
+    time -= epoch;
+    int hours = time/TINT_HOUR;
+    time %= TINT_HOUR;
+    int mins = time/TINT_MIN;
+    time %= TINT_MIN;
+    int secs = time/TINT_SEC;
+    time %= TINT_SEC;
+    int msecs = time/TINT_MSEC;
+    time %= TINT_MSEC;
+    int usecs = time/TINT_uSEC;
+    sprintf(ret_str,"%i_%02i_%02i_%03i_%03i",hours,mins,secs,msecs,usecs);
+    return ret_str;
+}
+    
 int Datagram::Send () {
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
-	offset=0;
-	length=0;
-	now = Time();
+	//offset=0;
+	//length=0;
+	Time();
 	return r;
 }
 
@@ -36,22 +55,19 @@ int Datagram::Recv () {
 	offset = 0;
 	length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
 					   (struct sockaddr*)&(addr), &addrlen);
-	if (length<0)
+	if (length<0) // FIXME FIXME FIXME 
 #ifdef _WIN32
 		PLOG(ERROR)<<"on recv" << WSAGetLastError() << "\n";
 #else
 		PLOG(ERROR)<<"on recv";
 #endif
-	now = Time();
+	Time();
 	return length;
 }
 
 
 SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
-	// ARNOTODO: LOG commented out, it causes a crash on win32 (in a strlen()
-	// done as part of a std::local::name() ??
-	//
-	//LOG(INFO)<<"waiting for "<<sockcnt;
+	dprintf("waiting (%i socks)\n",sockcnt);
 	struct timeval timeout;
 	timeout.tv_sec = usec/TINT_SEC;
 	timeout.tv_usec = usec%TINT_SEC;
@@ -66,19 +82,19 @@ SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
 			max_sock_fd = sockets[i];
 	}
 	int sel = select(max_sock_fd+1, &bases, NULL, &err, &timeout);
+    Time();
 	if (sel>0) {
 		for (int i=0; i<=sockcnt; i++)
 			if (FD_ISSET(sockets[i],&bases))
 				return sockets[i];
-	} else if (sel<0)
+	} else if (sel<0) {
 #ifdef _WIN32
 		PLOG(ERROR)<<"select fails" << WSAGetLastError() << "\n";
 #else
 		PLOG(ERROR)<<"select fails";
 #endif
-
-	// Arno: may return 0 when timeout expired
-	return sel;
+    } 
+    return -1;
 }
 
 tint Datagram::Time () {

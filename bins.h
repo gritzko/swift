@@ -26,12 +26,12 @@ public:
     
     void        set (bin64_t bin, fill_t val=FILLED); 
     
-    void        set_range (bins& origin, bin64_t range);
+    void        copy_range (bins& origin, bin64_t range);
     
     bin64_t     find (const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
     
     bin64_t     find_filtered
-        (bins& filter, const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
+        (bins& filter, bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
     
     void        remove (bins& b);
     
@@ -40,6 +40,8 @@ public:
     uint64_t*   get_stripes (int& count);
 
     uint32_t    size() { return cells_allocated; }
+    
+    bin64_t     cover(bin64_t val);
     
     bool        empty () const { return !deep(0) && !halves[0]; }
     

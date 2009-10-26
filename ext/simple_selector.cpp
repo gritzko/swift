@@ -36,4 +36,3 @@ public:
     }
 };
 
-PeerSelector* Channel::peer_selector = new SimpleSelector();

@@ -227,7 +227,34 @@ TEST(BinsTest,FindFiltered) {
     
 }
 
-TEST(BinsTest,SetRange) {
+
+TEST(BinsTest, Cover) {
+    
+    bins b;
+    b.set(bin64_t(2,0));
+    b.set(bin64_t(4,1));
+    EXPECT_EQ(bin64_t(4,1),b.cover(bin64_t(0,30)));
+    //bins c;
+    //EXPECT_EQ(bin64_t::ALL,b.cover(bin64_t(0,30)));
+    
+}
+
+
+TEST(BinsTest,FindFiltered2) {
+    
+    bins data, filter;
+    for(int i=0; i<1024; i+=2)
+        data.set(bin64_t(0,i));
+    for(int j=1; j<1024; j+=2)
+        filter.set(bin64_t(0,j));
+    filter.set(bin64_t(0,501),bins::EMPTY);
+    EXPECT_EQ(bin64_t(0,501),data.find_filtered(filter,bin64_t(10,0),0));
+    data.set(bin64_t(0,501));
+    EXPECT_EQ(bin64_t::NONE,data.find_filtered(filter,bin64_t(10,0),0));
+    
+}
+    
+TEST(BinsTest,CopyRange) {
     bins data, add;
     data.set(bin64_t(2,0));
     data.set(bin64_t(2,2));
@@ -236,7 +263,7 @@ TEST(BinsTest,SetRange) {
     add.set(bin64_t(1,4));
     add.set(bin64_t(0,13));
     add.set(bin64_t(5,118));
-    data.set_range(add, bin64_t(3,0));
+    data.copy_range(add, bin64_t(3,0));
     EXPECT_TRUE(bins::is_mixed(data.get(bin64_t(3,0))));
     EXPECT_EQ(bins::EMPTY,data.get(bin64_t(2,0)));
     EXPECT_EQ(bins::FILLED,data.get(bin64_t(2,1)));

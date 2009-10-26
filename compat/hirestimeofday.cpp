@@ -5,7 +5,7 @@
  */
 
 #include <iostream>
-#include "compat/hirestimeofday.h"
+#include "hirestimeofday.h"
 
 #ifndef _WIN32
 #include <sys/time.h>

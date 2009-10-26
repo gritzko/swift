@@ -2,10 +2,11 @@
  * Written by Arno Bakker
  * see LICENSE.txt for license information
  */
+#ifdef _WIN32
 
-#include "compat/unixio.h"
-#include <io.h>
+#include "unixio.h"
 #include <stdio.h>
+#include <io.h>
 #include <winsock2.h>
 
 size_t pread(int fildes, void *buf, size_t nbyte, long offset)
@@ -26,3 +27,5 @@ int inet_aton(const char *cp, struct in_addr *inp)
 	inp->S_un.S_addr = inet_addr(cp);
 	return 1;
 }
+
+#endif

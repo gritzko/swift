@@ -317,13 +317,25 @@ void    bins::remove (bins& b) {
 }
 
 
+bin64_t     bins::cover(bin64_t val) {
+    iterator i(this,val,false);
+    while (i.pos!=val && !i.solid())
+        i.towards(val);
+    //if (!i.half && !halves[0])
+    //    return bin64_t::ALL;
+    return i.pos;
+}
+
+
 bin64_t     bins::find_filtered 
-    (bins& filter, const bin64_t range, const uint8_t layer, fill_t seek)  
+    (bins& filter, bin64_t range, const uint8_t layer, fill_t seek)  
 {
+    if (range==bin64_t::ALL)
+        range = bin64_t ( height>filter.height ? height : filter.height, 0 );
     iterator i(this,range,true), j(&filter,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=EMPTY) )
+        while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=FILLED) )
             i.left(), j.left(); // TODO may optimize a lot here 
         if (i.bin().layer()==layer && !i.deep() && *i==seek && *j==EMPTY)
             return i.bin();
@@ -337,7 +349,10 @@ bin64_t     bins::find_filtered
     return bin64_t::NONE;    
 }
 
-void        bins::set_range (bins& origin, bin64_t range) { // FIXME unite with remove(); do bitwise()
+// FIXME unite with remove(); do bitwise()
+void        bins::copy_range (bins& origin, bin64_t range) { 
+    if (range==bin64_t::ALL)
+        range = bin64_t ( height>origin.height ? height : origin.height, 0 );
     iterator zis(this,range,true), zat(&origin,range,true);
     while (zis.pos.within(range)) {
         while (zis.deep() || zat.deep()) {

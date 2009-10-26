@@ -29,14 +29,23 @@ p2tp::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
 int Channel::sockets[8] = {0,0,0,0,0,0,0,0};
 int Channel::socket_count = 0;
+Address Channel::tracker;
+tbqueue Channel::send_queue;
+#include "ext/dummy_controller.cpp"
+#include "ext/simple_selector.cpp"
+PeerSelector* Channel::peer_selector = new SimpleSelector();
 
-
-Channel::Channel	(FileTransfer* file, int socket, struct sockaddr_in peer_addr) :
-	file_(file), peer(peer_addr), peer_channel_id(0),
-	socket_(socket) // FIXME
+Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
+	file_(file), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
+    socket_(socket==-1?sockets[0]:socket), // FIXME
+    own_id_mentioned_(false), next_send_time_(0)
 {
+    if (peer_==Address())
+        peer_ = tracker;
 	this->id = channels.size();
 	channels.push_back(this);
+    cc_ = new BasicController();
+    RequeueSend(Datagram::now);
 }
 
 
@@ -45,6 +54,9 @@ Channel::~Channel () {
 }
 
 
+void     p2tp::SetTracker(const Address& tracker) {
+    Channel::tracker = tracker;
+}
 
 
 int Channel::DecodeID(int scrambled) {
@@ -73,6 +85,27 @@ void    p2tp::Shutdown (int sock_des) {
 
 void    p2tp::Loop (tint till) {
     Channel::Loop(till);
+}
+
+
+int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
+    FileTransfer* ft = new FileTransfer(filename, hash);
+    int fdes = ft->file_descriptor();
+    if (fdes>0) {
+        
+        /*if (FileTransfer::files.size()<fdes)  // FIXME duplication
+            FileTransfer::files.resize(fdes);
+        FileTransfer::files[fdes] = ft;*/
+        
+        // initiate tracker connections
+        if (Channel::tracker!=Address())
+            new Channel(ft);
+        
+        return fdes;
+    } else {
+        delete ft;
+        return -1;
+    }
 }
 
 
@@ -110,6 +143,10 @@ size_t  p2tp::SeqComplete (int fdes) {
     else
         return 0;
 }
+
+
+
+
 
 /**	<h2> P2TP handshake </h2>
  Basic rules:

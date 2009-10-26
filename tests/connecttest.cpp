@@ -49,15 +49,21 @@ using namespace p2tp;
 
 
 TEST(P2TP,CwndTest) {
-	int f = open("big_test_file",O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-	int size = rand()%(1<<19) + (1<<19);
+    
+    unlink("doc/sofi-copy.jpg");
+    struct stat st;
+	ASSERT_EQ(0,stat("doc/sofi.jpg", &st));
+    int size = st.st_size, sizek = (st.st_size>>10) + (st.st_size%1024?1:0) ;
+    
+	/*int f = open("big_test_file",O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	int size = 60<<10; //rand()%(1<<19) + (1<<19);
     int sizek = (size>>10) + ((size&1023)?1:0);
 	char* b = (char*)malloc(size);
 	for(int i=0; i<size; i++) 
 		b[i] = (i%1024!=1023) ? ('A' + rand()%('Z'-'A')) : ('\n');
 	write(f,b,size);
 	free(b);
-	close(f);
+	close(f);*/
 
 	/*
 	struct sockaddr_in addr1, addr2;
@@ -69,24 +75,23 @@ TEST(P2TP,CwndTest) {
 	addr2.sin_port = htons(7004);
 	addr2.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	  */
-    int sock1 = p2tp::Listen(7003);
+    int sock1 = p2tp::Listen(7001);
 	ASSERT_TRUE(sock1>=0);
 	//ASSERT_TRUE(sock2>=0);
 	
-    p2tp::AddPeer(Datagram::Address("127.0.0.1",7001));
-    
-	int file = p2tp::Open("big_test_file");
+	int file = p2tp::Open("doc/sofi.jpg");
     FileTransfer* fileobj = FileTransfer::file(file);
+    FileTransfer::instance++;
     
-	int copy = p2tp::Open("big_test_file_copy",fileobj->root_hash());
+    p2tp::SetTracker(Datagram::Address("127.0.0.1",7001));
+    
+	int copy = p2tp::Open("doc/sofi-copy.jpg",fileobj->root_hash());
   
-	p2tp::Loop(TINT_MSEC);
+	p2tp::Loop(TINT_SEC);
     
-    ASSERT_EQ(sizek<<10,p2tp::Size(copy));
-
     int count = 0;
-    while (p2tp::SeqComplete(copy)!=size && count++<(1<<14))
-        p2tp::Loop(TINT_MSEC);
+    while (p2tp::SeqComplete(copy)!=size && count++<20)
+        p2tp::Loop(TINT_SEC);
     ASSERT_EQ(size,p2tp::SeqComplete(copy));
     
 	p2tp::Close(file);

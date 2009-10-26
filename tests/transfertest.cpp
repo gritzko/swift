@@ -72,10 +72,11 @@ TEST(TransferTest,TransferFile) {
             leech = new FileTransfer("copy",seed->root_hash());
             EXPECT_EQ(2,leech->complete_kilo());
         }
-        bin64_t next = leech->picker()->Pick(seed->ack_out(),0);
+        bin64_t next = leech->picker().Pick(seed->ack_out(),0);
         ASSERT_NE(bin64_t::NONE,next);
+        ASSERT_TRUE(next.base_offset()<5);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
-        size_t len = pread(seed->file_descriptor(),buf,1024,next.base_offset()<<10); // FIXME TEST FOR ERROR
+        size_t len = pread(seed->file_descriptor(),buf,1024,next.base_offset()<<10);
         bin64_t sibling = next.sibling();
         if (sibling.base_offset()<seed->size_kilo())
             leech->OfferHash(sibling, seed->hash(sibling));
