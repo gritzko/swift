@@ -59,6 +59,7 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
         hint_in_.pop_front();
         send = file().ack_out().find_filtered
             (ack_in_,hint,0,bins::FILLED);
+        dprintf("%s #%i may_send %lli\n",Datagram::TimeStr(),id,send.base_offset());
         if (send!=bin64_t::NONE)
             while (send!=hint) {
                 hint = hint.towards(send);
@@ -104,6 +105,8 @@ void	Channel::Send () {
         AddHint(dgram);
         if (cc_->free_cwnd()) 
             data = AddData(dgram);
+        else
+            dprintf("%s #%i no cwnd\n",Datagram::TimeStr(),id);
     } else {
         AddHandshake(dgram);
         AddAck(dgram);
@@ -276,6 +279,7 @@ void	Channel::OnAckTs (Datagram& dgram) {
 void	Channel::OnHint (Datagram& dgram) {
 	bin64_t hint = dgram.Pull32();
 	hint_in_.push_back(hint);
+    //RequeueSend(cc_->OnHintRecvd(hint));
     dprintf("%s #%i -hint (%i,%lli)\n",Datagram::TimeStr(),id,hint.layer(),hint.offset());
 }
 

@@ -44,7 +44,7 @@ Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
         peer_ = tracker;
 	this->id = channels.size();
 	channels.push_back(this);
-    cc_ = new BasicController();
+    cc_ = new BasicController(id);
     RequeueSend(Datagram::now);
 }
 

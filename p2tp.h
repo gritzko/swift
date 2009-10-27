@@ -211,7 +211,8 @@ namespace p2tp {
 	};
 
 	struct CongestionController {
-        CongestionController () {}
+        int channel_id;
+        CongestionController (int chann_id) : channel_id(chann_id) {}
         virtual int     free_cwnd() = 0;
         virtual tint    RoundTripTime() = 0;
         virtual tint    RoundTripTimeoutTime() = 0;
@@ -220,6 +221,7 @@ namespace p2tp {
         virtual tint    OnDataSent(bin64_t b) = 0;
         virtual tint    OnDataRecvd(bin64_t b) = 0;
         virtual tint    OnAckRcvd(bin64_t ackd, tint peer_time=0) = 0;
+        //virtual tint    OnHintRecvd (bin64_t hint) = 0;
 		virtual         ~CongestionController() {}
 	};
 
