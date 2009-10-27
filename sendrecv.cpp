@@ -146,11 +146,11 @@ void	Channel::AddHint (Datagram& dgram) {
     for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
         hinted+=i->bin.width();
     
-    float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
+    //float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
     
-    if ( hinted*1024 < peer_cwnd*4 ) {
+    if ( cc_->PeerBPS() > hinted*1024 ) { //hinted*1024 < peer_cwnd*4 ) {
         
-        uint8_t layer = 0;
+        uint8_t layer = 2; // actually, enough
         bin64_t hint = file().picker().Pick(ack_in_,layer);
         
         if (hint!=bin64_t::NONE) {
@@ -351,8 +351,10 @@ void	Channel::Recv (int socket) {
 		channel = new Channel(file, socket, data.address());
 	} else {
 		mych = DecodeID(mych);
-		if (mych>=channels.size()) 
-			RETLOG ("invalid channel id");
+		if (mych>=channels.size()) {
+            eprintf("invalid channel #%i\n",mych);
+            return;
+        }
 		channel = channels[mych];
 		if (!channel) 
 			RETLOG ("channel is closed");

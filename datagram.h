@@ -184,6 +184,7 @@ struct Datagram {
 
 std::string sock2str (struct sockaddr_in addr);
 #define dprintf(...) printf(__VA_ARGS__)
+#define eprintf(...) fprintf(stderr,__VA_ARGS__)
 
 }
 

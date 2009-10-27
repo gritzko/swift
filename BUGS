@@ -1,0 +1,3 @@
+    * hints, data for non-existing ranges
+    * opens multiple channels to the same address
+    * hints do not expire

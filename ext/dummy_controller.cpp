@@ -15,14 +15,16 @@ using namespace p2tp;
 struct BasicController : public CongestionController {
 
     tbqueue         data_out_;
-    tint            dev_avg, rtt_avg;
+    tint            dev_avg, rtt_avg, diat_avg;
     tint            last_send_time, last_recv_time, last_cwnd_mark;
-    int             cwnd, peer_cwnd, in_flight, cwnd_rcvd;
+    int             cwnd, peer_cwnd, cwnd_rcvd;
+    bin64_t         last_recv_bin;
     
     BasicController (int chann_id) : CongestionController(chann_id),
     dev_avg(0), rtt_avg(TINT_SEC), 
     last_send_time(0), last_recv_time(0), last_cwnd_mark(0),
-    cwnd(1), peer_cwnd(1), in_flight(0), cwnd_rcvd(0)
+    cwnd(1), peer_cwnd(1), cwnd_rcvd(0), diat_avg(TINT_SEC),
+    last_recv_bin(bin64_t::NONE)
     { }
     
     tint    RoundTripTime() {
@@ -33,8 +35,11 @@ struct BasicController : public CongestionController {
         return rtt_avg + dev_avg * 8 + TINT_MSEC;
     }
     
+    int     in_flight() const {return data_out_.size();}
+    
     int     PeerBPS() {
-        return (peer_cwnd<<10) * TINT_SEC / rtt_avg;
+        //return (peer_cwnd<<10) * TINT_SEC / rtt_avg;
+        return TINT_SEC * 1024 / diat_avg;
     }
     
     float PeerCWindow() {
@@ -73,7 +78,7 @@ struct BasicController : public CongestionController {
         last_send_time = Datagram::now;
         if (b==bin64_t::ALL) { // nothing to send, absolutely
             data_out_.clear();
-            cwnd = 0;
+            cwnd >>= 1;
         } else if (b==bin64_t::NONE) { // sent some metadata
             cwnd = 1; // no more data => no need for cwnd
             data_out_.push_back(b);
@@ -81,18 +86,22 @@ struct BasicController : public CongestionController {
             data_out_.push_back(b);
         }
         dprintf("%s #%i cwnd %i infl %i peer_cwnd %i\n",
-                Datagram::TimeStr(),channel_id,cwnd,in_flight,peer_cwnd);
+                Datagram::TimeStr(),channel_id,cwnd,in_flight(),peer_cwnd);
         return get_send_time();
     }
     
-    /*tint OnHintRecvd (bin64_t hint) {
-        if (!cwnd) {
-            cwnd = 1;
-        }
-        return get_send_time();
-    }*/
 
     tint OnDataRecvd(bin64_t b) {
+        if (last_recv_bin!=bin64_t::ALL && last_recv_bin!=bin64_t::NONE) {
+            tint diat = Datagram::now - last_recv_time;
+            diat_avg = ( diat_avg*3 + diat ) >> 2;
+        }
+        last_recv_bin = b;
+        last_recv_time = Datagram::now;
+        if (rtt_avg==TINT_SEC && last_send_time) {
+            rtt_avg = Datagram::now - last_send_time;
+            dev_avg = rtt_avg;
+        }
         if (data_out_.size() && data_out_.front().bin==bin64_t::NONE)
             data_out_.pop_front();
         if (b==bin64_t::NONE) {  // pong
@@ -102,6 +111,7 @@ struct BasicController : public CongestionController {
             return Datagram::now;
         } else if (b==bin64_t::ALL) { // the peer has nothing to send
             //peer_cwnd = 0;
+            peer_cwnd = 1;
             return get_send_time();
         } else {
             //if (!peer_cwnd)
@@ -111,12 +121,14 @@ struct BasicController : public CongestionController {
                 last_cwnd_mark = Datagram::now;
                 peer_cwnd = cwnd_rcvd;
                 cwnd_rcvd = 0;
+                dprintf("%s #%i peer_cwnd %i\n",
+                        Datagram::TimeStr(),channel_id,peer_cwnd);
             }
             return Datagram::now; // at least, send an ACK
         }
     }
     
-    tint OnAckRcvd(bin64_t ackd, tint when) {
+    tint OnAckRcvd(bin64_t ackd, tint when) { // FIXME::: NO ACKS => NO RTT
         tbqueue tmp;
         for (int i=0; data_out_.size() && i<6; i++) {
             tintbin x = data_out_.front();
@@ -124,15 +136,12 @@ struct BasicController : public CongestionController {
             if (x.bin==ackd) {
                 // van Jacobson's rtt
                 tint rtt = Datagram::now-x.time;
-                if (rtt_avg==TINT_SEC) {
-                    rtt_avg = rtt;
-                } else {
-                    rtt_avg = (rtt_avg*3 + rtt) >> 2;
-                    dev_avg = ( dev_avg*3 + abs(rtt-rtt_avg) ) >> 2;
-                }
+                rtt_avg = (rtt_avg*3 + rtt) >> 2;
+                dev_avg = ( dev_avg*3 + abs(rtt-rtt_avg) ) >> 2;
                 dprintf("%s #%i rtt %lli dev %lli\n",
                         Datagram::TimeStr(),channel_id,rtt_avg,dev_avg);
                 // insert AIMD (2) here
+                cwnd++;
                 break;
             } else {
                 tmp.push_back(x);
