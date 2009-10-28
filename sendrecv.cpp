@@ -138,7 +138,7 @@ void	Channel::AddHint (Datagram& dgram) {
         
         uint8_t layer = 2; // actually, enough
         bin64_t hint = file().picker().Pick(ack_in_,layer);
-        // FIXME: any layer
+        // FIXME FIXME FIXME: any layer
         if (hint==bin64_t::NONE)
             hint = file().picker().Pick(ack_in_,0);
         

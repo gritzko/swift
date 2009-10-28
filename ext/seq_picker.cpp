@@ -23,7 +23,7 @@ public:
     }
     
     virtual bin64_t Pick (bins& offer, uint8_t layer) {
-        
+
         bin64_t hint = offer.find_filtered
             (ack_hint_out_,bin64_t::ALL,layer,bins::FILLED);
         if (hint==bin64_t::NONE)
@@ -47,7 +47,7 @@ public:
     }
     
     virtual void    Expired (bins& b) {
-        ack_hint_out_.remove(b);
+        ack_hint_out_.remove(b); // may invalidate
     }
     
 };

@@ -49,6 +49,8 @@ using namespace p2tp;
 
 
 TEST(P2TP,CwndTest) {
+
+    srand ( time(NULL) );
     
     unlink("doc/sofi-copy.jpg");
     struct stat st;
@@ -90,7 +92,7 @@ TEST(P2TP,CwndTest) {
 	p2tp::Loop(TINT_SEC);
     
     int count = 0;
-    while (p2tp::SeqComplete(copy)!=size && count++<20)
+    while (p2tp::SeqComplete(copy)!=size && count++<600)
         p2tp::Loop(TINT_SEC);
     ASSERT_EQ(size,p2tp::SeqComplete(copy));
     

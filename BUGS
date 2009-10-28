@@ -1,3 +1,12 @@
     * hints, data for non-existing ranges
     * opens multiple channels to the same address
-    * hints do not expire
+    v hints do not expire
+    * survive 10% loss
+    * unlimited ping pong
+    * git
+    * check hints agains ack_out?_
+    * check data against ack_in
+    * channel suspend/wake. 3 cong modes state machine - ???
+    * minimize the number of template instantiations
+    * Channel thinks how much it HINTs a second,
+      picker thinks which HINTs are snubbed

@@ -14,6 +14,7 @@
 #else
     #include <arpa/inet.h>
 #endif
+#define RND_DROP 10
 #include <glog/logging.h>
 #include "datagram.h"
 
@@ -42,11 +43,13 @@ char* Datagram::TimeStr (tint time) {
 }
     
 int Datagram::Send () {
-    if (rand()%10==0) {
+#ifdef RND_DROP
+    if (rand()%RND_DROP==0) {
         Time();
         dprintf("%s datagram killed\n",TimeStr());
         return size();
     }
+#endif
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
 	//offset=0;
