@@ -79,14 +79,18 @@ struct BasicController : public CongestionController {
         if (b==bin64_t::ALL) { // nothing to send, absolutely
             data_out_.clear();
             cwnd >>= 1;
+            if (!cwnd)
+                cwnd = 1;
         } else if (b==bin64_t::NONE) { // sent some metadata
             cwnd = 1; // no more data => no need for cwnd
+            data_out_.clear();
             data_out_.push_back(b);
         } else {
             data_out_.push_back(b);
         }
-        dprintf("%s #%i cwnd %i infl %i peer_cwnd %i\n",
-                Datagram::TimeStr(),channel_id,cwnd,in_flight(),peer_cwnd);
+        dprintf("%s #%i cwnd %i infl %i peer_cwnd %i //%lli\n",
+            Datagram::TimeStr(),channel_id,cwnd,in_flight(),peer_cwnd,
+            (uint64_t)b);
         return get_send_time();
     }
     
@@ -133,7 +137,7 @@ struct BasicController : public CongestionController {
         for (int i=0; data_out_.size() && i<6; i++) {
             tintbin x = data_out_.front();
             data_out_.pop_front();
-            if (x.bin==ackd) {
+            if (x.bin.within(ackd)) {
                 // van Jacobson's rtt
                 tint rtt = Datagram::now-x.time;
                 rtt_avg = (rtt_avg*3 + rtt) >> 2;

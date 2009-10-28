@@ -129,14 +129,18 @@ void	Channel::AddHint (Datagram& dgram) {
         hint_out_.clear();
     }
     
-    uint64_t hinted = hint_out_.mass() + hint_out_old_.mass();
-    
+    uint64_t hinted = hint_out_.mass();// + hint_out_old_.mass();
+    int bps = cc_->PeerBPS();
+    dprintf("%s #%i hinted %lli peer_bps %i\n",Datagram::TimeStr(),id,hinted,bps);
     //float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
     
-    if ( cc_->PeerBPS() > hinted*1024 ) { //hinted*1024 < peer_cwnd*4 ) {
+    if ( bps > hinted*1024 ) { //hinted*1024 < peer_cwnd*4 ) {
         
         uint8_t layer = 2; // actually, enough
         bin64_t hint = file().picker().Pick(ack_in_,layer);
+        // FIXME: any layer
+        if (hint==bin64_t::NONE)
+            hint = file().picker().Pick(ack_in_,0);
         
         if (hint!=bin64_t::NONE) {
             hint_out_.set(hint);

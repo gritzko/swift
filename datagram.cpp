@@ -42,6 +42,11 @@ char* Datagram::TimeStr (tint time) {
 }
     
 int Datagram::Send () {
+    if (rand()%10==0) {
+        Time();
+        dprintf("%s datagram killed\n",TimeStr());
+        return size();
+    }
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
 	//offset=0;
