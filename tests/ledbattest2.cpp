@@ -69,7 +69,7 @@ TEST(Datagram,LedbatTest) {
     SOCKET sock2read;
     tint wait_time = 100*TINT_MSEC;
 
-    while ((sock2read = Datagram::Wait(2,socks,wait_time)) != -1) {
+    while (sock2read = Datagram::Wait(2,socks,wait_time)) {
         tint now = Datagram::Time();
         if (sock2read==ack_sock) {
             Datagram data(ack_sock); // send an acknowledgement
