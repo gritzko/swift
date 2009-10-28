@@ -250,6 +250,25 @@ uint16_t bins::get (bin64_t bin) {
 }
 
 
+void bins::clear () {
+    set(bin64_t(height,0),EMPTY);
+}
+
+
+uint64_t bins::mass () {
+    iterator i(this,bin64_t(0,0),false);
+    uint64_t ret = 0;
+    while (!i.solid())
+        i.left();
+    while (!i.end()) {
+        if (*i==bins::FILLED)
+            ret += i.pos.width();
+        i.next(true);
+    }
+    return ret;
+}
+
+
 void bins::set (bin64_t bin, fill_t val) {
     assert(val==FILLED || val==EMPTY);
     iterator i(this,bin,false);

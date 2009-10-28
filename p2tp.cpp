@@ -38,7 +38,7 @@ PeerSelector* Channel::peer_selector = new SimpleSelector();
 Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
 	file_(file), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
-    own_id_mentioned_(false), next_send_time_(0)
+    own_id_mentioned_(false), next_send_time_(0), hint_out_rotate_(0)
 {
     if (peer_==Address())
         peer_ = tracker;

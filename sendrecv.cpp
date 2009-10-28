@@ -121,30 +121,15 @@ void	Channel::Send () {
 
 void	Channel::AddHint (Datagram& dgram) {
 
-    tint hint_timeout = Datagram::now - 2*TINT_SEC;
-    while (!hint_out_.empty() && hint_out_.front().time<hint_timeout) {
-        tintbin old_hint = hint_out_.front();
-        file().picker().Expired(old_hint.bin);
-        hint_out_.pop_front();
-    }
-    // FIXME  weird weird weird
-    uint16_t state;
-    while ( !hint_out_.empty() && (state=file().ack_out().get(hint_out_.front().bin)) != bins::EMPTY ) {
-        if (state==bins::FILLED) {
-            hint_out_.pop_front();
-        } else {
-            tintbin old_hint = hint_out_.front();
-            hint_out_.pop_front();
-            old_hint.bin = old_hint.bin.right();
-            hint_out_.push_front(old_hint);
-            old_hint.bin = old_hint.bin.sibling();
-            hint_out_.push_front(old_hint);
-        }
+    if (hint_out_rotate_<Datagram::now-TINT_SEC) {
+        hint_out_rotate_ = Datagram::now;
+        if ( ! hint_out_old_.is_empty() )
+            file().picker().Expired(hint_out_old_);
+        swap(hint_out_,hint_out_old_);
+        hint_out_.clear();
     }
     
-    uint64_t hinted = 0;
-    for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
-        hinted+=i->bin.width();
+    uint64_t hinted = hint_out_.mass() + hint_out_old_.mass();
     
     //float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
     
@@ -154,7 +139,7 @@ void	Channel::AddHint (Datagram& dgram) {
         bin64_t hint = file().picker().Pick(ack_in_,layer);
         
         if (hint!=bin64_t::NONE) {
-            this->hint_out_.push_back(tintbin(hint));
+            hint_out_.set(hint);
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
             dprintf("%s #%i +hint (%i,%lli)\n",Datagram::TimeStr(),id,hint.layer(),hint.offset());
@@ -170,7 +155,7 @@ bin64_t		Channel::AddData (Datagram& dgram) {
 	bin64_t tosend = DequeueHint();
     if (tosend==bin64_t::NONE) 
         return bin64_t::NONE;
-    if (ack_in_.empty() && file().size())
+    if (ack_in_.is_empty() && file().size())
         AddPeakHashes(dgram);
     AddUncleHashes(dgram,tosend);
     uint8_t buf[1024];
@@ -252,6 +237,8 @@ bin64_t Channel::OnData (Datagram& dgram) {
     bool ok = file().OfferData(pos, data, length) ;
     dprintf("%s #%i %cdata (%lli)\n",Datagram::TimeStr(),id,ok?'-':'!',pos.offset());
     data_in_ = tintbin(Datagram::now,pos);
+    hint_out_.set(pos,bins::EMPTY);
+    hint_out_old_.set(pos,bins::EMPTY);
     return ok ? pos : bin64_t::none();
 }
 

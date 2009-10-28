@@ -42,8 +42,12 @@ public:
     uint32_t    size() { return cells_allocated; }
     
     bin64_t     cover(bin64_t val);
+
+    uint64_t    mass ();
     
-    bool        empty () const { return !deep(0) && !halves[0]; }
+    bool        is_empty () const { return !deep(0) && !halves[0]; }
+
+    void        clear ();
     
     static bool is_mixed (uint16_t val) { return val!=EMPTY && val!=FILLED; }
     

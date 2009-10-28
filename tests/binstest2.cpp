@@ -271,6 +271,22 @@ TEST(BinsTest,CopyRange) {
     EXPECT_EQ(bins::FILLED,data.get(bin64_t(1,7)));
 }
 
+TEST(BinsTest, Mass) {
+    bins b;
+    b.set(bin64_t(6,0),bins::FILLED);
+    b.set(bin64_t(0,0),bins::EMPTY);
+    EXPECT_EQ(63,b.mass());
+    EXPECT_FALSE(b.is_empty());
+    b.clear();
+    EXPECT_TRUE(b.is_empty());
+    EXPECT_EQ(0,b.mass());
+
+    bins b50;
+    for(int i=0; i<50; i++)
+        b50.set(bin64_t(4,i*2));
+    EXPECT_EQ(50<<4,b50.mass());
+}
+
 TEST(BinheapTest,Eat) {
     
     binheap b;

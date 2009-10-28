@@ -228,7 +228,7 @@ namespace p2tp {
     class PiecePicker {
     public:
         virtual bin64_t Pick (bins& offered, uint8_t layer) = 0;
-        virtual void    Expired (bin64_t b) = 0;
+        virtual void    Expired (bins& b) = 0;
         virtual void    Received (bin64_t b) = 0;
     };
 
@@ -312,7 +312,9 @@ namespace p2tp {
 		/**	Transmit schedule: in most cases filled with the peer's hints */
 		binqueue    hint_in_;
 		/** Hints sent (to detect and reschedule ignored hints). */
-		tbqueue		hint_out_;
+		bins		hint_out_;
+        bins        hint_out_old_;
+        tint        hint_out_rotate_;
 		/** The congestion control strategy. */
 		CongestionController	*cc_;
         /** Types of messages the peer accepts. */
