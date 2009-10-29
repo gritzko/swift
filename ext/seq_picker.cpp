@@ -46,8 +46,8 @@ public:
         ack_hint_out_.set(b,bins::FILLED);
     }
     
-    virtual void    Expired (bins& b) {
-        ack_hint_out_.remove(b); // may invalidate
+    virtual void    Expired (bin64_t b) {
+        ack_hint_out_.copy_range(file_->ack_out(),b);
     }
     
 };

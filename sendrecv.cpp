@@ -121,15 +121,14 @@ void	Channel::Send () {
 
 void	Channel::AddHint (Datagram& dgram) {
 
-    if (hint_out_rotate_<Datagram::now-TINT_SEC) {
-        hint_out_rotate_ = Datagram::now;
-        if ( ! hint_out_old_.is_empty() )
-            file().picker().Expired(hint_out_old_);
-        swap(hint_out_,hint_out_old_);
-        hint_out_.clear();
+    while (!hint_out_.empty() &&
+            hint_out_.front().time<Datagram::now-TINT_SEC) {
+        file().picker().Expired(hint_out_.front().bin);
+        hint_out_.pop_front();
     }
-    
-    uint64_t hinted = hint_out_.mass();// + hint_out_old_.mass();
+    uint64_t hinted = 0;
+    for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
+        hinted += i->bin.width();
     int bps = cc_->PeerBPS();
     dprintf("%s #%i hinted %lli peer_bps %i\n",Datagram::TimeStr(),id,hinted,bps);
     //float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
@@ -143,7 +142,7 @@ void	Channel::AddHint (Datagram& dgram) {
             hint = file().picker().Pick(ack_in_,0);
         
         if (hint!=bin64_t::NONE) {
-            hint_out_.set(hint);
+            hint_out_.push_back(hint);
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
             dprintf("%s #%i +hint (%i,%lli)\n",Datagram::TimeStr(),id,hint.layer(),hint.offset());
@@ -240,10 +239,11 @@ bin64_t Channel::OnData (Datagram& dgram) {
     int length = dgram.Pull(&data,1024);
     bool ok = file().OfferData(pos, data, length) ;
     dprintf("%s #%i %cdata (%lli)\n",Datagram::TimeStr(),id,ok?'-':'!',pos.offset());
-    data_in_ = tintbin(Datagram::now,pos);
-    hint_out_.set(pos,bins::EMPTY);
-    hint_out_old_.set(pos,bins::EMPTY);
-    return ok ? pos : bin64_t::none();
+    if (ok) {
+        data_in_ = tintbin(Datagram::now,pos);
+        return pos;
+    } else
+        return bin64_t::NONE;
 }
 
 
