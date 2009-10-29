@@ -122,7 +122,8 @@ void	Channel::Send () {
 void	Channel::AddHint (Datagram& dgram) {
 
     while (!hint_out_.empty() &&
-            hint_out_.front().time<Datagram::now-TINT_SEC) {
+            (hint_out_.front().time<Datagram::now-TINT_SEC ||
+            file().ack_out().get(hint_out_.front().bin)==bins::FILLED ) ) {
         file().picker().Expired(hint_out_.front().bin);
         hint_out_.pop_front();
     }

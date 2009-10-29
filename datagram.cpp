@@ -14,7 +14,7 @@
 #else
     #include <arpa/inet.h>
 #endif
-#define RND_DROP 10
+//#define RND_DROP 10
 #include <glog/logging.h>
 #include "datagram.h"
 
