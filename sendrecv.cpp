@@ -93,6 +93,7 @@ void	Channel::AddHandshake (Datagram& dgram) {
 	dgram.Push32(EncodeID(id));
     dprintf("%s #%i +hs\n",Datagram::TimeStr(),id);
     AddAck(dgram);
+    ack_out_.clear();
 }
 
 
