@@ -97,6 +97,7 @@ struct Datagram {
     static char* TimeStr(tint time=0);
 	static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
 	static tint now, epoch;
+    static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;
 
 	Datagram (SOCKET socket, const Address addr_) : addr(addr_), offset(0),
 		length(0), sock(socket) {}

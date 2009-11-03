@@ -14,7 +14,6 @@
 #else
     #include <arpa/inet.h>
 #endif
-//#define RND_DROP 10
 #include <glog/logging.h>
 #include "datagram.h"
 
@@ -23,6 +22,8 @@ namespace p2tp {
 tint Datagram::now = Datagram::Time();
 tint Datagram::epoch = now;
 uint32_t Datagram::Address::LOCALHOST = INADDR_LOOPBACK;
+uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0, 
+         Datagram::bytes_up=0, Datagram::bytes_down=0;
 
 char* Datagram::TimeStr (tint time) {
     static char ret_str[128];
@@ -43,17 +44,12 @@ char* Datagram::TimeStr (tint time) {
 }
     
 int Datagram::Send () {
-#ifdef RND_DROP
-    if (rand()%RND_DROP==0) {
-        Time();
-        dprintf("%s datagram killed\n",TimeStr());
-        return size();
-    }
-#endif
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
 	//offset=0;
 	//length=0;
+    dgrams_up++;
+    bytes_up+=size();
 	Time();
 	return r;
 }
@@ -69,13 +65,14 @@ int Datagram::Recv () {
 #else
 		PLOG(ERROR)<<"on recv";
 #endif
+    dgrams_down++;
+    bytes_down+=length;
 	Time();
 	return length;
 }
 
 
 SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
-	dprintf("waiting (%i socks)\n",sockcnt);
 	struct timeval timeout;
 	timeout.tv_sec = usec/TINT_SEC;
 	timeout.tv_usec = usec%TINT_SEC;

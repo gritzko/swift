@@ -360,7 +360,7 @@ namespace p2tp {
     /** Run send/receive loop for the specified amount of time. */
     void    Loop (tint till);
     /** Stop listening to a port. */
-    void    Shutdown (int sock_des);
+    void    Shutdown (int sock_des=-1);
 
     /** Open a file, start a transmission; fill it with content for a given root hash;
         in case the hash is omitted, the file is a fresh submit. */

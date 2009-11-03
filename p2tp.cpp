@@ -77,9 +77,10 @@ int     p2tp::Listen (Datagram::Address addr) {
 
 void    p2tp::Shutdown (int sock_des) {
     for(int i=0; i<Channel::socket_count; i++)
-        if (Channel::sockets[i]==sock_des)
+        if (sock_des==-1 || Channel::sockets[i]==sock_des) {
+            Datagram::Close(Channel::sockets[i]);
             Channel::sockets[i] = Channel::sockets[--Channel::socket_count];
-    Datagram::Close(sock_des);
+        }
 }
 
 
