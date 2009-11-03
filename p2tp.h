@@ -140,7 +140,7 @@ namespace p2tp {
         uint64_t        complete_kilo () const { return completek_; }
         uint64_t        seq_complete () const { return seq_complete_; }
         bool            is_complete () const
-            { return seq_complete_==size_; }
+            { return size_ && seq_complete_==size_; }
         bins&           ack_out ()  { return ack_out_; }
         int             file_descriptor () const { return fd_; }
         PiecePicker&    picker () { return *picker_; }

@@ -132,7 +132,7 @@ size_t  p2tp::Size (int fdes) {
 
 size_t  p2tp::Complete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
-        return FileTransfer::files[fdes]->complete();
+        return FileTransfer::files[fdes]->is_complete();
     else
         return 0;
 }

@@ -39,8 +39,17 @@ Sha1Hash::Sha1Hash(const char* str) {
 }
 
 Sha1Hash::Sha1Hash(bool hex, const char* hash) {
-	assert(!hex);
-	memcpy(bits,hash,SIZE);
+	if (hex) {
+        char hx[3]; hx[2]=0;
+        int val;
+        for(int i=0; i<SIZE; i++) {
+            strncpy(hx,hash+i*2,2);
+            sscanf(hx, "%x", &val);
+            bits[i] = val;
+        }
+        assert(this->hex()==string(hash));
+    } else
+        memcpy(bits,hash,SIZE);
 }
 
 string	Sha1Hash::hex() const {

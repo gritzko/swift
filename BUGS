@@ -1,5 +1,9 @@
     * hints, data for non-existing ranges
     * opens multiple channels to the same address
+    * hints do not expire
+    * RTT calculations need improvement (test)
+    * google-log is unnecessary
+    * reduce template use (peer queue)
     v hints do not expire
     * survive 10% loss
     * unlimited ping pong

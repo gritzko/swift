@@ -46,6 +46,8 @@ char* Datagram::TimeStr (tint time) {
 int Datagram::Send () {
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
+    if (r<0)
+        perror("can't send");
 	//offset=0;
 	//length=0;
     dgrams_up++;
