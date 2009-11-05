@@ -99,4 +99,14 @@ struct SlowStartController : public CwndController {
     
 };
 
+
+struct AIMDController : public CwndController {
+    
+    AIMDController(SendController* orig, int cwnd=1) : CwndController(orig,cwnd) {}
+    const char* type() const { return "AIMD"; }
+    void    OnAckRcvd(bin64_t ackd) ;
+    
+};
+
+
 #endif

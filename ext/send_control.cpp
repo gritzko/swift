@@ -104,9 +104,19 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
 
 
 void SlowStartController::OnAckRcvd (bin64_t pos) {
-    if (pos!=bin64_t::NONE)
+    if (pos!=bin64_t::NONE) {
         cwnd_ += 1;
-    else 
+        if (TINT_SEC*cwnd_/ch_->rtt_avg_>=10)
+            Swap(new AIMDController(this,cwnd_));
+    } else 
         cwnd_ /= 2;
 }
     
+
+void AIMDController::OnAckRcvd (bin64_t pos) {
+    if (pos!=bin64_t::NONE)
+        cwnd_ += 1.0/cwnd_;
+    else 
+        cwnd_ /= 2;
+}
+ 

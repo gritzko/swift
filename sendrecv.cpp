@@ -91,8 +91,8 @@ void	Channel::AddHandshake (Datagram& dgram) {
 	dgram.Push8(P2TP_HANDSHAKE);
 	dgram.Push32(EncodeID(id));
     dprintf("%s #%i +hs\n",Datagram::TimeStr(),id);
-    AddAck(dgram);
     ack_out_.clear();
+    AddAck(dgram);
 }
 
 
@@ -134,20 +134,40 @@ void	Channel::Send () {
 
 void	Channel::AddHint (Datagram& dgram) {
 
-    while (!hint_out_.empty() &&
+    while (!hint_out_.empty()) {
+        tintbin f = hint_out_.front();
+        if (f.time<Datagram::now-rtt_avg_*8) {
+            hint_out_.pop_front();
+        } else {
+            int status = file().ack_out().get(f.bin);
+            if (status==bins::EMPTY) {
+                break;
+            } else if (status==bins::FILLED) {
+                hint_out_.pop_front();
+            } else { // mixed
+                hint_out_.front().bin = f.bin.right();
+                f.bin = f.bin.left();
+                hint_out_.push_front(f);
+            }
+        }
+    }
+    /*while (!hint_out_.empty() &&
             (hint_out_.front().time<Datagram::now-TINT_SEC ||
             file().ack_out().get(hint_out_.front().bin)==bins::FILLED ) ) {
         file().picker().Expired(hint_out_.front().bin);
         hint_out_.pop_front();
-    }
+    }*/
     uint64_t hinted = 0;
     for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
         hinted += i->bin.width();
-    int bps = PeerBPS();
-    dprintf("%s #%i hinted %lli peer_bps %i\n",Datagram::TimeStr(),id,hinted,bps);
-    //float peer_cwnd = cc_->PeerBPS() * cc_->RoundTripTime() / TINT_SEC;
-    
-    if ( bps > hinted*1024 ) { //hinted*1024 < peer_cwnd*4 ) {
+    //int bps = PeerBPS();
+    double peer_cwnd = rtt_avg_ / dip_avg_;
+    if (peer_cwnd<1)
+        peer_cwnd = 1;
+    dprintf("%s #%i hinted %lli peer_cwnd %lli/%lli=%f\n",
+            Datagram::TimeStr(),id,hinted,rtt_avg_,dip_avg_,((float)rtt_avg_/dip_avg_));
+
+    if ( 4*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
         
         uint8_t layer = 2; // actually, enough
         bin64_t hint = file().picker().Pick(ack_in_,layer);
@@ -170,8 +190,10 @@ bin64_t		Channel::AddData (Datagram& dgram) {
 	if (!file().size()) // know nothing
 		return bin64_t::NONE;
 	bin64_t tosend = DequeueHint();
-    if (tosend==bin64_t::NONE) 
+    if (tosend==bin64_t::NONE) {
+        dprintf("%s #%i out of hints\n",Datagram::TimeStr(),id);
         return bin64_t::NONE;
+    }
     if (ack_in_.is_empty() && file().size())
         AddPeakHashes(dgram);
     AddUncleHashes(dgram,tosend);
@@ -230,6 +252,7 @@ void	Channel::Recv (Datagram& dgram) {
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = Datagram::now - last_send_time_;
         dev_avg_ = rtt_avg_;
+        dip_avg_ = rtt_avg_;
         dprintf("%s #%i rtt init %lli\n",Datagram::TimeStr(),id,rtt_avg_);
     }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
