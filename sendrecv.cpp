@@ -227,6 +227,11 @@ void	Channel::AddAck (Datagram& dgram) {
 
 
 void	Channel::Recv (Datagram& dgram) {
+    if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
+        rtt_avg_ = Datagram::now - last_send_time_;
+        dev_avg_ = rtt_avg_;
+        dprintf("%s #%i rtt init %lli\n",Datagram::TimeStr(),id,rtt_avg_);
+    }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
 	while (dgram.size()) {
 		uint8_t type = dgram.Pull8();
@@ -284,18 +289,16 @@ void	Channel::OnAck (Datagram& dgram) {
     dprintf("%s #%i -ack (%i,%lli)\n",Datagram::TimeStr(),id,ackd_pos.layer(),ackd_pos.offset());
     for (int i=0; i<8 && i<data_out_.size(); i++) 
         if (data_out_[i].bin.within(ackd_pos)) {
-            tintbin x = data_out_[i];
-            data_out_[i].bin = bin64_t::ALL;
-            tint rtt = Datagram::now-x.time;
+            tint rtt = Datagram::now-data_out_[i].time;
             rtt_avg_ = (rtt_avg_*3 + rtt) >> 2;
             dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
             dprintf("%s #%i rtt %lli dev %lli\n",
                     Datagram::TimeStr(),id,rtt_avg_,dev_avg_);
-            cc_->OnAckRcvd(x.bin);
+            cc_->OnAckRcvd(data_out_[i].bin);
         }
-    while (data_out_.size() && data_out_.front().bin==bin64_t::ALL)
-        data_out_.pop_front();
 	ack_in_.set(ackd_pos);
+    while (data_out_.size() && ack_in_.get(data_out_.front().bin)==bins::FILLED)
+        data_out_.pop_front();
 }
 
 

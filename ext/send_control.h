@@ -77,7 +77,7 @@ struct KeepAliveController : public SendController {
 
 struct CwndController : public SendController {
     
-    float   cwnd_;
+    double   cwnd_;
     
     CwndController(SendController* orig, int cwnd=1) :
     SendController(orig), cwnd_(cwnd) {    }

@@ -26,12 +26,14 @@ uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0,
          Datagram::bytes_up=0, Datagram::bytes_down=0;
 
 char* Datagram::TimeStr (tint time) {
-    static char ret_str[32][4]; // wow
+    assert(!time || time>=epoch);
+    static char ret_str[4][32]; // wow
     static int i;
     i = (i+1) & 3;
     if (time==0)
         time = now;
     time -= epoch;
+    assert(time>=0);
     int hours = time/TINT_HOUR;
     time %= TINT_HOUR;
     int mins = time/TINT_MIN;

@@ -38,8 +38,8 @@ void    PingPongController::OnDataRecvd(bin64_t b) {
 }
     
 void    PingPongController::OnAckRcvd(bin64_t ackd) {
-    if (ch_->data_out_.empty())
-        Swap(new SlowStartController(this));
+    //if (ch_->data_out_.empty())
+    Swap(new SlowStartController(this));
 }
 
 
@@ -66,14 +66,19 @@ void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
 
 
 bool    CwndController::MaySendData() {
+    dprintf("%s #%i maysend %i < %f & %s (rtt %lli)\n",Datagram::TimeStr(),
+            ch_->id,(int)ch_->data_out_.size(),cwnd_,Datagram::TimeStr(NextSendTime()),
+            ch_->rtt_avg_);
     return ch_->data_out_.size() < cwnd_  &&  Datagram::now >= NextSendTime();
 }
     
 tint    CwndController::NextSendTime () {
+    tint sendtime;
     if (ch_->data_out_.size() < cwnd_)
-        return ch_->last_send_time_ + ch_->rtt_avg_ / cwnd_;
+        sendtime = ch_->last_send_time_ + (ch_->rtt_avg_ / cwnd_);
     else
-        return ch_->last_send_time_ + ch_->rtt_avg_ + ch_->dev_avg_ * 4 ;
+        sendtime = ch_->last_send_time_ + ch_->rtt_avg_ + ch_->dev_avg_ * 4 ;
+    return sendtime;
 }
     
 void    CwndController::OnDataSent(bin64_t b) {
