@@ -31,20 +31,20 @@ int Channel::sockets[8] = {0,0,0,0,0,0,0,0};
 int Channel::socket_count = 0;
 Address Channel::tracker;
 tbqueue Channel::send_queue;
-#include "ext/dummy_controller.cpp"
 #include "ext/simple_selector.cpp"
 PeerSelector* Channel::peer_selector = new SimpleSelector();
 
 Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
 	file_(file), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
-    own_id_mentioned_(false), next_send_time_(0)
+    own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
+    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC)
 {
     if (peer_==Address())
         peer_ = tracker;
 	this->id = channels.size();
 	channels.push_back(this);
-    cc_ = new BasicController(id);
+    cc_ = new PingPongController(this);
     RequeueSend(Datagram::now);
 }
 

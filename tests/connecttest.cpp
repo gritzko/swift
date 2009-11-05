@@ -55,7 +55,7 @@ TEST(P2TP,CwndTest) {
     unlink("doc/sofi-copy.jpg");
     struct stat st;
 	ASSERT_EQ(0,stat("doc/sofi.jpg", &st));
-    int size = st.st_size, sizek = (st.st_size>>10) + (st.st_size%1024?1:0) ;
+    int size = st.st_size;//, sizek = (st.st_size>>10) + (st.st_size%1024?1:0) ;
     
 	/*int f = open("big_test_file",O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	int size = 60<<10; //rand()%(1<<19) + (1<<19);

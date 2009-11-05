@@ -26,7 +26,9 @@ uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0,
          Datagram::bytes_up=0, Datagram::bytes_down=0;
 
 char* Datagram::TimeStr (tint time) {
-    static char ret_str[128];
+    static char ret_str[32][4]; // wow
+    static int i;
+    i = (i+1) & 3;
     if (time==0)
         time = now;
     time -= epoch;
@@ -39,8 +41,8 @@ char* Datagram::TimeStr (tint time) {
     int msecs = time/TINT_MSEC;
     time %= TINT_MSEC;
     int usecs = time/TINT_uSEC;
-    sprintf(ret_str,"%i_%02i_%02i_%03i_%03i",hours,mins,secs,msecs,usecs);
-    return ret_str;
+    sprintf(ret_str[i],"%i_%02i_%02i_%03i_%03i",hours,mins,secs,msecs,usecs);
+    return ret_str[i];
 }
     
 int Datagram::Send () {

@@ -82,14 +82,14 @@ namespace p2tp {
 		P2TP_HANDSHAKE = 0,
 		P2TP_DATA = 1,
 		P2TP_ACK = 2,
-		P2TP_ACK_TS = 8,
+		P2TP_TS = 8,
 		P2TP_HINT = 3,
 		P2TP_HASH = 4,
 		P2TP_PEX_ADD = 5,
 		P2TP_PEX_RM = 6,
 		P2TP_MESSAGE_COUNT = 7
 	} messageid_t;
-
+    
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
@@ -212,20 +212,9 @@ namespace p2tp {
         friend void    Close (int fd) ;
 	};
 
-	struct CongestionController {
-        int channel_id;
-        CongestionController (int chann_id) : channel_id(chann_id) {}
-        virtual int     free_cwnd() = 0;
-        virtual tint    RoundTripTime() = 0;
-        virtual tint    RoundTripTimeoutTime() = 0;
-        virtual int     PeerBPS() = 0;
-        virtual float   PeerCWindow() = 0;
-        virtual tint    OnDataSent(bin64_t b) = 0;
-        virtual tint    OnDataRecvd(bin64_t b) = 0;
-        virtual tint    OnAckRcvd(bin64_t ackd, tint peer_time=0) = 0;
-        //virtual tint    OnHintRecvd (bin64_t hint) = 0;
-		virtual         ~CongestionController() {}
-	};
+    
+#include "ext/send_control.h"
+    
 
     class PiecePicker {
     public:
@@ -234,12 +223,14 @@ namespace p2tp {
         virtual void    Received (bin64_t b) = 0;
     };
 
+    
     class PeerSelector {
     public:
         virtual void AddPeer (const Datagram::Address& addr, const Sha1Hash& root) = 0;
         virtual Datagram::Address GetPeer (const Sha1Hash& for_root) = 0;
     };
 
+    
     class DataStorer {
     public:
         DataStorer (const Sha1Hash& id, size_t size);
@@ -254,8 +245,8 @@ namespace p2tp {
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
         (There was a seductive idea to remove channels, just put the root
         hash or a fragment of it into every datagram.) */
-	class Channel {
-	public:
+	struct Channel {  // normally, API users do not deal with the structure
+
 		Channel	(FileTransfer* file, int socket=-1, Address peer=Address());
 		~Channel();
 
@@ -266,7 +257,7 @@ namespace p2tp {
 		void		Send ();
 
 		void		OnAck (Datagram& dgram);
-		void		OnAckTs (Datagram& dgram);
+		void		OnTs (Datagram& dgram);
 		bin64_t		OnData (Datagram& dgram);
 		void		OnHint (Datagram& dgram);
 		void		OnHash (Datagram& dgram);
@@ -275,6 +266,7 @@ namespace p2tp {
 		void		AddHandshake (Datagram& dgram);
 		bin64_t		AddData (Datagram& dgram);
 		void		AddAck (Datagram& dgram);
+		void		AddTs (Datagram& dgram);
 		void		AddHint (Datagram& dgram);
 		void		AddUncleHashes (Datagram& dgram, bin64_t pos);
 		void		AddPeakHashes (Datagram& dgram);
@@ -285,14 +277,13 @@ namespace p2tp {
         bool        is_established () { return peer_channel_id_ && own_id_mentioned_; }
         FileTransfer& file() { return *file_; }
         const Address& peer() const { return peer_; }
-
+        
 		static int DecodeID(int scrambled);
 		static int EncodeID(int unscrambled);
 		static Channel* channel(int i) {
             return i<channels.size()?channels[i]:NULL;
         }
 
-	private:
 
 		/** Channel id: index in the channel array. */
 		uint32_t	id;
@@ -309,6 +300,8 @@ namespace p2tp {
 		bins		ack_in_;
 		/**	Last data received; needs to be acked immediately. */
 		tintbin		data_in_;
+        /** The history of data sent and still unacknowledged. */
+        tbqueue     data_out_;
         /** Index in the history array. */
 		bins        ack_out_;
 		/**	Transmit schedule: in most cases filled with the peer's hints */
@@ -316,20 +309,28 @@ namespace p2tp {
 		/** Hints sent (to detect and reschedule ignored hints). */
 		tbqueue		hint_out_;
 		/** The congestion control strategy. */
-		CongestionController	*cc_;
+		SendController	*cc_;
         /** Types of messages the peer accepts. */
         uint64_t    cap_in_;
         /** For repeats. */
 		//tint		last_send_time, last_recv_time;
         /** PEX progress */
         int         pex_out_;
-
+        /** Smoothed averages for RTT, RTT deviation and data interarrival periods. */
+        tint        rtt_avg_, dev_avg_, dip_avg_;
+        tint        last_send_time_;
+        tint        last_recv_time_;
         tint        next_send_time_;
+        tint        peer_send_time_;
         static      tbqueue send_queue;
-        void        RequeueSend (tint next_time);
         
-        /** Get a rewuest for one packet from the queue of peer's requests. */
+        void        RequeueSend (tint next_time);
+        int         PeerBPS() const {
+            return TINT_SEC / dip_avg_ * 1024;
+        }
+        /** Get a request for one packet from the queue of peer's requests. */
         bin64_t		DequeueHint();
+        void        ClearStaleDataOut ();
         //void        CleanStaleHints();
 
         static PeerSelector* peer_selector;
@@ -350,6 +351,7 @@ namespace p2tp {
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
         
         friend class FileTransfer; // FIXME!!!
+        friend class SendController; // FIXME!!!
 	};
 
 
