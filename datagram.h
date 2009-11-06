@@ -109,7 +109,6 @@ struct Datagram {
 	static SOCKET Bind(Address address);
 	static void Close(int port);
 	static tint Time();
-    static char* TimeStr(tint time=0);
 	static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
 	static tint now, epoch;
     static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;
@@ -198,6 +197,7 @@ struct Datagram {
 
 };
 
+const char* tintstr(tint t=0);
 std::string sock2str (struct sockaddr_in addr);
 #define dprintf(...) printf(__VA_ARGS__)
 #define eprintf(...) fprintf(stderr,__VA_ARGS__)

@@ -24,14 +24,14 @@ uint32_t Address::LOCALHOST = INADDR_LOOPBACK;
 uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0, 
          Datagram::bytes_up=0, Datagram::bytes_down=0;
 
-char* Datagram::TimeStr (tint time) {
-    assert(!time || time>=epoch);
+const char* tintstr (tint time) {
+    if (time==0)
+        time = Datagram::now;
+    assert(time>=Datagram::epoch);
     static char ret_str[4][32]; // wow
     static int i;
     i = (i+1) & 3;
-    if (time==0)
-        time = now;
-    time -= epoch;
+    time -= Datagram::epoch;
     assert(time>=0);
     int hours = time/TINT_HOUR;
     time %= TINT_HOUR;

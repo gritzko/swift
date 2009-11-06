@@ -13,7 +13,7 @@ using namespace p2tp;
 
 
 void    SendController::Swap (SendController* newctrl) {
-    dprintf("%s #%i sendctrl %s->%s\n",Datagram::TimeStr(),ch_->id,type(),newctrl->type());
+    dprintf("%s #%i sendctrl %s->%s\n",tintstr(),ch_->id,type(),newctrl->type());
     assert(this==ch_->cc_);
     ch_->cc_ = newctrl;
     delete this;
@@ -66,8 +66,8 @@ void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
 
 
 bool    CwndController::MaySendData() {
-    dprintf("%s #%i maysend %i < %f & %s (rtt %lli)\n",Datagram::TimeStr(),
-            ch_->id,(int)ch_->data_out_.size(),cwnd_,Datagram::TimeStr(NextSendTime()),
+    dprintf("%s #%i maysend %i < %f & %s (rtt %lli)\n",tintstr(),
+            ch_->id,(int)ch_->data_out_.size(),cwnd_,tintstr(NextSendTime()),
             ch_->rtt_avg_);
     return ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime();
 }
