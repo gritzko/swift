@@ -14,3 +14,5 @@
     * minimize the number of template instantiations
     * Channel thinks how much it HINTs a second,
       picker thinks which HINTs are snubbed
+    * dead Channels are not killed => cannot open a new one
+        (have a channel already)
