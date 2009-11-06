@@ -19,7 +19,7 @@ class SimpleSelector : public PeerSelector {
 public:
     SimpleSelector () {
     }
-    void AddPeer (const Datagram::Address& addr, const Sha1Hash& root) {
+    void AddPeer (const Address& addr, const Sha1Hash& root) {
         peers.push_front(memo_t(addr,root)); //,root.fingerprint() !!!
     }
     Address GetPeer (const Sha1Hash& for_root) {

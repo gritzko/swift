@@ -72,7 +72,7 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
 /*void	Channel::CleanStaleHints () {
 	while ( !hint_out.empty() && file().ack_out().get(hint_out.front().bin)==bins::FILLED ) 
 		hint_out.pop_front();  // FIXME must normally clear fulfilled entries
-	tint timed_out = Datagram::now - cc_->RoundTripTime()*8;
+	tint timed_out = NOW - cc_->RoundTripTime()*8;
 	while ( !hint_out.empty() && hint_out.front().time < timed_out ) {
         file().picker()->Snubbed(hint_out.front().bin);
 		hint_out.pop_front();
@@ -99,7 +99,7 @@ void	Channel::AddHandshake (Datagram& dgram) {
 void    Channel::ClearStaleDataOut() {
     int oldsize = data_out_.size();
     while ( data_out_.size() && data_out_.front().time < 
-           Datagram::now - rtt_avg_ - dev_avg_*4 )
+           NOW - rtt_avg_ - dev_avg_*4 )
         data_out_.pop_front();
     if (data_out_.size()!=oldsize)
         cc_->OnAckRcvd(bin64_t::NONE);
@@ -113,6 +113,7 @@ void	Channel::Send () {
     if ( is_established() ) {
         AddAck(dgram);
         AddHint(dgram);
+        AddPex(dgram);
         ClearStaleDataOut();
         if (cc_->MaySendData()) 
             data = AddData(dgram);
@@ -127,7 +128,7 @@ void	Channel::Send () {
     if (dgram.size()==4) // only the channel id; bare keep-alive
         data = bin64_t::ALL;
     cc_->OnDataSent(data);
-    last_send_time_ = Datagram::now;
+    last_send_time_ = NOW;
     RequeueSend(cc_->NextSendTime());
 }
 
@@ -136,7 +137,7 @@ void	Channel::AddHint (Datagram& dgram) {
 
     while (!hint_out_.empty()) {
         tintbin f = hint_out_.front();
-        if (f.time<Datagram::now-rtt_avg_*8) {
+        if (f.time<NOW-rtt_avg_*8) {
             hint_out_.pop_front();
         } else {
             int status = file().ack_out().get(f.bin);
@@ -152,7 +153,7 @@ void	Channel::AddHint (Datagram& dgram) {
         }
     }
     /*while (!hint_out_.empty() &&
-            (hint_out_.front().time<Datagram::now-TINT_SEC ||
+            (hint_out_.front().time<NOW-TINT_SEC ||
             file().ack_out().get(hint_out_.front().bin)==bins::FILLED ) ) {
         file().picker().Expired(hint_out_.front().bin);
         hint_out_.pop_front();
@@ -250,9 +251,10 @@ void	Channel::AddAck (Datagram& dgram) {
 
 void	Channel::Recv (Datagram& dgram) {
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
-        rtt_avg_ = Datagram::now - last_send_time_;
+        rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
         dip_avg_ = rtt_avg_;
+        file_->hs_in_.push_back(id);
         dprintf("%s #%i rtt init %lli\n",Datagram::TimeStr(),id,rtt_avg_);
     }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
@@ -272,9 +274,9 @@ void	Channel::Recv (Datagram& dgram) {
 		}
 	}
     cc_->OnDataRecvd(data);
-    last_recv_time_ = Datagram::now;
+    last_recv_time_ = NOW;
     if (data!=bin64_t::ALL)
-        RequeueSend(Datagram::now);
+        RequeueSend(NOW);
 }
 
 
@@ -294,9 +296,9 @@ bin64_t Channel::OnData (Datagram& dgram) {
     bool ok = file().OfferData(pos, data, length) ;
     dprintf("%s #%i %cdata (%lli)\n",Datagram::TimeStr(),id,ok?'-':'!',pos.offset());
     if (ok) {
-        data_in_ = tintbin(Datagram::now,pos);
+        data_in_ = tintbin(NOW,pos);
         if (last_recv_time_) {
-            tint dip = Datagram::now - last_recv_time_;
+            tint dip = NOW - last_recv_time_;
             dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
         }
         return pos;
@@ -312,7 +314,7 @@ void	Channel::OnAck (Datagram& dgram) {
     dprintf("%s #%i -ack (%i,%lli)\n",Datagram::TimeStr(),id,ackd_pos.layer(),ackd_pos.offset());
     for (int i=0; i<8 && i<data_out_.size(); i++) 
         if (data_out_[i].bin.within(ackd_pos)) {
-            tint rtt = Datagram::now-data_out_[i].time;
+            tint rtt = NOW-data_out_[i].time;
             rtt_avg_ = (rtt_avg_*3 + rtt) >> 2;
             dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
             dprintf("%s #%i rtt %lli dev %lli\n",
@@ -360,32 +362,20 @@ void Channel::OnPex (Datagram& dgram) {
     uint32_t ipv4 = dgram.Pull32();
     uint16_t port = dgram.Pull16();
     Address addr(ipv4,port);
-    //if (peer_selector)
-    //    peer_selector->AddPeer(Datagram::Address(addr,port),file().root_hash());
-    file_->pex_in_.push_back(addr);
-    if (file_->pex_in_.size()>1000)
-        file_->pex_in_.pop_front(); 
-    static int ENOUGH_PEERS_THRESHOLD = 20;
-    if (file_->channel_count()<ENOUGH_PEERS_THRESHOLD) {
-        int i = 0, chno;
-        while ( (chno=file_->RevealChannel(i)) != -1 ) {
-            if (channels[i]->peer()==addr) 
-                break;
-        }
-        if (chno==-1)
-            new Channel(file_,socket_,addr);
-    }
+    dprintf("%s #%i -pex %s\n",Datagram::TimeStr(),id,addr.str().c_str());
+    file_->OnPexIn(addr);
 }
 
 
 void    Channel::AddPex (Datagram& dgram) {
-    int ch = file().RevealChannel(this->pex_out_);
-    if (ch==-1)
+    int chid = file_->RevealChannel(pex_out_);
+    if (chid==-1 || chid==id)
         return;
-    Address a = channels[ch]->peer();
+    Address a = channels[chid]->peer();
     dgram.Push8(P2TP_PEX_ADD);
     dgram.Push32(a.ipv4());
     dgram.Push16(a.port());
+    dprintf("%s #%i +pex %s\n",Datagram::TimeStr(),id,a.str().c_str());
 }
 
 
@@ -396,7 +386,7 @@ void	Channel::Recv (int socket) {
 		RETLOG("datagram shorter than 4 bytes");
 	uint32_t mych = data.Pull32();
 	Sha1Hash hash;
-	Channel* channel;
+	Channel* channel = NULL;
 	if (!mych) { // handshake initiated
 		if (data.size()<1+4+1+4+Sha1Hash::SIZE) 
 			RETLOG ("incorrect size initial handshake packet");
@@ -411,6 +401,9 @@ void	Channel::Recv (int socket) {
 		if (!file) 
 			RETLOG ("hash unknown, no such file");
         dprintf("%s #0 -hash ALL %s\n",Datagram::TimeStr(),hash.hex().c_str());
+        for(binqueue::iterator i=file->hs_in_.begin(); i!=file->hs_in_.end(); i++)
+            if (channels[*i] && channels[*i]->peer_==data.addr) 
+                RETLOG("have a channel already");
 		channel = new Channel(file, socket, data.address());
 	} else {
 		mych = DecodeID(mych);
@@ -463,14 +456,14 @@ void    Channel::Loop (tint howlong) {
         }
         if (send_time>limit)
             send_time = limit;
-        if (sender && send_time<=Datagram::now) {
+        if (sender && send_time<=NOW) {
             dprintf("%s #%i sch_send %s\n",Datagram::TimeStr(),sender->id,
                     Datagram::TimeStr(send_time));
             sender->Send();
             pop_heap(send_queue.begin(), send_queue.end(), tblater);
             send_queue.pop_back();
         } else {
-            tint towait = send_time - Datagram::now;
+            tint towait = send_time - NOW;
             dprintf("%s waiting %lliusec\n",Datagram::TimeStr(),towait);
             int rd = Datagram::Wait(socket_count,sockets,towait);
             if (rd!=-1)
@@ -489,7 +482,7 @@ void    Channel::Loop (tint howlong) {
  if (send_queue.empty())
  dprintf("%s empty send_queue\n", Datagram::TimeStr());
  
- while ( Datagram::now <= untiltime && !send_queue.empty() ) {
+ while ( NOW <= untiltime && !send_queue.empty() ) {
  
  // BUG BUG BUG  no scheduled sends => just listen
  
@@ -508,11 +501,11 @@ void    Channel::Loop (tint howlong) {
  if (sender->next_send_time_!=next_send.time)
  continue;
  
- if (wake_on<Datagram::now)
- wake_on = Datagram::now;
+ if (wake_on<NOW)
+ wake_on = NOW;
  if (wake_on>untiltime)
  wake_on = untiltime;
- tint towait = min(wake_on-Datagram::now,TINT_SEC);
+ tint towait = min(wake_on-NOW,TINT_SEC);
  dprintf("%s waiting %lliusec\n",Datagram::TimeStr(),towait);
  int rd = Datagram::Wait(socket_count,sockets,towait);
  if (rd!=-1)

@@ -44,7 +44,7 @@ public:
     }
     
     tint    next_send_time ( ){
-        return cwnd_ ? Datagram::now + (rtt_avg_/cwnd_) : TINT_NEVER; // TODO keepalives
+        return cwnd_ ? NOW + (rtt_avg_/cwnd_) : TINT_NEVER; // TODO keepalives
     }
     
     void OnDataSent(bin64_t b) {
@@ -52,20 +52,20 @@ public:
             cwnd_ = 0; // nothing to send; suspend
         } else {
             last_bin_sent_ = b;
-            last_send_time_ = Datagram::now;
+            last_send_time_ = NOW;
             in_flight_++;
         }
     }
     
     void OnDataRecvd(bin64_t b) {
-        last_recv_time_ = Datagram::now;
+        last_recv_time_ = NOW;
     }
     
     void OnAckRcvd(bin64_t b, tint peer_stamp) {
         if (last_bin_sent_!=b)
             return;
         if (peer_stamp!=TINT_NEVER)
-            rtt_avg_ = (rtt_avg_*7 + (Datagram::now-last_send_time_)) >> 3; // van Jac
+            rtt_avg_ = (rtt_avg_*7 + (NOW-last_send_time_)) >> 3; // van Jac
         in_flight_--;
     }
     

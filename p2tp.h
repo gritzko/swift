@@ -64,19 +64,19 @@ Messages
 
 namespace p2tp {
 
+    #define NOW Datagram::now
     struct tintbin {
         tint    time;
         bin64_t bin;
         tintbin(const tintbin& b) : time(b.time), bin(b.bin) {}
         tintbin() : time(0), bin(bin64_t::NONE) {}
         tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
-        tintbin(bin64_t bin_) : time(Datagram::now), bin(bin_) {}
+        tintbin(bin64_t bin_) : time(NOW), bin(bin_) {}
     };
 
-    
 	typedef std::deque<tintbin> tbqueue;
     typedef std::deque<bin64_t> binqueue;
-    typedef Datagram::Address   Address;
+    typedef Address   Address;
 
 	typedef enum {
 		P2TP_HANDSHAKE = 0,
@@ -118,7 +118,7 @@ namespace p2tp {
             we use a rotating queue of bin completion events. */
         //bin64_t         RevealAck (uint64_t& offset);
         /** Rotating queue read for channels of this transmission. */
-        uint32_t        RevealChannel (int& i);
+        int             RevealChannel (int& i);
         
         static FileTransfer* Find (const Sha1Hash& hash);
 		static FileTransfer* file (int fd) {
@@ -144,7 +144,7 @@ namespace p2tp {
         bins&           ack_out ()  { return ack_out_; }
         int             file_descriptor () const { return fd_; }
         PiecePicker&    picker () { return *picker_; }
-        int             channel_count () const { return handshake_in_.size(); }
+        int             channel_count () const { return hs_in_.size(); }
 
         static int instance; // FIXME this smells
 
@@ -188,7 +188,8 @@ namespace p2tp {
         char*           error_;
 
         /** Channels working for this transfer. */
-        std::deque<int> handshake_in_;
+        binqueue        hs_in_;
+        int             hs_in_offset_;
         std::deque<Address>        pex_in_;
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
@@ -226,8 +227,8 @@ namespace p2tp {
     
     class PeerSelector {
     public:
-        virtual void AddPeer (const Datagram::Address& addr, const Sha1Hash& root) = 0;
-        virtual Datagram::Address GetPeer (const Sha1Hash& for_root) = 0;
+        virtual void AddPeer (const Address& addr, const Sha1Hash& root) = 0;
+        virtual Address GetPeer (const Sha1Hash& for_root) = 0;
     };
 
     
@@ -288,7 +289,7 @@ namespace p2tp {
 		/** Channel id: index in the channel array. */
 		uint32_t	id;
 		/**	Socket address of the peer. */
-        Datagram::Address	peer_;
+        Address	peer_;
 		/**	The UDP socket fd. */
 		int			socket_;
 		/**	Descriptor of the file in question. */
@@ -344,9 +345,9 @@ namespace p2tp {
         static Address  tracker;
 		static std::vector<Channel*> channels;
 
-        friend int      Listen (Datagram::Address addr);
+        friend int      Listen (Address addr);
         friend void     Shutdown (int sock_des);
-        friend void     AddPeer (Datagram::Address address, const Sha1Hash& root);
+        friend void     AddPeer (Address address, const Sha1Hash& root);
         friend void     SetTracker(const Address& tracker);
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
         
@@ -358,7 +359,7 @@ namespace p2tp {
 
     /*************** The top-level API ****************/
     /** Start listening a port. Returns socket descriptor. */
-    int     Listen (Datagram::Address addr);
+    int     Listen (Address addr);
     /** Run send/receive loop for the specified amount of time. */
     void    Loop (tint till);
     /** Stop listening to a port. */
@@ -372,7 +373,7 @@ namespace p2tp {
     /** Add a possible peer which participares in a given transmission. In the case
         root hash is zero, the peer might be talked to regarding any transmission
         (likely, a tracker, cache or an archive). */
-    void    AddPeer (Datagram::Address address, const Sha1Hash& root=Sha1Hash::ZERO);
+    void    AddPeer (Address address, const Sha1Hash& root=Sha1Hash::ZERO);
     
     void    SetTracker(const Address& tracker);
     

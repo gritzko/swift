@@ -29,7 +29,7 @@ tint    PingPongController::NextSendTime () {
 }
     
 void    PingPongController::OnDataSent(bin64_t b) {
-    if ( (ch_->last_recv_time_ && ch_->last_recv_time_<Datagram::now-TINT_SEC*3) || //no reply
+    if ( (ch_->last_recv_time_ && ch_->last_recv_time_<NOW-TINT_SEC*3) || //no reply
          (b==bin64_t::ALL && MaySendData()) ) // nothing to send
         Swap(new KeepAliveController(this));
 }
@@ -69,7 +69,7 @@ bool    CwndController::MaySendData() {
     dprintf("%s #%i maysend %i < %f & %s (rtt %lli)\n",Datagram::TimeStr(),
             ch_->id,(int)ch_->data_out_.size(),cwnd_,Datagram::TimeStr(NextSendTime()),
             ch_->rtt_avg_);
-    return ch_->data_out_.size() < cwnd_  &&  Datagram::now >= NextSendTime();
+    return ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime();
 }
     
 tint    CwndController::NextSendTime () {

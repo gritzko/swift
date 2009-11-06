@@ -31,7 +31,7 @@ int FileTransfer::instance = 0;
 FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     root_hash_(_root_hash), fd_(0), hashfd_(0), dry_run_(false),
     peak_count_(0), hashes_(NULL), error_(NULL), size_(0), sizek_(0),
-    complete_(0), completek_(0), seq_complete_(0) //, data_in_off_(0)
+    complete_(0), completek_(0), seq_complete_(0), hs_in_offset_(0)
 {
 	fd_ = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd_<0)
@@ -339,13 +339,6 @@ FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
 }
 
 
-void FileTransfer::OnPexIn (const Address& addr) {
-    pex_in_.push_back(addr);
-    if (pex_in_.size()>1000)
-        pex_in_.pop_front(); 
-}
-
-
 std::string FileTransfer::GetTempFilename(Sha1Hash& root_hash, int instance, std::string postfix)
 {
 	std::string tempfile = gettmpdir();
@@ -371,11 +364,39 @@ std::string FileTransfer::GetTempFilename(Sha1Hash& root_hash, int instance, std
 }*/
 
 
-uint32_t        FileTransfer::RevealChannel (int& offset) {
-    while (offset<Channel::channels.size() && 
-           (!Channel::channels[offset] || Channel::channels[offset]->file_!=this) )
-           offset++;
-    return offset < Channel::channels.size() ? offset : -1;
+void            FileTransfer::OnPexIn (const Address& addr) {
+    for(int i=0; i<hs_in_.size(); i++) {
+        Channel* c = Channel::channels[hs_in_[i]];
+        if (c && c->file_==this && c->peer_==addr)
+            return; // already connected
+    }
+    if (hs_in_.size()<20) {
+        new Channel(this,Channel::sockets[0],addr);
+    } else {
+        pex_in_.push_back(addr);
+        if (pex_in_.size()>1000)
+            pex_in_.pop_front();
+    }
+}
+
+
+int        FileTransfer::RevealChannel (int& pex_out_) {
+    pex_out_ -= hs_in_offset_;
+    if (pex_out_<0)
+        pex_out_ = 0;
+    while (pex_out_<hs_in_.size()) {
+        Channel* c = Channel::channels[hs_in_[pex_out_]];
+        if (c && c->file_==this) {
+            pex_out_ += hs_in_offset_ + 1;
+            return c->id;
+        } else {
+            hs_in_[pex_out_] = hs_in_[0];
+            hs_in_.pop_front();
+            hs_in_offset_++;
+        }
+    }
+    pex_out_ += hs_in_offset_;
+    return -1;
 }
 
 

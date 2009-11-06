@@ -46,45 +46,47 @@ typedef int64_t tint;
 #define INVALID_SOCKET -1
 #endif
 
+    
+struct Address {
+    struct sockaddr_in  addr;
+    static uint32_t LOCALHOST;
+    void init(uint32_t ipv4=0, uint16_t port=0) {
+        memset(&addr,0,sizeof(struct sockaddr_in));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = htonl(ipv4);
+    }
+    Address() { init(); }
+    Address(const char* ip, uint16_t port) {
+        init(LOCALHOST,port);
+        inet_aton(ip,&(addr.sin_addr));
+    }
+    Address(uint16_t port) {
+        init(LOCALHOST,port);
+    }
+    Address(uint32_t ipv4addr, uint16_t port) {
+        init(ipv4addr,port);
+    }
+    Address(const struct sockaddr_in& address) : addr(address) {}
+    uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }
+    uint16_t port () const { return ntohs(addr.sin_port); }
+    operator sockaddr_in () const {return addr;}
+    bool operator == (const Address& b) const { 
+        return addr.sin_family==b.addr.sin_family &&
+        addr.sin_port==b.addr.sin_port &&
+        addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
+    }
+    std::string str () const {
+        char s[32];
+        sprintf(s,"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
+                (ipv4()>>8)&0xff,ipv4()&0xff,port());
+        return std::string(s);
+    }
+    bool operator != (const Address& b) const { return !(*this==b); }
+};
+    
+    
 struct Datagram {
-
-    struct Address {
-        struct sockaddr_in  addr;
-        static uint32_t LOCALHOST;
-        void init(uint32_t ipv4=0, uint16_t port=0) {
-            memset(&addr,0,sizeof(struct sockaddr_in));
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(port);
-            addr.sin_addr.s_addr = htonl(ipv4);
-        }
-        Address() { init(); }
-        Address(const char* ip, uint16_t port) {
-            init(LOCALHOST,port);
-            inet_aton(ip,&(addr.sin_addr));
-        }
-        Address(uint16_t port) {
-            init(LOCALHOST,port);
-        }
-        Address(uint32_t ipv4addr, uint16_t port) {
-            init(ipv4addr,port);
-        }
-        Address(const struct sockaddr_in& address) : addr(address) {}
-        uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }
-        uint16_t port () const { return ntohs(addr.sin_port); }
-        operator sockaddr_in () const {return addr;}
-        bool operator == (const Address& b) const { 
-            return addr.sin_family==b.addr.sin_family &&
-            addr.sin_port==b.addr.sin_port &&
-            addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
-        }
-        std::string str () const {
-            char s[32];
-            sprintf(s,"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
-                    (ipv4()>>8)&0xff,ipv4()&0xff,port());
-            return std::string(s);
-        }
-        bool operator != (const Address& b) const { return !(*this==b); }
-    };
 
 	Address addr;
 	SOCKET sock;

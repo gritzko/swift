@@ -45,7 +45,7 @@ Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
 	this->id = channels.size();
 	channels.push_back(this);
     cc_ = new PingPongController(this);
-    RequeueSend(Datagram::now);
+    RequeueSend(NOW);
 }
 
 
@@ -67,7 +67,7 @@ int Channel::EncodeID(int unscrambled) {
 }
 
 
-int     p2tp::Listen (Datagram::Address addr) {
+int     p2tp::Listen (Address addr) {
     int sock = Datagram::Bind(addr);
     if (sock!=INVALID_SOCKET)
         Channel::sockets[Channel::socket_count++] = sock;
@@ -117,7 +117,7 @@ void	p2tp::Close (int fd) {
 }
 
 
-void    p2tp::AddPeer (Datagram::Address address, const Sha1Hash& root) {
+void    p2tp::AddPeer (Address address, const Sha1Hash& root) {
     Channel::peer_selector->AddPeer(address,root);
 }
 
