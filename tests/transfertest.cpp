@@ -99,8 +99,6 @@ TEST(TransferTest,TransferFile) {
 
 int main (int argc, char** argv) {
 
-	google::InitGoogleLogging(argv[0]);
-
 	std::string tempdir = gettmpdir();
     unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.hashes")).c_str());
     unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.peaks")).c_str());
@@ -115,7 +113,7 @@ int main (int argc, char** argv) {
 	int f = open(BTF,O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (f < 0)
 	{
-		PLOG(FATAL)<< "Error opening " << BTF << "\n";
+		eprintf("Error opening %s\n",BTF);
 		return -1;
 	}
     uint8_t buf[1024];

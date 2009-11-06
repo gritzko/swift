@@ -52,9 +52,9 @@ TEST(Datagram,LedbatTest) {
     int sec_ackd = 0;
 
     // bind sending socket
-    SOCKET send_sock = Datagram::Bind(Datagram::Address(INADDR_ANY,send_port));
+    SOCKET send_sock = Datagram::Bind(Address(INADDR_ANY,send_port));
     // bind receiving socket
-    SOCKET ack_sock = Datagram::Bind(Datagram::Address(INADDR_ANY,ack_port));
+    SOCKET ack_sock = Datagram::Bind(Address(INADDR_ANY,ack_port));
     struct sockaddr_in send_to, ack_to;
     memset(&send_to, 0, sizeof(struct sockaddr_in));
     memset(&ack_to, 0, sizeof(struct sockaddr_in));
@@ -188,7 +188,6 @@ int main (int argc, char** argv) {
     p2tp::LibraryInit();
     printf("Warning: use the script to set up dummynet!\n");
     testing::InitGoogleTest(&argc, argv);
-    google::InitGoogleLogging(argv[0]);
     dest_addr = htonl(INADDR_LOOPBACK);
     while ((opt = getopt(argc, argv, "a:d:s:h")) != -1)
         switch (opt) {

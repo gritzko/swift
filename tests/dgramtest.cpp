@@ -96,7 +96,6 @@ int main (int argc, char** argv) {
 	p2tp::LibraryInit();
 
 	testing::InitGoogleTest(&argc, argv);
-    google::InitGoogleLogging(argv[0]);
 	return RUN_ALL_TESTS();
 
 }

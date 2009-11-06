@@ -5,7 +5,6 @@
 #include "datagram.h"
 #include "p2tp.h"
 #include <gtest/gtest.h>
-//#include <glog/logging.h>
 
 using namespace p2tp;
 using namespace std;
@@ -171,8 +170,7 @@ int main (int argc, char** argv) {
     printf("Warning: use the script to set up dummynet!\n");
 
     p2tp::LibraryInit();
-
     testing::InitGoogleTest(&argc, argv);
-    google::InitGoogleLogging(argv[0]);
     return RUN_ALL_TESTS();
+
 }
