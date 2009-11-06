@@ -420,6 +420,7 @@ void	Channel::Recv (int socket) {
 			RETLOG ("invalid peer address");
         channel->own_id_mentioned_ = true;
 	}
+    dprintf("recvd %i bytes for %i\n",data.size(),channel->id);
     channel->Recv(data);
 }
 

@@ -51,34 +51,42 @@ typedef int64_t tint;
 struct Address {
     struct sockaddr_in  addr;
     static uint32_t LOCALHOST;
-    void init(uint32_t ipv4=0, uint16_t port=0) {
-        memset(&addr,0,sizeof(struct sockaddr_in));
-        addr.sin_family = AF_INET;
+    void set_port (uint16_t port) {
         addr.sin_port = htons(port);
+    }
+    void set_port (const char* port_str) {
+        int p;
+        if (sscanf(port_str,"%i",&p))
+            set_port(p);
+    }
+    void set_ipv4 (uint32_t ipv4) {
         addr.sin_addr.s_addr = htonl(ipv4);
     }
-    Address() { init(); }
-    Address(const char* ip, uint16_t port) {
-        init(LOCALHOST,port);
-        inet_aton(ip,&(addr.sin_addr));
+    void set_ipv4 (const char* ipv4_str) {
+        inet_aton(ipv4_str,&(addr.sin_addr));
     }
-    Address(const char* ip_port) {
-        char ipp[32];
-        strcpy(ipp,ip_port);
-        char* semi = strchr(ipp,':');
-        if (semi) {
-            *semi = 0;
-            int port;
-            sscanf(semi+1, "%i", &port);
-            init(LOCALHOST,port);
-        }
-        inet_aton(ipp,&(addr.sin_addr));
+    void clear () {
+        memset(&addr,0,sizeof(struct sockaddr_in));
+        addr.sin_family = AF_INET;
     }
+    Address() { 
+        clear();
+    }
+    Address(const char* ip, uint16_t port)  {
+        clear();
+        set_ipv4(ip);
+        set_port(port);
+    }
+    Address(const char* ip_port);
     Address(uint16_t port) {
-        init(LOCALHOST,port);
+        clear();
+        set_ipv4(LOCALHOST);
+        set_port(port);
     }
     Address(uint32_t ipv4addr, uint16_t port) {
-        init(ipv4addr,port);
+        clear();
+        set_ipv4(ipv4addr);
+        set_port(port);
     }
     Address(const struct sockaddr_in& address) : addr(address) {}
     uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }

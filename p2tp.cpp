@@ -146,7 +146,12 @@ size_t  p2tp::SeqComplete (int fdes) {
 }
 
 
-
+const Sha1Hash& p2tp::RootMerkleHash (int file) {
+    FileTransfer* trans = FileTransfer::file(file);
+    if (!trans)
+        return Sha1Hash::ZERO;
+    return trans->root_hash();
+}
 
 
 /**	<h2> P2TP handshake </h2>

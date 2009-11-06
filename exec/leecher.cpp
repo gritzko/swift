@@ -15,6 +15,9 @@ using namespace p2tp;
 /** P2TP downloader. Params: root hash, filename, tracker ip/port, own ip/port */
 int main (int argn, char** args) {
     
+    srand(time(NULL));
+    FileTransfer::instance = rand();
+    
     if (argn<4) {
         fprintf(stderr,"parameters: root_hash filename tracker_ip/port [own_ip/port]\n");
         return -1;
@@ -41,9 +44,10 @@ int main (int argn, char** args) {
 	p2tp::SetTracker(tracker);
     
 	int file = p2tp::Open(filename,root_hash);
+    printf("Downloading %s\n",root_hash.hex().c_str());
     
     while (!p2tp::Complete(file)) {
-	    p2tp::Loop(TINT_SEC/100);
+	    p2tp::Loop(TINT_SEC);
         printf("%lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
                Datagram::dgrams_up, Datagram::bytes_up,
                Datagram::dgrams_down, Datagram::bytes_down );

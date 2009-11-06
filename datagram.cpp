@@ -46,6 +46,30 @@ const char* tintstr (tint time) {
     return ret_str[i];
 }
     
+    
+Address::Address(const char* ip_port) {
+    clear();
+    if (strlen(ip_port)>=32)
+        return;
+    char ipp[32];
+    strncpy(ipp,ip_port,32);
+    char* semi = strchr(ipp,':');
+    if (semi) {
+        *semi = 0;
+        set_ipv4(ipp);
+        set_port(semi+1);
+    } else {
+        if (strchr(ipp, '.')) {
+            set_ipv4(ipp);
+            set_port((uint16_t)0);
+        } else {
+            set_ipv4(INADDR_LOOPBACK);
+            set_port(ipp);
+        }
+    }
+}
+    
+    
 int Datagram::Send () {
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));

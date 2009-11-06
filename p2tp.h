@@ -368,6 +368,8 @@ namespace p2tp {
     /** Open a file, start a transmission; fill it with content for a given root hash;
         in case the hash is omitted, the file is a fresh submit. */
     int     Open (const char* filename, const Sha1Hash& hash=Sha1Hash::ZERO) ;
+    /** Get the root hash for the transmission. */
+    const Sha1Hash& RootMerkleHash (int file) ;
     /** Close a file and a transmission. */
     void	Close (int fd) ;
     /** Add a possible peer which participares in a given transmission. In the case
