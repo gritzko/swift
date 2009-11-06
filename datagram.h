@@ -30,6 +30,7 @@
 #include <string>
 #include "hashtree.h"
 #include "compat/hirestimeofday.h"
+#include "compat/util.h"
 
 
 namespace p2tp {
@@ -60,6 +61,18 @@ struct Address {
     Address(const char* ip, uint16_t port) {
         init(LOCALHOST,port);
         inet_aton(ip,&(addr.sin_addr));
+    }
+    Address(const char* ip_port) {
+        char ipp[32];
+        strcpy(ipp,ip_port);
+        char* semi = strchr(ipp,':');
+        if (semi) {
+            *semi = 0;
+            int port;
+            sscanf(semi+1, "%i", &port);
+            init(LOCALHOST,port);
+        }
+        inet_aton(ipp,&(addr.sin_addr));
     }
     Address(uint16_t port) {
         init(LOCALHOST,port);

@@ -12,7 +12,6 @@
 
 namespace p2tp
 {
-	std::string gettmpdir(void);
 	/**
 	 * Return path of temporary directory.
 	 *
@@ -20,8 +19,10 @@ namespace p2tp
 	 *
 	 * TODO: Unicode... (gets hairy with open() call on Linux. Win32 has _wopen)
 	 */
+	std::string gettmpdir(void);
 
-
+    void print_error(const char* msg);
+    
 };
 
 #endif /* UTIL_H_ */

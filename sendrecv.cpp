@@ -7,8 +7,9 @@
  *
  */
 #include <algorithm>
-#include <glog/logging.h>
+//#include <glog/logging.h>
 #include "p2tp.h"
+#include "compat/util.h"
 
 
 using namespace p2tp;
@@ -124,7 +125,8 @@ void	Channel::Send () {
         AddAck(dgram);
     }
     dprintf("%s #%i sent %ib %s\n",Datagram::TimeStr(),id,dgram.size(),peer().str().c_str());
-	PCHECK( dgram.Send() != -1 )<<"error sending";
+	if (dgram.Send()==-1)
+        print_error("can't send datagram");
     if (dgram.size()==4) // only the channel id; bare keep-alive
         data = bin64_t::ALL;
     cc_->OnDataSent(data);
@@ -202,8 +204,8 @@ bin64_t		Channel::AddData (Datagram& dgram) {
     size_t r = pread(file().file_descriptor(),buf,1024,tosend.base_offset()<<10); 
     // TODO: ??? corrupted data, retries
     if (r<0) {
-        PLOG(ERROR)<<"error on reading";
-        return 0;
+        print_error("error on reading");
+        return bin64_t::NONE;
     }
     assert(dgram.space()>=r+4+1);
     dgram.Push8(P2TP_DATA);
@@ -456,7 +458,7 @@ void    Channel::Loop (tint howlong) {
         }
         if (send_time>limit)
             send_time = limit;
-        if (sender && send_time<=NOW) {
+        if ( sender && send_time <= NOW ) {
             dprintf("%s #%i sch_send %s\n",Datagram::TimeStr(),sender->id,
                     Datagram::TimeStr(send_time));
             sender->Send();
@@ -466,7 +468,7 @@ void    Channel::Loop (tint howlong) {
             tint towait = send_time - NOW;
             dprintf("%s waiting %lliusec\n",Datagram::TimeStr(),towait);
             int rd = Datagram::Wait(socket_count,sockets,towait);
-            if (rd!=-1)
+            if (rd!=INVALID_SOCKET)
                 Recv(rd);
         }
         
@@ -474,50 +476,3 @@ void    Channel::Loop (tint howlong) {
     	
 }
 
-
-
-/*
- 
- tint untiltime = Datagram::Time()+time;
- if (send_queue.empty())
- dprintf("%s empty send_queue\n", Datagram::TimeStr());
- 
- while ( NOW <= untiltime && !send_queue.empty() ) {
- 
- // BUG BUG BUG  no scheduled sends => just listen
- 
- tintbin next_send = send_queue.front();
- tint wake_on = next_send.time;
- Channel* sender = channel(next_send.bin);
- 
- // BUG BUG BUG filter stale timeouts here
- 
- //if (wake_on<=untiltime) {
- pop_heap(send_queue.begin(), send_queue.end(), tblater);
- send_queue.pop_back();
- //}// else
- //sender = 0; // BUG will never wake up
- 
- if (sender->next_send_time_!=next_send.time)
- continue;
- 
- if (wake_on<NOW)
- wake_on = NOW;
- if (wake_on>untiltime)
- wake_on = untiltime;
- tint towait = min(wake_on-NOW,TINT_SEC);
- dprintf("%s waiting %lliusec\n",Datagram::TimeStr(),towait);
- int rd = Datagram::Wait(socket_count,sockets,towait);
- if (rd!=-1)
- Recv(rd);
- // BUG WRONG BUG WRONG  another may need to send
- if (sender) {
- dprintf("%s #%i sch_send %s\n",Datagram::TimeStr(),sender->id,
- Datagram::TimeStr(next_send.time));
- sender->Send();
- // if (sender->cc_->next_send_time==TINT_NEVER) 
- }
- 
- }
- 
- */

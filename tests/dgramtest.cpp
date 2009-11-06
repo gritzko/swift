@@ -7,7 +7,7 @@
  *
  */
 #include <gtest/gtest.h>
-#include <glog/logging.h>
+//#include <glog/logging.h>
 #include "datagram.h"
 #include "p2tp.h" // Arno: for LibraryInit
 

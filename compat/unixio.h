@@ -23,6 +23,7 @@ size_t pwrite(int fildes, const void *buf, size_t nbyte, long offset);
 
 int inet_aton(const char *cp, struct in_addr *inp);
 
+
 #endif /* UNIXIO_H_ */
 
 #endif // WIN32

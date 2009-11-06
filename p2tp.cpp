@@ -16,7 +16,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
-#include <glog/logging.h>
+//#include <glog/logging.h>
 #include "p2tp.h"
 #include "datagram.h"
 

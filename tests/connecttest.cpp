@@ -8,7 +8,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <glog/logging.h>
+//#include <glog/logging.h>
 #include "p2tp.h"
 
 using namespace p2tp;

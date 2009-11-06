@@ -12,22 +12,39 @@
 using namespace p2tp;
 
 
+/** P2TP seeder. Params: filename, own ip/port, tracker ip/port */
 int main (int argn, char** args) {
     
-    assert(0<p2tp::Listen(7001));
-	
-	int file = p2tp::Open("doc/sofi.jpg");
+    if (argn<3) {
+        fprintf(stderr,"parameters: filename own_ip/port [tracker_ip/port]\n");
+        return -1;
+    }
+    
+    char* filename = args[1];
+    
+    Address tracker(args[3]), bindaddr(args[2]);
+    
+    if (bindaddr==Address()) {
+        fprintf(stderr,"Bind address format: [1.2.3.4:]12345\n");
+        return -2;
+    }
+    
+    assert(0<p2tp::Listen(bindaddr));
+
+    if (tracker!=Address())
+        p2tp::SetTracker(tracker);
+    
+	int file = p2tp::Open(filename);
     
     while (true) {
 	    p2tp::Loop(TINT_SEC);
         printf("%lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
-            Datagram::dgrams_up, Datagram::bytes_up,
-            Datagram::dgrams_down, Datagram::bytes_down );
+               Datagram::dgrams_up, Datagram::bytes_up,
+               Datagram::dgrams_down, Datagram::bytes_down );
     }
     
 	p2tp::Close(file);
-
+    
 	p2tp::Shutdown();
-
+    
 }
-

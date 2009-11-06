@@ -6,8 +6,8 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include <gtest/gtest.h>
-#include <glog/logging.h>
+//#include <gtest/gtest.h>
+//#include <glog/logging.h>
 #include "p2tp.h"
 #include "compat/util.h"
 #ifdef _MSC_VER

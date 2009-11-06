@@ -14,7 +14,6 @@
 #else
     #include <arpa/inet.h>
 #endif
-#include <glog/logging.h>
 #include "datagram.h"
 
 namespace p2tp {
@@ -65,12 +64,10 @@ int Datagram::Recv () {
 	offset = 0;
 	length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
 					   (struct sockaddr*)&(addr), &addrlen);
-	if (length<0) // FIXME FIXME FIXME 
-#ifdef _WIN32
-		PLOG(ERROR)<<"on recv" << WSAGetLastError() << "\n";
-#else
-		PLOG(ERROR)<<"on recv";
-#endif
+	if (length<0) {
+        length = 0;
+        print_error("error on recv");
+    }
     dgrams_down++;
     bytes_down+=length;
 	Time();
@@ -99,13 +96,9 @@ SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
 			if (FD_ISSET(sockets[i],&bases))
 				return sockets[i];
 	} else if (sel<0) {
-#ifdef _WIN32
-		PLOG(ERROR)<<"select fails" << WSAGetLastError() << "\n";
-#else
-		PLOG(ERROR)<<"select fails";
-#endif
+		print_error("select fails");
     } 
-    return -1;
+    return INVALID_SOCKET;
 }
 
 tint Datagram::Time () {
@@ -120,40 +113,36 @@ SOCKET Datagram::Bind (Address addr_) {
 	SOCKET fd;
 	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		PLOG(ERROR)<<"socket fails";
-        return -1;
+		print_error("socket() fails");
+        return INVALID_SOCKET;
     }
 #ifdef _WIN32
 	u_long enable = 1;
 	ioctlsocket(fd, FIONBIO, &enable);
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&sndbuf, sizeof(int)) != 0 ) {
-        PLOG(ERROR)<<"setsockopt fails";
-        return -3;
+        print_error("setsockopt fails");
+        return INVALID_SOCKET;
     }
    	if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&rcvbuf, sizeof(int)) != 0 ) {
-        PLOG(ERROR)<<"setsockopt2 fails";
-        return -3;
+        print_error("setsockopt2 fails");
+        return INVALID_SOCKET;
     }
 #else
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-		return -2;
+		return INVALID_SOCKET;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int)) < 0 ) {
-        PLOG(ERROR)<<"setsockopt fails";
-        return -3;
+        print_error("setsockopt fails");
+        return INVALID_SOCKET;
     }
    	if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(int)) < 0 ) {
-        PLOG(ERROR)<<"setsockopt2 fails";
-        return -3;
+        print_error("setsockopt2 fails");
+        return INVALID_SOCKET;
     }
 #endif
-    printf("BUFS: %i %i\n",sndbuf,rcvbuf);
-    /*memset(&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family = AF_INET;
-    addr.sin_port = htons(portno);
-    addr.sin_addr.s_addr = INADDR_ANY;*/
+    dprintf("socket buffers: %i send %i recv\n",sndbuf,rcvbuf);
 	if (::bind(fd, (sockaddr*)&addr, len) != 0) {
-        PLOG(ERROR)<<"bind fails";
-        return -4;
+        print_error("bind fails");
+        return INVALID_SOCKET;
     }
 	return fd;
 }
@@ -164,7 +153,7 @@ void Datagram::Close (int sock) { // remove from fd_set
 #else
 	if (::close(sock)!=0)
 #endif
-		PLOG(ERROR)<<"on closing a socket";
+		print_error("on closing a socket");
 }
 
 
