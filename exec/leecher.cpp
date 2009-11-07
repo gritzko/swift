@@ -15,7 +15,7 @@ using namespace p2tp;
 /** P2TP downloader. Params: root hash, filename, tracker ip/port, own ip/port */
 int main (int argn, char** args) {
     
-    srand(Datagram::Time());
+    srand(time(NULL));
     FileTransfer::instance = rand();
     
     if (argn<4) {

@@ -44,7 +44,6 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     else
         RecoverProgress();
     picker_ = new SeqPiecePicker(this);
-    picker_->Randomize(Datagram::Time()&7);
 }
 
 
@@ -145,6 +144,7 @@ void FileTransfer::SetSize (size_t bytes) { // peaks/root must be already set
     }
     for(int i=0; i<peak_count_; i++)
         hashes_[peaks_[i]] = peak_hashes_[i];
+    picker_->Randomize(rand()&31&(sizek_-1));
 }
 
 

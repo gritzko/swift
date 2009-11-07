@@ -29,6 +29,7 @@ public:
     }
     
     virtual bin64_t Pick (bins& offer, uint8_t layer) {
+        //dprintf("twist is %lli\n",twist_);
         if (twist_) {
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
@@ -37,8 +38,6 @@ public:
                 (ack_hint_out_,bin64_t::ALL,layer,bins::FILLED);
         if (twist_) {
             hint = hint.twisted(twist_);
-            //dprintf("found twisted by %lli fixed to (%i,%lli)\n",
-            //        twist_,hint.layer(),hint.offset());
             offer.twist(0);
             ack_hint_out_.twist(0);
         }
