@@ -15,17 +15,33 @@ class SeqPiecePicker : public PiecePicker {
     
     bins            ack_hint_out_;
     FileTransfer*   file_;
+    uint64_t        twist_;
     
 public:
     
-    SeqPiecePicker (FileTransfer* file_to_pick_from) : file_(file_to_pick_from), ack_hint_out_() {
+    SeqPiecePicker (FileTransfer* file_to_pick_from) : 
+    file_(file_to_pick_from), ack_hint_out_(), twist_(0) {
         ack_hint_out_.copy_range(file_->ack_out(),bin64_t::ALL);
     }
     
+    virtual void Randomize (uint64_t twist) {
+        twist_ = twist;
+    }
+    
     virtual bin64_t Pick (bins& offer, uint8_t layer) {
-
+        if (twist_) {
+            offer.twist(twist_);
+            ack_hint_out_.twist(twist_);
+        }
         bin64_t hint = offer.find_filtered
-            (ack_hint_out_,bin64_t::ALL,layer,bins::FILLED);
+                (ack_hint_out_,bin64_t::ALL,layer,bins::FILLED);
+        if (twist_) {
+            hint = hint.twisted(twist_);
+            //dprintf("found twisted by %lli fixed to (%i,%lli)\n",
+            //        twist_,hint.layer(),hint.offset());
+            offer.twist(0);
+            ack_hint_out_.twist(0);
+        }
         if (hint==bin64_t::NONE)
             return hint; // TODO: end-game mode
         while (hint.layer()>layer)

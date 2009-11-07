@@ -53,6 +53,7 @@ TEST(TransferTest,TransferFile) {
     unlink("copy");
     FileTransfer::instance = 1;
     FileTransfer* leech = new FileTransfer("copy",seed->root_hash());
+    leech->picker().Randomize(0);
     // transfer peak hashes
     for(int i=0; i<seed->peak_count(); i++)
         leech->OfferHash(seed->peak(i),seed->peak_hash(i));
@@ -70,6 +71,7 @@ TEST(TransferTest,TransferFile) {
             delete leech;
             FileTransfer::instance = 1;
             leech = new FileTransfer("copy",seed->root_hash());
+            leech->picker().Randomize(0);
             EXPECT_EQ(2,leech->complete_kilo());
         }
         bin64_t next = leech->picker().Pick(seed->ack_out(),0);

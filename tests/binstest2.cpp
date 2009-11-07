@@ -295,6 +295,9 @@ TEST(BinsTest,Twist) {
     b.twist(1<<3);
     EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,3)));
     EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,2)));
+    bin64_t tw = b.find(bin64_t(5,0),3,bins::FILLED);
+    tw = tw.twisted(1<<3);
+    EXPECT_EQ(bin64_t(3,2),tw);
     b.twist(0);
     EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,2)));
     EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));

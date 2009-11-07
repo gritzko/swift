@@ -44,6 +44,7 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     else
         RecoverProgress();
     picker_ = new SeqPiecePicker(this);
+    picker_->Randomize(Datagram::Time()&7);
 }
 
 

@@ -219,6 +219,7 @@ namespace p2tp {
 
     class PiecePicker {
     public:
+        virtual void Randomize (uint64_t twist) = 0;
         virtual bin64_t Pick (bins& offered, uint8_t layer) = 0;
         virtual void    Expired (bin64_t b) = 0;
         virtual void    Received (bin64_t b) = 0;

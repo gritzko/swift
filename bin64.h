@@ -106,6 +106,10 @@ struct bin64_t {
         else
             return right();
     }
+    
+    bin64_t twisted (uint64_t mask) const {
+        return bin64_t( v ^ ((mask<<1)&~tail_bits()) );
+    }
 
     bin64_t parent () const {
         uint64_t tbs = tail_bits(), ntbs = (tbs+1)|tbs;
