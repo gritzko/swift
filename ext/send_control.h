@@ -63,8 +63,11 @@ struct PingPongController : public SendController {
 
 
 struct KeepAliveController : public SendController {
+
+    tint delay_;
     
-    KeepAliveController(SendController* prev) : SendController(prev){}
+    KeepAliveController(SendController* prev) : SendController(prev),
+    delay_(0) {}
     const char* type() const { return "KeepAlive"; }
     bool    MaySendData();
     tint    NextSendTime () ;

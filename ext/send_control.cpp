@@ -49,10 +49,15 @@ bool    KeepAliveController::MaySendData() {
 }
     
 tint    KeepAliveController::NextSendTime () {
-    return ch_->last_send_time_ + TINT_SEC*58;
+    if (!delay_)
+        delay_ = ch_->rtt_avg_;
+    return ch_->last_send_time_ + delay_;
 }
     
 void    KeepAliveController::OnDataSent(bin64_t b) {
+    delay_ *= 2;
+    if (delay_>TINT_SEC*58)
+        delay_ = TINT_SEC*58;
     if (b!=bin64_t::ALL)
         Swap(new PingPongController(this));
 }

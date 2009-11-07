@@ -31,9 +31,14 @@ void bins::extend () {
 }
 
 bins::bins() :  height(4), blocks_allocated(0), cells(NULL), 
-                ap(0), cells_allocated(0) {
+                ap(0), cells_allocated(0), twist_mask(0) {
     extend();
     assert(!alloc_cell());
+}
+
+void bins::twist (uint64_t mask) {
+    assert( (1<<height) > mask );
+    twist_mask = mask;
 }
 
 bins::bins (const bins& b) : height(b.height), ap(b.ap),
@@ -185,8 +190,9 @@ void iterator::to (bool right) {
         host->split(half);
     history[pos.layer()] = half; // FIXME
     pos = pos.to(right);
+    if ( (host->twist_mask >> pos.layer()) & 1 )
+        right = !right; // twist it!
     half = (host->halves[half]<<1) + right;
-    //host->dump("/\\ ");
 }
 
 

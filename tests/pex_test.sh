@@ -13,7 +13,7 @@ for i in `seq 1 $PEERCOUNT`; do
     ( $EXEC/leecher 282a863d5567695161721686a59f0c667250a35d \
         $STORE/sofi$i.jpg 7001 710$i > $STORE/leecher$i.log ) &
     TOKILL="$TOKILL $!"
-    sleep 1;
+    sleep 4;
 done
 
 sleep 10

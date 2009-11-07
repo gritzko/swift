@@ -50,6 +50,8 @@ public:
     void        clear ();
     
     static bool is_mixed (uint16_t val) { return val!=EMPTY && val!=FILLED; }
+
+    void        twist (uint64_t mask);
     
 private:
     
@@ -67,6 +69,7 @@ private:
     uint32_t    cells_allocated;
     int         height;
     uint32_t    ap;
+    uint64_t    twist_mask;
     
     void extend();
     

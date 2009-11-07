@@ -287,6 +287,19 @@ TEST(BinsTest, Mass) {
     EXPECT_EQ(50<<4,b50.mass());
 }
 
+TEST(BinsTest,Twist) {
+    bins b;
+    b.set(bin64_t(3,2));
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,2)));
+    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));
+    b.twist(1<<3);
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,3)));
+    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,2)));
+    b.twist(0);
+    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,2)));
+    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));
+}
+
 TEST(BinheapTest,Eat) {
     
     binheap b;

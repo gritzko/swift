@@ -13,7 +13,6 @@
 #include "datagram.h"
 #include "p2tp.h"
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 
 using namespace p2tp;
 using namespace std;

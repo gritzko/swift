@@ -10,9 +10,10 @@
     * git
     * check hints agains ack_out?_
     * check data against ack_in
-    * channel suspend/wake. 3 cong modes state machine - ???
+    v channel suspend/wake. 3 cong modes state machine - ???
     * minimize the number of template instantiations
     * Channel thinks how much it HINTs a second,
       picker thinks which HINTs are snubbed
     * dead Channels are not killed => cannot open a new one
         (have a channel already)
+    * peers don't cooperate
