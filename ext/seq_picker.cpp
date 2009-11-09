@@ -14,14 +14,18 @@ using namespace p2tp;
 class SeqPiecePicker : public PiecePicker {
     
     bins            ack_hint_out_;
-    FileTransfer*   file_;
+    FileTransfer*   transfer_;
     uint64_t        twist_;
     
 public:
     
     SeqPiecePicker (FileTransfer* file_to_pick_from) : 
-    file_(file_to_pick_from), ack_hint_out_(), twist_(0) {
-        ack_hint_out_.copy_range(file_->ack_out(),bin64_t::ALL);
+    transfer_(file_to_pick_from), ack_hint_out_(), twist_() {
+        ack_hint_out_.copy_range(file().ack_out(),bin64_t::ALL);
+    }
+    
+    HashTree& file() { 
+        return transfer_->file(); 
     }
     
     virtual void Randomize (uint64_t twist) {
@@ -30,6 +34,9 @@ public:
     
     virtual bin64_t Pick (bins& offer, uint8_t layer) {
         //dprintf("twist is %lli\n",twist_);
+        if (!file().size())
+            return bin64_t(0,0); // a hack to get peak hashes; FIXME
+        twist_ &= (file().peak(0)) & ((1<<16)-1);
         if (twist_) {
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
@@ -62,7 +69,7 @@ public:
     }
     
     virtual void    Expired (bin64_t b) {
-        ack_hint_out_.copy_range(file_->ack_out(),b);
+        ack_hint_out_.copy_range(file().ack_out(),b);
     }
     
 };

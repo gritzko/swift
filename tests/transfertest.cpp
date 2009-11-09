@@ -47,6 +47,7 @@ TEST(TransferTest,TransferFile) {
     EXPECT_EQ(5,seed->size_kilo());
     EXPECT_EQ(4100,seed->complete());
     EXPECT_EQ(4100,seed->seq_complete());
+    EXPECT_EQ(bin64_t(2,0),seed->peak(0));
 
     // retrieve it
     unlink("copy");
@@ -60,6 +61,7 @@ TEST(TransferTest,TransferFile) {
     ASSERT_EQ(5<<10,leech->size());
     ASSERT_EQ(5,leech->size_kilo());
     ASSERT_EQ(0,leech->complete());
+    EXPECT_EQ(bin64_t(2,0),leech->peak(0));
     // transfer data and hashes
     //           ABCD            E000
     //     AB         CD       E0    0
@@ -74,6 +76,7 @@ TEST(TransferTest,TransferFile) {
             leech = & leech_transfer->file();
             leech_transfer->picker().Randomize(0);
             EXPECT_EQ(2,leech->complete_kilo());
+            EXPECT_EQ(bin64_t(2,0),leech->peak(0));
         }
         bin64_t next = leech_transfer->picker().Pick(seed->ack_out(),0);
         ASSERT_NE(bin64_t::NONE,next);
