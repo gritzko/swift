@@ -209,7 +209,8 @@ const char* tintstr(tint t=0);
 std::string sock2str (struct sockaddr_in addr);
 #define dprintf(...) printf(__VA_ARGS__)
 #define eprintf(...) fprintf(stderr,__VA_ARGS__)
-
+//#define dprintf(...) {}
+    
 }
 
 #endif

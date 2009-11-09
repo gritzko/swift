@@ -20,7 +20,7 @@ class SeqPiecePicker : public PiecePicker {
 public:
     
     SeqPiecePicker (FileTransfer* file_to_pick_from) : 
-    transfer_(file_to_pick_from), ack_hint_out_(), twist_() {
+    transfer_(file_to_pick_from), ack_hint_out_(), twist_(0) {
         ack_hint_out_.copy_range(file().ack_out(),bin64_t::ALL);
     }
     
@@ -36,7 +36,7 @@ public:
         //dprintf("twist is %lli\n",twist_);
         if (!file().size())
             return bin64_t(0,0); // a hack to get peak hashes; FIXME
-        twist_ &= (file().peak(0)) & ((1<<16)-1);
+        twist_ &= (file().peak(0)) & ((1<<6)-1);
         if (twist_) {
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);

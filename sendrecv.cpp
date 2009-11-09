@@ -164,13 +164,14 @@ void	Channel::AddHint (Datagram& dgram) {
     for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
         hinted += i->bin.width();
     //int bps = PeerBPS();
+    //double kbps = max(4,TINT_SEC / dip_avg_);
     double peer_cwnd = rtt_avg_ / dip_avg_;
     if (peer_cwnd<1)
         peer_cwnd = 1;
     dprintf("%s #%i hinted %lli peer_cwnd %lli/%lli=%f\n",
             tintstr(),id,hinted,rtt_avg_,dip_avg_,((float)rtt_avg_/dip_avg_));
 
-    if ( 4*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
+    if ( 8*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
         
         uint8_t layer = 2; // actually, enough
         bin64_t hint = transfer().picker().Pick(ack_in_,layer);

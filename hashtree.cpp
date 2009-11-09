@@ -321,3 +321,4 @@ HashTree::~HashTree () {
     if (fd_)
         close(fd_);
 }
+
