@@ -190,8 +190,8 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
     completek_ = complete_ = 0;
 	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
     
-    // FIXME check tail here
-    if (file_size(fd_)!=size_)
+    size_t cur_size = file_size(fd_);
+    if ( cur_size<=(sizek_-1)<<10  || cur_size>sizek_<<10 )
         if (file_resize(fd_, size_)) {
             print_error("cannot set file size\n");
             size_=0; // remain in the 0-state
@@ -278,6 +278,8 @@ bool            HashTree::OfferHash (bin64_t pos, const Sha1Hash& hash) {
 
 
 bool            HashTree::OfferData (bin64_t pos, const char* data, size_t length) {
+    if (!size())
+        return false;
     if (!pos.is_base())
         return false;
     if (length<1024 && pos!=bin64_t(0,sizek_-1))
@@ -296,9 +298,10 @@ bool            HashTree::OfferData (bin64_t pos, const char* data, size_t lengt
     pwrite(fd_,data,length,pos.base_offset()<<10);
     complete_ += length;
     completek_++;
-    if (length<1024 && !(size_&1023)) {
-        size_ -= 1024 - length;
-        file_resize(fd_, size_);
+    if (pos.base_offset()==sizek_-1) {
+        size_ = ((sizek_-1)<<10) + length;
+        if (file_size(fd_)!=size_)
+            file_resize(fd_,size_);
     }
     return true;
 }
