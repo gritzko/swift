@@ -105,13 +105,6 @@ namespace p2tp {
 		/**	Close everything. */
 		~FileTransfer();
 
-        /** Offer a hash; returns true if it verified; false otherwise.
-         Once it cannot be verified (no sibling or parent), the hash
-         is remembered, while returning false. */
-		void            OfferHash (bin64_t pos, const Sha1Hash& hash);
-        /** Offer data; the behavior is the same as with a hash:
-            accept or remember or drop. Returns true => ACK is sent. */
-        bool            OfferData (bin64_t bin, const uint8_t* data, size_t length);
 
         /** While we need to feed ACKs to every peer, we try (1) avoid
             unnecessary duplication and (2) keep minimum state. Thus,
@@ -125,83 +118,33 @@ namespace p2tp {
             return fd<files.size() ? files[fd] : NULL;
         }
 
-        int             peak_count () const { return peak_count_; }
-        bin64_t         peak (int i) const { return peaks_[i]; }
-        const Sha1Hash& peak_hash (int i) const { return peak_hashes_[i]; }
-        bin64_t         peak_for (bin64_t pos) const;
-        const Sha1Hash& hash (bin64_t pos) const {
-            assert(pos<sizek_*2);
-            return hashes_[pos];
-        }
-        const Sha1Hash& root_hash () const { return root_hash_; }
-        uint64_t        size () const { return size_; }
-        uint64_t        size_kilo () const { return sizek_; }
-        uint64_t        complete () const { return complete_; }
-        uint64_t        complete_kilo () const { return completek_; }
-        uint64_t        seq_complete () const { return seq_complete_; }
-        bool            is_complete () const
-            { return size_ && seq_complete_==size_; }
-        bins&           ack_out ()  { return ack_out_; }
-        int             file_descriptor () const { return fd_; }
+        bins&           ack_out ()  { return file_.ack_out(); }
         PiecePicker&    picker () { return *picker_; }
         int             channel_count () const { return hs_in_.size(); }
+        HashTree&       file() { return file_; }
+        int             fd () const { return file_.file_descriptor(); }
+        const Sha1Hash& root_hash () const { return file_.root_hash(); }
 
         static int instance; // FIXME this smells
 
     private:
 
 		static std::vector<FileTransfer*> files;
-		static std::string GetTempFilename(Sha1Hash& root_hash, int instance, std::string postfix);
 
-		/**	file descriptor. */
-		int				fd_;
-        /** File size, as derived from the hashes. */
-        size_t          size_;
-        size_t          sizek_;
-		/**	Part the file currently downloaded. */
-		size_t          complete_;
-		size_t          completek_;
-		size_t          seq_complete_;
-		/**	A binmap for all packets obtained and succesfully checked. */
-		bins			ack_out_;
-		/**	History of bin retrieval. */
-		//binqueue		data_in_;
-        //int             data_in_off_;
+        HashTree        file_;
+        
         /** Piece picker strategy. */
         PiecePicker*    picker_;
-		/** File for keeping the Merkle hash tree. */
-        int             hashfd_;
-#ifdef _WIN32
-        HANDLE			hashmaphandle_;
-#endif
-        /** Merkle hash tree: root */
-        Sha1Hash        root_hash_;
-        /** Merkle hash tree: peak hashes */
-        Sha1Hash        peak_hashes_[64];
-        bin64_t         peaks_[64];
-        int             peak_count_;
-        /** Merkle hash tree: the tree, as a bin64_t-indexed array */
-        Sha1Hash*       hashes_;
-        /** for recovering saved state */
-        bool            dry_run_;
-        /** Error encountered */
-        char*           error_;
-
+        
         /** Channels working for this transfer. */
         binqueue        hs_in_;
         int             hs_in_offset_;
         std::deque<Address>        pex_in_;
+        
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
 
     protected:
-        void            SetSize(size_t bytes);
-        void            Submit();
-        void            RecoverProgress();
-        void            OfferPeak (bin64_t pos, const Sha1Hash& hash);
-        Sha1Hash        DeriveRoot();
-        void            SavePeaks();
-        void            LoadPeaks();
         void            OnDataIn (bin64_t pos);
         void            OnPexIn (const Address& addr);
 
@@ -277,7 +220,8 @@ namespace p2tp {
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
         bool        is_established () { return peer_channel_id_ && own_id_mentioned_; }
-        FileTransfer& file() { return *file_; }
+        FileTransfer& transfer() { return *transfer_; }
+        HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
         
 		static int DecodeID(int scrambled);
@@ -294,7 +238,7 @@ namespace p2tp {
 		/**	The UDP socket fd. */
 		int			socket_;
 		/**	Descriptor of the file in question. */
-		FileTransfer*	file_;
+		FileTransfer*	transfer_;
 		/**	Peer channel id; zero if we are trying to open a channel. */
 		uint32_t	peer_channel_id_;
         bool        own_id_mentioned_;

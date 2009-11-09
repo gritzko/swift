@@ -8,19 +8,21 @@
  */
 #ifndef P2TP_SHA1_HASH_TREE_H
 #define P2TP_SHA1_HASH_TREE_H
-#include "bin.h"
+#include "bin64.h"
+#include "bins.h"
 #include <string.h>
 #include <string>
-#include <vector>
+
+namespace p2tp {
+
 
 struct Sha1Hash {
 	uint8_t	bits[20];
 
 	Sha1Hash() { memset(bits,0,20); }
 	Sha1Hash(const Sha1Hash& left, const Sha1Hash& right);
-	Sha1Hash(const uint8_t* bits, size_t length);
-	/***/
-	Sha1Hash(const char* bits);
+	Sha1Hash(const char* str, size_t length=-1);
+	Sha1Hash(const uint8_t* data, size_t length);
 	Sha1Hash(bool hex, const char* hash);
 	
 	std::string	hex() const;
@@ -33,42 +35,72 @@ struct Sha1Hash {
 	const static size_t SIZE;
 };
 
-/*
-typedef std::pair<bin,Sha1Hash> binhash;
 
-struct HashTree {
-	Sha1Hash	root;
-	int			fd;
-	bin			mass;
-	uint32_t	length;
-	std::vector<bool> status;
-	std::vector<Sha1Hash> bits;
-	std::vector<binhash> peaks;
-	typedef enum { ACCEPT, DUNNO, PEAK_ACCEPT, REJECT } hashres_t;
+class HashTree {
+
+    /** Merkle hash tree: root */
+	Sha1Hash        root_hash_;
+    Sha1Hash        *hashes_;
+    /** Merkle hash tree: peak hashes */
+    Sha1Hash        peak_hashes_[64];
+    bin64_t         peaks_[64];
+    int             peak_count_;
+    /** File descriptor to put hashes to */
+	int             fd_;
+    int             hash_fd_;
+    /** Whether to re-hash files. */
+    bool            data_recheck_;
+    /** Base size, as derived from the hashes. */
+    size_t          size_;
+    size_t          sizek_;
+    /**	Part of the tree currently checked. */
+    size_t          complete_;
+    size_t          completek_;
+    bins            ack_out_;
+    
 protected:
-	Sha1Hash		deriveRoot();
-	hashres_t		offerPeak (bin pos, Sha1Hash hash);
+    
+    void            Submit();
+    void            RecoverProgress();
+    Sha1Hash        DeriveRoot();
+    bool            OfferPeakHash (bin64_t pos, const Sha1Hash& hash);
+    
 public:
 	
-	HashTree (int fd);
-	HashTree (const Sha1Hash& root);
+	HashTree (const char* file_name, const Sha1Hash& root=Sha1Hash::ZERO, 
+              const char* hash_filename=NULL);
+    
+    /** Offer a hash; returns true if it verified; false otherwise.
+     Once it cannot be verified (no sibling or parent), the hash
+     is remembered, while returning false. */
+    bool            OfferHash (bin64_t pos, const Sha1Hash& hash);
+    /** Offer data; the behavior is the same as with a hash:
+     accept or remember or drop. Returns true => ACK is sent. */
+    bool            OfferData (bin64_t bin, const char* data, size_t length);
+    /** Not implemented yet. */
+    int             AppendData (char* data, int length) ;
+    
+    int             file_descriptor () const { return fd_; }
+    int             peak_count () const { return peak_count_; }
+    bin64_t         peak (int i) const { return peaks_[i]; }
+    const Sha1Hash& peak_hash (int i) const { return peak_hashes_[i]; }
+    bin64_t         peak_for (bin64_t pos) const;
+    const Sha1Hash& hash (bin64_t pos) const {return hashes_[pos];}
+    const Sha1Hash& root_hash () const { return root_hash_; }
+    uint64_t        size () const { return size_; }
+    uint64_t        size_kilo () const { return sizek_; }
+    uint64_t        complete () const { return complete_; }
+    uint64_t        complete_kilo () const { return completek_; }
+    uint64_t        seq_complete () ;
+    bool            is_complete () 
+        { return size_ && seq_complete()==size_; }
+    bins&           ack_out () { return ack_out_; }
 	
 	~HashTree ();
 
-	hashres_t		offer (bin pos, const Sha1Hash& hash);
 	
-	bool			rooted () const { return length>0; }
-	
-	const Sha1Hash&	operator [] (bin i) { 
-		return i<=mass ? bits[i] : Sha1Hash::ZERO; 
-	}
-	
-	uint32_t		data_size () const { return length; }
-	
-	bin				data_mass () const { return mass; }
-	
-	const std::vector<binhash>& peak_hashes() const { return peaks; }
-	
-};*/
+};
+
+}
 
 #endif

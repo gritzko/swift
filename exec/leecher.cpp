@@ -30,14 +30,16 @@ int main (int argn, char** args) {
     
     char* filename = args[2];
     
-    Address tracker(args[3]), bindaddr(args[4]);
+    Address tracker(args[3]), bindaddr;
     
     if (tracker==Address()) {
         fprintf(stderr,"Tracker address format: [1.2.3.4:]12345\n");
         return -2;
     }
-    if (bindaddr==Address()) 
-        bindaddr = Address(rand()%10000+7000);
+    if (argn>=5) 
+        bindaddr = Address(args[4]);
+    else
+        bindaddr = Address(INADDR_ANY,rand()%10000+7000);
     
     assert(0<p2tp::Listen(bindaddr));
     

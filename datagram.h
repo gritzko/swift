@@ -170,7 +170,7 @@ struct Datagram {
 		length+=8;
 	}
 	void	PushHash (const Sha1Hash& hash) {
-		Push(hash.bits, Sha1Hash::SIZE);
+		Push((uint8_t*)hash.bits, Sha1Hash::SIZE);
 	}
 
 	uint8_t	Pull8() {

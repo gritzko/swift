@@ -173,10 +173,10 @@ void	Channel::AddHint (Datagram& dgram) {
     if ( 4*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
         
         uint8_t layer = 2; // actually, enough
-        bin64_t hint = file().picker().Pick(ack_in_,layer);
+        bin64_t hint = transfer().picker().Pick(ack_in_,layer);
         // FIXME FIXME FIXME: any layer
         if (hint==bin64_t::NONE)
-            hint = file().picker().Pick(ack_in_,0);
+            hint = transfer().picker().Pick(ack_in_,0);
         
         if (hint!=bin64_t::NONE) {
             hint_out_.push_back(hint);
@@ -256,7 +256,7 @@ void	Channel::Recv (Datagram& dgram) {
         rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
         dip_avg_ = rtt_avg_;
-        file_->hs_in_.push_back(id);
+        transfer().hs_in_.push_back(id);
         dprintf("%s #%i rtt init %lli\n",tintstr(),id,rtt_avg_);
     }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
@@ -295,7 +295,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
 	bin64_t pos = dgram.Pull32();
     uint8_t *data;
     int length = dgram.Pull(&data,1024);
-    bool ok = file().OfferData(pos, data, length) ;
+    bool ok = file().OfferData(pos, (char*)data, length) ;
     dprintf("%s #%i %cdata (%lli)\n",tintstr(),id,ok?'-':'!',pos.offset());
     if (ok) {
         data_in_ = tintbin(NOW,pos);
@@ -365,12 +365,12 @@ void Channel::OnPex (Datagram& dgram) {
     uint16_t port = dgram.Pull16();
     Address addr(ipv4,port);
     dprintf("%s #%i -pex %s\n",tintstr(),id,addr.str().c_str());
-    file_->OnPexIn(addr);
+    transfer().OnPexIn(addr);
 }
 
 
 void    Channel::AddPex (Datagram& dgram) {
-    int chid = file_->RevealChannel(pex_out_);
+    int chid = transfer().RevealChannel(pex_out_);
     if (chid==-1 || chid==id)
         return;
     Address a = channels[chid]->peer();
@@ -395,7 +395,7 @@ void	Channel::Recv (int socket) {
 		uint8_t hashid = data.Pull8();
 		if (hashid!=P2TP_HASH) 
 			RETLOG ("no hash in the initial handshake");
-		bin pos = data.Pull32();
+		bin64_t pos = data.Pull32();
 		if (pos!=bin64_t::ALL32) 
 			RETLOG ("that is not the root hash");
 		hash = data.PullHash();

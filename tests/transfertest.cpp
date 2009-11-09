@@ -9,14 +9,11 @@
 //#include <gtest/gtest.h>
 //#include <glog/logging.h>
 #include "p2tp.h"
-#include "compat/util.h"
-#ifdef _MSC_VER
-#include "compat/unixio.h"
-#endif
+#include "compat.h"
 
 using namespace p2tp;
 
-const char* BTF = "big_test_file";
+const char* BTF = "test_file";
 
 Sha1Hash A,B,C,D,E,AB,CD,ABCD,E0,E000,ABCDE000,ROOT;
 
@@ -34,9 +31,11 @@ TEST(TransferTest,TransferFile) {
         ROOT = Sha1Hash(ROOT,Sha1Hash::ZERO);
         //printf("m %lli %s\n",(uint64_t)pos.parent(),ROOT.hex().c_str());
     }
-
-    // submit a new file
-    FileTransfer* seed = new FileTransfer(BTF);
+    
+    // now, submit a new file
+    
+    FileTransfer* seed_transfer = new FileTransfer(BTF);
+    HashTree* seed = & seed_transfer->file();
     EXPECT_TRUE(A==seed->hash(0));
     EXPECT_TRUE(E==seed->hash(bin64_t(0,4)));
     EXPECT_TRUE(ABCD==seed->hash(bin64_t(2,0)));
@@ -52,8 +51,9 @@ TEST(TransferTest,TransferFile) {
     // retrieve it
     unlink("copy");
     FileTransfer::instance = 1;
-    FileTransfer* leech = new FileTransfer("copy",seed->root_hash());
-    leech->picker().Randomize(0);
+    FileTransfer* leech_transfer = new FileTransfer("copy",seed->root_hash());
+    HashTree* leech = & leech_transfer->file();
+    leech_transfer->picker().Randomize(0);
     // transfer peak hashes
     for(int i=0; i<seed->peak_count(); i++)
         leech->OfferHash(seed->peak(i),seed->peak_hash(i));
@@ -68,13 +68,14 @@ TEST(TransferTest,TransferFile) {
     leech->OfferHash(bin64_t(1,1), seed->hash(bin64_t(1,1)));
     for (int i=0; i<5; i++) {
         if (i==2) { // now: stop, save, start
-            delete leech;
+            delete leech_transfer;
             FileTransfer::instance = 1;
-            leech = new FileTransfer("copy",seed->root_hash());
-            leech->picker().Randomize(0);
+            leech_transfer = new FileTransfer("copy",seed->root_hash());
+            leech = & leech_transfer->file();
+            leech_transfer->picker().Randomize(0);
             EXPECT_EQ(2,leech->complete_kilo());
         }
-        bin64_t next = leech->picker().Pick(seed->ack_out(),0);
+        bin64_t next = leech_transfer->picker().Pick(seed->ack_out(),0);
         ASSERT_NE(bin64_t::NONE,next);
         ASSERT_TRUE(next.base_offset()<5);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
@@ -84,9 +85,9 @@ TEST(TransferTest,TransferFile) {
             leech->OfferHash(sibling, seed->hash(sibling));
         uint8_t memo = *buf;
         *buf = 'z';
-        EXPECT_FALSE(leech->OfferData(next, buf, len));
+        EXPECT_FALSE(leech->OfferData(next, (char*)buf, len));
         *buf = memo;
-        EXPECT_TRUE(leech->OfferData(next, buf, len));
+        EXPECT_TRUE(leech->OfferData(next, (char*)buf, len));
     }
     EXPECT_EQ(4100,leech->size());
     EXPECT_EQ(5,leech->size_kilo());
@@ -101,16 +102,10 @@ TEST(TransferTest,TransferFile) {
 
 int main (int argc, char** argv) {
 
-	std::string tempdir = gettmpdir();
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.hashes")).c_str());
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.0.peaks")).c_str());
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.1.hashes")).c_str());
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.1.peaks")).c_str());
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.2.hashes")).c_str());
-    unlink((tempdir + std::string(".70196e6065a42835b1f08227ac3e2fb419cf78c8.2.peaks")).c_str());
-
-    unlink(BTF);
+    unlink("test_file");
     unlink("copy");
+    unlink("test_file.mhash");
+    unlink("copy.mhash");
 
 	int f = open(BTF,O_RDWR|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (f < 0)

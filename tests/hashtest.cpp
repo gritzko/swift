@@ -7,29 +7,48 @@
  *
  */
 #include <fcntl.h>
-#include "bin.h"
+#include "bin64.h"
 #include <gtest/gtest.h>
 #include "hashtree.h"
 
+using namespace p2tp;
+
 char hash123[] = "a8fdc205a9f19cc1c7507a60c4f01b13d11d7fd0";
-//char roothash123[] = "84e1e5f4b549fe072d803709eeb06143cd2ad736";
+char rooth123[] = "d0bdb8ba28076d84d2b3a0e62521b998e42349a1";
 
 TEST(Sha1HashTest,Trivial) {
 	Sha1Hash hash("123\n");
 	EXPECT_STREQ(hash123,hash.hex().c_str());
 }
 
-/*
-TEST(Sha1HashTest,HashTreeTest) {
-	Sha1Hash roothash123(hash123);
-	for(bin pos=1; pos<bin::ALL; pos=pos.parent())
+
+TEST(Sha1HashTest,OfferDataTest) {
+	Sha1Hash roothash123(true,hash123);
+	for(bin64_t pos(0,0); pos!=bin64_t::ALL; pos=pos.parent())
 		roothash123 = Sha1Hash(roothash123,Sha1Hash::ZERO);
-	HashTree tree = HashTree(roothash123);
-	ASSERT_EQ(HashTree::PEAK_ACCEPT, tree.offer(bin(1),hash123));
-	ASSERT_TRUE(tree.rooted());
+    unlink("123");
+    EXPECT_STREQ(rooth123,roothash123.hex().c_str());
+	HashTree tree("123",roothash123);
+    tree.OfferHash(bin64_t(0,0),Sha1Hash(true,hash123));
+	ASSERT_EQ(1,tree.size_kilo());
+    ASSERT_TRUE(tree.OfferData(bin64_t(0,0), "123\n", 4));
+    unlink("123");
+	ASSERT_EQ(4,tree.size());
 }
 
-TEST(Sha1HashTest,HashFileTest) {
+
+TEST(Sha1HashTest,SubmitTest) {
+    FILE* f123 = fopen("123","w+");
+    fprintf(f123, "123\n");
+    fclose(f123);
+    HashTree ht123("123");
+    EXPECT_STREQ(hash123,ht123.hash(bin64_t(0,0)).hex().c_str());
+    EXPECT_STREQ(rooth123,ht123.root_hash().hex().c_str());
+    EXPECT_EQ(4,ht123.size());
+}
+
+
+/*TEST(Sha1HashTest,HashFileTest) {
 	uint8_t a [1024], b[1024], c[1024];
 	memset(a,'a',1024);
 	memset(b,'b',1024);
@@ -59,8 +78,9 @@ TEST(Sha1HashTest,HashFileTest) {
 	EXPECT_TRUE ( bootstree.bits[1]==aaahash );
 	EXPECT_TRUE ( bootstree.bits[2]==bbbhash );
 	EXPECT_FALSE ( bootstree.bits[2]==aaahash );
-}
-*/
+}*/
+
+
 int main (int argc, char** argv) {
 	//bin::init();
 	

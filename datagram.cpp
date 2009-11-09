@@ -15,6 +15,7 @@
     #include <arpa/inet.h>
 #endif
 #include "datagram.h"
+#include "compat.h"
 
 namespace p2tp {
 
@@ -126,10 +127,10 @@ SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
 }
 
 tint Datagram::Time () {
-	HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
-	tint ret = tod->getTimeUSec();
+	//HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
+	//tint ret = tod->getTimeUSec();
 	//DLOG(INFO)<<"now is "<<ret;
-	return now=ret;
+	return now = usec_time();
 }
 
 SOCKET Datagram::Bind (Address addr_) {

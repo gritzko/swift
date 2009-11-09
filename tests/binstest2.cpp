@@ -303,6 +303,15 @@ TEST(BinsTest,Twist) {
     EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));
 }
 
+TEST(BinsTest,SeqLength) {
+    bins b;
+    b.set(bin64_t(3,0));
+    b.set(bin64_t(1,4));
+    b.set(bin64_t(0,10));
+    b.set(bin64_t(3,2));
+    EXPECT_EQ(11,b.seq_length());
+}
+
 TEST(BinheapTest,Eat) {
     
     binheap b;

@@ -41,6 +41,8 @@ public:
 
     uint32_t    size() { return cells_allocated; }
     
+    uint64_t    seq_length ();
+    
     bin64_t     cover(bin64_t val);
 
     uint64_t    mass ();

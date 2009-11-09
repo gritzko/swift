@@ -34,8 +34,8 @@ tbqueue Channel::send_queue;
 #include "ext/simple_selector.cpp"
 PeerSelector* Channel::peer_selector = new SimpleSelector();
 
-Channel::Channel	(FileTransfer* file, int socket, Address peer_addr) :
-	file_(file), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
+Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
+	transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
     last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC)
@@ -91,7 +91,7 @@ void    p2tp::Loop (tint till) {
 
 int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
     FileTransfer* ft = new FileTransfer(filename, hash);
-    int fdes = ft->file_descriptor();
+    int fdes = ft->file().file_descriptor();
     if (fdes>0) {
         
         /*if (FileTransfer::files.size()<fdes)  // FIXME duplication
@@ -124,7 +124,7 @@ void    p2tp::AddPeer (Address address, const Sha1Hash& root) {
 
 size_t  p2tp::Size (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
-        return FileTransfer::files[fdes]->size();
+        return FileTransfer::files[fdes]->file().size();
     else
         return 0;
 }
@@ -132,7 +132,7 @@ size_t  p2tp::Size (int fdes) {
 
 size_t  p2tp::Complete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
-        return FileTransfer::files[fdes]->is_complete();
+        return FileTransfer::files[fdes]->file().is_complete();
     else
         return 0;
 }
@@ -140,7 +140,7 @@ size_t  p2tp::Complete (int fdes) {
 
 size_t  p2tp::SeqComplete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
-        return FileTransfer::files[fdes]->seq_complete();
+        return FileTransfer::files[fdes]->file().seq_complete();
     else
         return 0;
 }
@@ -150,7 +150,7 @@ const Sha1Hash& p2tp::RootMerkleHash (int file) {
     FileTransfer* trans = FileTransfer::file(file);
     if (!trans)
         return Sha1Hash::ZERO;
-    return trans->root_hash();
+    return trans->file().root_hash();
 }
 
 

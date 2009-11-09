@@ -37,7 +37,8 @@ bins::bins() :  height(4), blocks_allocated(0), cells(NULL),
 }
 
 void bins::twist (uint64_t mask) {
-    assert( (1<<height) > mask );
+    while ( (1<<height) <= mask )
+        extend_range();
     twist_mask = mask;
 }
 
@@ -392,6 +393,19 @@ void        bins::copy_range (bins& origin, bin64_t range) {
         }
         zis.sibling(); zat.sibling();
     }
+}
+
+uint64_t    bins::seq_length () {
+    iterator i(this);
+    if (!i.deep() && *i==FILLED)
+        return i.pos.width();
+    while (!i.pos.is_base()) {
+        if (i.deep() || *i!=FILLED) 
+            i.left();
+        else
+            i.sibling();
+    }
+    return i.pos.base_offset() + (*i==FILLED ? 1 : 0);
 }
 
 binheap::binheap() {

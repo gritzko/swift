@@ -33,14 +33,6 @@ std::string gettmpdir(void)
 }
 
 
-    void print_error(const char* msg) {
-        perror(msg);
-#ifdef _WIN32
-        int e = WSAGetLastError();
-        if (e)
-            fprintf(stderr,"network error #%i\n",e);
-#endif
-    }
     
     
 }; // namespace
