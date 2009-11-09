@@ -42,7 +42,7 @@ typedef int64_t tint;
 #define TINT_MSEC ((tint)1000)
 #define TINT_uSEC ((tint)1)
 #define TINT_NEVER ((tint)0x7fffffffffffffffLL)
-#define MAXDGRAMSZ 1400
+#define MAXDGRAMSZ 2800
 #ifndef _WIN32
 #define INVALID_SOCKET -1
 #endif

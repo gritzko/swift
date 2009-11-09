@@ -19,7 +19,7 @@ int main (int argn, char** args) {
     FileTransfer::instance = rand();
     
     if (argn<4) {
-        fprintf(stderr,"parameters: root_hash filename tracker_ip/port [own_ip/port]\n");
+        fprintf(stderr,"parameters: root_hash filename tracker_ip:port [own_ip:port]\n");
         return -1;
     }
     Sha1Hash root_hash(true,args[1]);
