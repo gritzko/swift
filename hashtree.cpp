@@ -64,7 +64,7 @@ std::string	Sha1Hash::hex() const {
 
 
 HashTree::HashTree (const char* filename, const Sha1Hash& root_hash, const char* hash_filename) :
-root_hash_(root_hash), fd_(0), hash_fd_(0), data_recheck_(false),
+root_hash_(root_hash), fd_(0), hash_fd_(0), data_recheck_(true),
 peak_count_(0), hashes_(NULL), size_(0), sizek_(0),
 complete_(0), completek_(0)
 {

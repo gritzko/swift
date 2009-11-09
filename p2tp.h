@@ -149,9 +149,10 @@ namespace p2tp {
         void            OnPexIn (const Address& addr);
 
 		friend class Channel;
-        friend size_t  Size (int fdes);
-        friend size_t  Complete (int fdes);
-        friend size_t  SeqComplete (int fdes);
+        friend uint64_t  Size (int fdes);
+        friend bool      IsComplete (int fdes);
+        friend uint64_t  Complete (int fdes);
+        friend uint64_t  SeqComplete (int fdes);
         friend int     Open (const char* filename, const Sha1Hash& hash) ;
         friend void    Close (int fd) ;
 	};
@@ -326,13 +327,14 @@ namespace p2tp {
     
     /** Returns size of the file in bytes, 0 if unknown. Might be rounded up to a kilobyte
         before the transmission is complete. */
-    size_t  Size (int fdes);
+    uint64_t  Size (int fdes);
     /** Returns the amount of retrieved and verified data, in bytes.
         A 100% complete transmission has Size()==Complete(). */
-    size_t  Complete (int fdes);
+    uint64_t  Complete (int fdes);
+    bool      IsComplete (int fdes);
     /** Returns the number of bytes that are complete sequentially, starting from the
         beginning, till the first not-yet-retrieved packet. */
-    size_t  SeqComplete (int fdes);
+    uint64_t  SeqComplete (int fdes);
 
 
 	//uint32_t Width (const tbinvec& v);

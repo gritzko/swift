@@ -122,7 +122,7 @@ void    p2tp::AddPeer (Address address, const Sha1Hash& root) {
 }
 
 
-size_t  p2tp::Size (int fdes) {
+uint64_t  p2tp::Size (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().size();
     else
@@ -130,7 +130,7 @@ size_t  p2tp::Size (int fdes) {
 }
 
 
-size_t  p2tp::Complete (int fdes) {
+bool  p2tp::IsComplete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().is_complete();
     else
@@ -138,7 +138,15 @@ size_t  p2tp::Complete (int fdes) {
 }
 
 
-size_t  p2tp::SeqComplete (int fdes) {
+uint64_t  p2tp::Complete (int fdes) {
+    if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
+        return FileTransfer::files[fdes]->file().complete();
+    else
+        return 0;
+}
+
+
+uint64_t  p2tp::SeqComplete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().seq_complete();
     else
