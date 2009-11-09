@@ -125,11 +125,11 @@ void	Channel::Send () {
         AddAck(dgram);
     }
     dprintf("%s #%i sent %ib %s\n",tintstr(),id,dgram.size(),peer().str().c_str());
-	if (dgram.Send()==-1)
-        print_error("can't send datagram");
     if (dgram.size()==4) // only the channel id; bare keep-alive
         data = bin64_t::ALL;
     cc_->OnDataSent(data);
+	if (dgram.Send()==-1)
+        print_error("can't send datagram");
     last_send_time_ = NOW;
     RequeueSend(cc_->NextSendTime());
 }
