@@ -9,7 +9,6 @@
 #ifndef BINS_H
 #define BINS_H
 #include "bin64.h"
-#include <gtest/gtest.h>
 
 /**  A binmap covering 2^64 range. Complexity limit: 100+200LoC  */
 class bins {
@@ -104,7 +103,9 @@ private:
     static int join32to16(uint32_t cell);
     
     friend class iterator;
+#ifdef FRIEND_TEST
     FRIEND_TEST(BinsTest,Routines);
+#endif
 };
 
 

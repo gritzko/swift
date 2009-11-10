@@ -8,6 +8,7 @@
  */
 #include "bins.h"
 #include <string.h>
+#include <stdio.h>
 #include <algorithm>
 
 // make it work piece by piece
