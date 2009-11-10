@@ -10,6 +10,7 @@
 //#include <glog/logging.h>
 #include "p2tp.h"
 #include "compat.h"
+#include <gtest/gtest.h>
 
 using namespace p2tp;
 

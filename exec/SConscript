@@ -1,0 +1,43 @@
+import sys
+
+Import("DEBUG")
+Import("env")
+Import("libpath")
+
+cpppath = env["CPPPATH"]
+libs = ['p2tp']
+
+if sys.platform == "win32":
+    cpppath = ".."
+    libpath += '..;'
+    if DEBUG:
+        env.Append(CXXFLAGS="/Zi /Yd /MTd")
+else:
+    cpppath = cpppath + ':..'
+    libpath += ':..'
+    if DEBUG:
+        env.Append(CXXFLAGS="-g")
+
+print "tests: libpath is",libpath
+
+env.Program( 
+    target='seeder',
+    source=['seeder.cpp'],
+    CPPPATH=cpppath,
+    LIBS=libs,
+    LIBPATH=libpath )
+
+env.Program( 
+    target='leecher',
+    source=['leecher.cpp'],
+    CPPPATH=cpppath,
+    LIBS=libs,
+    LIBPATH=libpath )
+
+env.Program( 
+    target='hasher',
+    source=['hasher.cpp'],
+    CPPPATH=cpppath,
+    LIBS=libs,
+    LIBPATH=libpath )
+
