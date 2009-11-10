@@ -234,6 +234,8 @@ TEST(BinsTest, Cover) {
     b.set(bin64_t(2,0));
     b.set(bin64_t(4,1));
     EXPECT_EQ(bin64_t(4,1),b.cover(bin64_t(0,30)));
+    EXPECT_EQ(bin64_t(2,0),b.cover(bin64_t(0,3)));
+    EXPECT_EQ(bin64_t(2,0),b.cover(bin64_t(2,0)));
     //bins c;
     //EXPECT_EQ(bin64_t::ALL,b.cover(bin64_t(0,30)));
     

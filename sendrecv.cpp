@@ -112,8 +112,10 @@ void	Channel::Send () {
     dgram.Push32(peer_channel_id_);
     bin64_t data = bin64_t::NONE;
     if ( is_established() ) {
+        // FIXME: seeder check
         AddAck(dgram);
-        AddHint(dgram);
+        if (!file().is_complete())
+            AddHint(dgram);
         AddPex(dgram);
         ClearStaleDataOut();
         if (cc_->MaySendData()) 
@@ -242,8 +244,7 @@ void	Channel::AddAck (Datagram& dgram) {
         // TODO bins::ANY_LAYER
         if (ack==bin64_t::NONE)
             break;
-        while (file().ack_out().get(ack.parent())==bins::FILLED)
-            ack = ack.parent();
+        ack = file().ack_out().cover(ack);
         ack_out_.set(ack);
         dgram.Push8(P2TP_ACK);
         dgram.Push32(ack);

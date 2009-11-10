@@ -118,6 +118,7 @@ public: // rm this
     bins        *host;
     uint32_t    history[64];
     uint32_t    half;
+    uint8_t     layer_;
     bin64_t     pos;  // TODO: half[] layer bin
 public:
     iterator(bins* host, bin64_t start=0, bool split=false);
@@ -144,6 +145,7 @@ public:
     void parent() ;
     bool defined() { return !host->deep(half); }
     uint16_t& operator* () { return host->halves[half]; }
+    uint8_t layer() const { return layer_; }
 };
 
 

@@ -170,6 +170,7 @@ iterator::iterator(bins* host_, bin64_t start, bool split) {
     for(int i=0; i<64; i++)
         history[i] = 1;
     pos = bin64_t(host->height,0);
+    layer_ = host->height;
     while (!start.within(pos))
         parent();
     while (pos!=start && (deep() || split))
@@ -189,9 +190,10 @@ iterator::~iterator () {
 void iterator::to (bool right) {
     if (!deep())
         host->split(half);
-    history[pos.layer()] = half; // FIXME
+    history[layer()] = half; // FIXME
     pos = pos.to(right);
-    if ( (host->twist_mask >> pos.layer()) & 1 )
+    layer_--;
+    if ( (host->twist_mask >> layer()) & 1 )
         right = !right; // twist it!
     half = (host->halves[half]<<1) + right;
 }
@@ -218,10 +220,11 @@ void bins::extend_range () {
 void iterator::parent () {
     if (!half) {
         host->extend_range();
-        history[pos.layer()+1] = 0;
+        history[layer()+1] = 0;
     }
     pos = pos.parent();
-    half = history[pos.layer()];
+    layer_++;
+    half = history[layer()];
     host->join(half);
     //host->dump("| ");
 }
@@ -231,9 +234,9 @@ bin64_t bins::find (const bin64_t range, const uint8_t layer, fill_t seek) {
     iterator i(this,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( i.bin().layer()>layer && (i.deep() || *i!=stop) )
+        while ( i.layer()>layer && (i.deep() || *i!=stop) )
             i.left();
-        if (i.bin().layer()==layer && !i.deep() && *i==seek)
+        if (i.layer()==layer && !i.deep() && *i==seek)
             return i.bin();
         while (i.bin().is_right() && i.bin()!=range)
             i.parent();
@@ -348,8 +351,8 @@ bin64_t     bins::cover(bin64_t val) {
     iterator i(this,val,false);
     while (i.pos!=val && !i.solid())
         i.towards(val);
-    //if (!i.half && !halves[0])
-    //    return bin64_t::ALL;
+    if (!i.solid())
+        return bin64_t::NONE;
     return i.pos;
 }
 
@@ -359,19 +362,27 @@ bin64_t     bins::find_filtered
 {
     if (range==bin64_t::ALL)
         range = bin64_t ( height>filter.height ? height : filter.height, 0 );
-    iterator i(this,range,true), j(&filter,range,true);
+    iterator ti(this,range,true), fi(&filter,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=FILLED) )
-            i.left(), j.left(); // TODO may optimize a lot here 
-        if (i.bin().layer()==layer && !i.deep() && *i==seek && *j==EMPTY)
-            return i.bin();
-        while (i.bin().is_right() && i.bin()!=range)
-            i.parent(), j.parent();
-        if (i.bin()==range)
+        while ( ti.layer()>layer ) {
+            bool go = fi.deep() ?
+                (ti.deep() || *ti!=stop)  :
+                (ti.deep() ? *fi!=FILLED : (*ti^stop)&~*fi );
+            if (go) {
+                ti.left(); fi.left();                
+            } else 
+                break;
+        }
+        //while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=FILLED) )
+        //    i.left(), j.left(); // TODO may optimize a lot here 
+        if (ti.layer()==layer && !ti.deep() && *ti==seek && *fi==EMPTY)
+            return ti.bin();
+        while (ti.bin().is_right() && ti.bin()!=range)
+            ti.parent(), fi.parent();
+        if (ti.bin()==range)
             break;
-        i.parent(), j.parent();
-        i.right(), j.right();
+        ti.sibling(), fi.sibling();
     }
     return bin64_t::NONE;    
 }
