@@ -52,6 +52,11 @@ public:
             return hint; // TODO: end-game mode
         while (hint.layer()>layer)
             hint = hint.left();
+        assert(ack_hint_out_.get(hint)==bins::EMPTY);
+        if (file().ack_out().get(hint)!=bins::EMPTY) {
+            eprintf("bogus hint: (%i,%lli)\n",(int)hint.layer(),hint.offset());
+            exit(1);
+        }
         ack_hint_out_.set(hint);
         return hint;
         /*for (int l=layer; l>=0; l--) {

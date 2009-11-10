@@ -149,7 +149,7 @@ void	Channel::AddHint (Datagram& dgram) {
         } else {
             int status = file().ack_out().get(f.bin);
             if (status==bins::EMPTY) {
-                transfer().picker().Received(f.bin);
+                transfer().picker().Expired(f.bin);
                 break;
             } else if (status==bins::FILLED) {
                 hint_out_.pop_front();
@@ -178,7 +178,7 @@ void	Channel::AddHint (Datagram& dgram) {
     dprintf("%s #%i hinted %lli peer_cwnd %lli/%lli=%f\n",
             tintstr(),id,hinted,rtt_avg_,dip_avg_,((float)rtt_avg_/dip_avg_));
 
-    if ( 8*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
+    if ( 4*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
         
         uint8_t layer = 2; // actually, enough
         bin64_t hint = transfer().picker().Pick(ack_in_,layer);
@@ -221,6 +221,7 @@ bin64_t		Channel::AddData (Datagram& dgram) {
     dgram.Push(buf,r);
     dprintf("%s #%i +data (%lli)\n",tintstr(),id,tosend.base_offset());
     data_out_.push_back(tosend);
+    ack_in_.set(tosend);
 	return tosend;
 }
 
@@ -310,6 +311,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
             tint dip = NOW - last_recv_time_;
             dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
         }
+        transfer().picker().Received(pos); // so dirty; FIXME FIXME FIXME
         return pos;
     } else
         return bin64_t::NONE;
@@ -355,6 +357,7 @@ void Channel::OnTs (Datagram& dgram) {
 void	Channel::OnHint (Datagram& dgram) {
 	bin64_t hint = dgram.Pull32();
 	hint_in_.push_back(hint);
+    ack_in_.set(hint,bins::EMPTY);
     //RequeueSend(cc_->OnHintRecvd(hint));
     dprintf("%s #%i -hint (%i,%lli)\n",tintstr(),id,hint.layer(),hint.offset());
 }

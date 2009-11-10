@@ -35,7 +35,7 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
         files.resize(fd()+1);
     files[fd()] = this;
     picker_ = new SeqPiecePicker(this);
-    picker_->Randomize(rand()&63);
+    //picker_->Randomize(rand()&63);
 }
 
 
