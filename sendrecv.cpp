@@ -59,7 +59,7 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
         hint_in_.pop_front();
         send = file().ack_out().find_filtered
             (ack_in_,hint,0,bins::FILLED);
-        dprintf("%s #%i may_send %lli\n",tintstr(),id,send.base_offset());
+        dprintf("%s #%i dequeued %lli\n",tintstr(),id,send.base_offset());
         if (send!=bin64_t::NONE)
             while (send!=hint) {
                 hint = hint.towards(send);
@@ -134,8 +134,6 @@ void	Channel::Send () {
     cc_->OnDataSent(data);
     if (dgram.Send()==-1)
         print_error("can't send datagram");
-    last_send_time_ = NOW;
-    RequeueSend(cc_->NextSendTime());
 }
 
 
@@ -286,7 +284,7 @@ void	Channel::Recv (Datagram& dgram) {
     cc_->OnDataRecvd(data);
     last_recv_time_ = NOW;
     if (data!=bin64_t::ALL)
-        RequeueSend(NOW);
+        Send(); //RequeueSend(NOW);
 }
 
 
@@ -332,7 +330,7 @@ void	Channel::OnAck (Datagram& dgram) {
             dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
             dprintf("%s #%i rtt %lli dev %lli\n",
                     tintstr(),id,rtt_avg_,dev_avg_);
-            cc_->OnAckRcvd(data_out_[i].bin);
+            cc_->OnAckRcvd(data_out_[i].bin); // may be invoked twice FIXME FIXME FIXME 
         }
 	ack_in_.set(ackd_pos);
     while (data_out_.size() && ack_in_.get(data_out_.front().bin)==bins::FILLED)
@@ -475,6 +473,8 @@ void    Channel::Loop (tint howlong) {
             dprintf("%s #%i sch_send %s\n",tintstr(),sender->id,
                     tintstr(send_time));
             sender->Send();
+            sender->last_send_time_ = NOW;
+            sender->RequeueSend(sender->cc_->NextSendTime());
             pop_heap(send_queue.begin(), send_queue.end(), tblater);
             send_queue.pop_back();
         } else {

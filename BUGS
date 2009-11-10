@@ -1,19 +1,21 @@
-    * hints, data for non-existing ranges
+    v hints, data for non-existing ranges
     * opens multiple channels to the same address
-    * hints do not expire
-    * RTT calculations need improvement (test)
-    * google-log is unnecessary
+    v hints do not expire
+    v RTT calculations need improvement (test)
+    v google-log is unnecessary
     * reduce template use (peer queue)
     v hints do not expire
-    * survive 10% loss
+    v survive 10% loss
     * unlimited ping pong
-    * git
-    * check hints agains ack_out?_
-    * check data against ack_in
+    v git sha-1
+    v check hints agains ack_out?_
+    v check data against ack_in
     v channel suspend/wake. 3 cong modes state machine - ???
     * minimize the number of template instantiations
-    * Channel thinks how much it HINTs a second,
+    v Channel thinks how much it HINTs a second,
       picker thinks which HINTs are snubbed
     * dead Channels are not killed => cannot open a new one
         (have a channel already)
-    * peers don't cooperate
+    v peers don't cooperate
+    * RecoverProgress fails sometime
+    * leecher can't see file is done already
