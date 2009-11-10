@@ -104,6 +104,8 @@ void    Channel::ClearStaleDataOut() {
         data_out_.pop_front();
     if (data_out_.size()!=oldsize)
         cc_->OnAckRcvd(bin64_t::NONE);
+    while (data_out_.size() && ack_in_.get(data_out_.front().bin)==bins::FILLED)
+        data_out_.pop_front();
 }
 
 
@@ -143,12 +145,15 @@ void	Channel::AddHint (Datagram& dgram) {
         tintbin f = hint_out_.front();
         if (f.time<NOW-rtt_avg_*8) {
             hint_out_.pop_front();
+            transfer().picker().Expired(f.bin);
         } else {
             int status = file().ack_out().get(f.bin);
             if (status==bins::EMPTY) {
+                transfer().picker().Received(f.bin);
                 break;
             } else if (status==bins::FILLED) {
                 hint_out_.pop_front();
+                transfer().picker().Expired(f.bin);
             } else { // mixed
                 hint_out_.front().bin = f.bin.right();
                 f.bin = f.bin.left();

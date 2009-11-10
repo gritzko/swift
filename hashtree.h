@@ -93,7 +93,7 @@ public:
     uint64_t        complete_kilo () const { return completek_; }
     uint64_t        seq_complete () ;
     bool            is_complete () 
-        { return size_ && seq_complete()==size_; }
+        { return size_ && complete_==size_; }
     bins&           ack_out () { return ack_out_; }
 	
 	~HashTree ();

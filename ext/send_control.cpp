@@ -98,7 +98,10 @@ void    CwndController::OnDataRecvd(bin64_t b) {
     
 void    CwndController::OnAckRcvd(bin64_t ackd) {
     if (ackd==bin64_t::NONE) {
-        cwnd_ /= 2;
+        if (NOW>last_change_+ch_->rtt_avg_) {
+            cwnd_ /= 2;
+            last_change_ = NOW;
+        }
     } else {
         if (cwnd_<1)
             cwnd_ *= 2;
