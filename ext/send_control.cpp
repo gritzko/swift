@@ -71,7 +71,7 @@ void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
 
 
 bool    CwndController::MaySendData() {
-    dprintf("%s #%i maysend %i < %f & %s (rtt %lli)\n",tintstr(),
+    dprintf("%s #%i sendctrl may send %i < %f & %s (rtt %lli)\n",tintstr(),
             ch_->id,(int)ch_->data_out_.size(),cwnd_,tintstr(NextSendTime()),
             ch_->rtt_avg_);
     return ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime();
@@ -98,6 +98,7 @@ void    CwndController::OnDataRecvd(bin64_t b) {
     
 void    CwndController::OnAckRcvd(bin64_t ackd) {
     if (ackd==bin64_t::NONE) {
+        dprintf("%s #%i sendctrl loss detected\n",tintstr(),ch_->id);
         if (NOW>last_change_+ch_->rtt_avg_) {
             cwnd_ /= 2;
             last_change_ = NOW;
@@ -106,7 +107,8 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
         if (cwnd_<1)
             cwnd_ *= 2;
         else 
-            cwnd_ += 1/cwnd_;
+            cwnd_ += 1.0/cwnd_;
+        dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
     }
 }
 
@@ -122,9 +124,15 @@ void SlowStartController::OnAckRcvd (bin64_t pos) {
     
 
 void AIMDController::OnAckRcvd (bin64_t pos) {
-    if (pos!=bin64_t::NONE)
+    if (pos==bin64_t::NONE) {
+        dprintf("%s #%i sendctrl loss detected\n",tintstr(),ch_->id);
+        if (NOW>last_change_+ch_->rtt_avg_) {
+            cwnd_ /= 2;
+            last_change_ = NOW;
+        }
+    } else {
         cwnd_ += 1.0/cwnd_;
-    else 
-        cwnd_ /= 2;
+        dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
+    }
 }
  

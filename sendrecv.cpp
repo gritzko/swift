@@ -132,7 +132,7 @@ void	Channel::Send () {
     if (dgram.size()==4) // only the channel id; bare keep-alive
         data = bin64_t::ALL;
     cc_->OnDataSent(data);
-	if (dgram.Send()==-1)
+    if (dgram.Send()==-1)
         print_error("can't send datagram");
     last_send_time_ = NOW;
     RequeueSend(cc_->NextSendTime());
@@ -202,7 +202,7 @@ bin64_t		Channel::AddData (Datagram& dgram) {
 		return bin64_t::NONE;
 	bin64_t tosend = DequeueHint();
     if (tosend==bin64_t::NONE) {
-        dprintf("%s #%i out of hints\n",tintstr(),id);
+        dprintf("%s #%i out of hints #sendctrl\n",tintstr(),id);
         return bin64_t::NONE;
     }
     if (ack_in_.is_empty() && file().size())
@@ -221,7 +221,7 @@ bin64_t		Channel::AddData (Datagram& dgram) {
     dgram.Push(buf,r);
     dprintf("%s #%i +data (%lli)\n",tintstr(),id,tosend.base_offset());
     data_out_.push_back(tosend);
-    ack_in_.set(tosend);
+    // FIXME BUG this makes data_out_ all stale  ack_in_.set(tosend);
 	return tosend;
 }
 

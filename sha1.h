@@ -19,3 +19,4 @@ void blk_SHA1_Update(blk_SHA_CTX *ctx, const void *dataIn, unsigned long len);
 void blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx);
 
 #endif
+
