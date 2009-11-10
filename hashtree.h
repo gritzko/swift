@@ -88,9 +88,9 @@ public:
     const Sha1Hash& hash (bin64_t pos) const {return hashes_[pos];}
     const Sha1Hash& root_hash () const { return root_hash_; }
     uint64_t        size () const { return size_; }
-    uint64_t        size_kilo () const { return sizek_; }
+    uint64_t        packet_size () const { return sizek_; }
     uint64_t        complete () const { return complete_; }
-    uint64_t        complete_kilo () const { return completek_; }
+    uint64_t        packets_complete () const { return completek_; }
     uint64_t        seq_complete () ;
     bool            is_complete () 
         { return size_ && complete_==size_; }

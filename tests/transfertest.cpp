@@ -44,7 +44,7 @@ TEST(TransferTest,TransferFile) {
     EXPECT_TRUE(E==seed->peak_hash(1));
     EXPECT_TRUE(ROOT==seed->root_hash());
     EXPECT_EQ(4100,seed->size());
-    EXPECT_EQ(5,seed->size_kilo());
+    EXPECT_EQ(5,seed->packet_size());
     EXPECT_EQ(4100,seed->complete());
     EXPECT_EQ(4100,seed->seq_complete());
     EXPECT_EQ(bin64_t(2,0),seed->peak(0));
@@ -59,7 +59,7 @@ TEST(TransferTest,TransferFile) {
     for(int i=0; i<seed->peak_count(); i++)
         leech->OfferHash(seed->peak(i),seed->peak_hash(i));
     ASSERT_EQ(5<<10,leech->size());
-    ASSERT_EQ(5,leech->size_kilo());
+    ASSERT_EQ(5,leech->packet_size());
     ASSERT_EQ(0,leech->complete());
     EXPECT_EQ(bin64_t(2,0),leech->peak(0));
     // transfer data and hashes
@@ -75,7 +75,7 @@ TEST(TransferTest,TransferFile) {
             leech_transfer = new FileTransfer("copy",seed->root_hash());
             leech = & leech_transfer->file();
             leech_transfer->picker().Randomize(0);
-            EXPECT_EQ(2,leech->complete_kilo());
+            EXPECT_EQ(2,leech->packets_complete());
             EXPECT_EQ(bin64_t(2,0),leech->peak(0));
         }
         bin64_t next = leech_transfer->picker().Pick(seed->ack_out(),0);
@@ -84,7 +84,7 @@ TEST(TransferTest,TransferFile) {
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);
         size_t len = pread(seed->file_descriptor(),buf,1024,next.base_offset()<<10);
         bin64_t sibling = next.sibling();
-        if (sibling.base_offset()<seed->size_kilo())
+        if (sibling.base_offset()<seed->packet_size())
             leech->OfferHash(sibling, seed->hash(sibling));
         uint8_t memo = *buf;
         *buf = 'z';
@@ -93,7 +93,7 @@ TEST(TransferTest,TransferFile) {
         EXPECT_TRUE(leech->OfferData(next, (char*)buf, len));
     }
     EXPECT_EQ(4100,leech->size());
-    EXPECT_EQ(5,leech->size_kilo());
+    EXPECT_EQ(5,leech->packet_size());
     EXPECT_EQ(4100,leech->complete());
     EXPECT_EQ(4100,leech->seq_complete());
 

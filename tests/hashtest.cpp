@@ -30,7 +30,7 @@ TEST(Sha1HashTest,OfferDataTest) {
     EXPECT_STREQ(rooth123,roothash123.hex().c_str());
 	HashTree tree("123",roothash123);
     tree.OfferHash(bin64_t(0,0),Sha1Hash(true,hash123));
-	ASSERT_EQ(1,tree.size_kilo());
+	ASSERT_EQ(1,tree.packet_size());
     ASSERT_TRUE(tree.OfferData(bin64_t(0,0), "123\n", 4));
     unlink("123");
 	ASSERT_EQ(4,tree.size());

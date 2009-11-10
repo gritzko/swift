@@ -320,7 +320,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
 
 void	Channel::OnAck (Datagram& dgram) {
 	bin64_t ackd_pos = dgram.Pull32();
-    if (file().size() && ackd_pos.base_offset()>file().size_kilo()) {
+    if (file().size() && ackd_pos.base_offset()>=file().packet_size()) {
         eprintf("invalid ack: (%i,%lli)\n",ackd_pos.layer(),ackd_pos.offset());
         return;
     }

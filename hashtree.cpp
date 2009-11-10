@@ -148,13 +148,13 @@ void            HashTree::RecoverProgress () {
     char zeros[1<<10];
     memset(zeros, 0, 1<<10);
     Sha1Hash kilo_zero(zeros,1<<10);
-    for(int p=0; p<size_kilo(); p++) {
+    for(int p=0; p<packet_size(); p++) {
         char buf[1<<10];
         bin64_t pos(0,p);
         if (hashes_[pos]==Sha1Hash::ZERO)
             continue;
         size_t rd = read(fd_,buf,1<<10);
-        assert(rd==(1<<10) || p==size_kilo()-1);
+        assert(rd==(1<<10) || p==packet_size()-1);
         if (rd==(1<<10) && !memcmp(buf, zeros, rd) && hashes_[pos]!=kilo_zero)
             continue;
         if ( data_recheck_ && !OfferHash(pos, Sha1Hash(buf,rd)) )
