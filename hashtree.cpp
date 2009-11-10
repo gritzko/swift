@@ -8,7 +8,8 @@
  */
 
 #include "hashtree.h"
-#include <openssl/sha.h>
+//#include <openssl/sha.h>
+#include "sha1.h"
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -19,6 +20,13 @@ using namespace p2tp;
 #define HASHSZ 20
 const size_t Sha1Hash::SIZE = HASHSZ;
 const Sha1Hash Sha1Hash::ZERO = Sha1Hash();
+
+void SHA1 (const void *data, size_t length, unsigned char *hash) {
+    blk_SHA_CTX ctx;
+    blk_SHA1_Init(&ctx);
+    blk_SHA1_Update(&ctx, data, length);
+    blk_SHA1_Final(hash, &ctx);
+}
 
 Sha1Hash::Sha1Hash(const Sha1Hash& left, const Sha1Hash& right) {
 	char data[HASHSZ*2];
