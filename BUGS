@@ -16,11 +16,11 @@
     v Channel thinks how much it HINTs a second,
       picker thinks which HINTs are snubbed
     * files <1sec download : how HINTs are sent?
-    * dead Channels are not killed => cannot open a new one
+    v dead Channels are not killed => cannot open a new one
         (have a channel already)
     v peers don't cooperate
     * RecoverProgress fails sometime
-    * leecher can't see file is done already
+    v leecher can't see file is done already
     * why leecher waits 1sec?
     * hint queue buildup
     * file operations are not 64-bit ready
