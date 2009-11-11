@@ -22,3 +22,4 @@
     * RecoverProgress fails sometime
     * leecher can't see file is done already
     * why leecher waits 1sec?
+    * hint queue buildup

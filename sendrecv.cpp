@@ -143,11 +143,12 @@ void	Channel::AddHint (Datagram& dgram) {
         tintbin f = hint_out_.front();
         if (f.time<NOW-rtt_avg_*8) {
             hint_out_.pop_front();
+            dprintf("%s #%i !hint (%i,%lli)\n",
+                    tintstr(),id,(int)f.bin.layer(),f.bin.offset());
             transfer().picker().Expired(f.bin);
         } else {
             int status = file().ack_out().get(f.bin);
             if (status==bins::EMPTY) {
-                transfer().picker().Expired(f.bin);
                 break;
             } else if (status==bins::FILLED) {
                 hint_out_.pop_front();
@@ -156,7 +157,7 @@ void	Channel::AddHint (Datagram& dgram) {
                 hint_out_.front().bin = f.bin.right();
                 f.bin = f.bin.left();
                 hint_out_.push_front(f);
-            }
+            } // FIXME: simplify this mess
         }
     }
     /*while (!hint_out_.empty() &&
