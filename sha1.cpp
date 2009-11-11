@@ -8,7 +8,11 @@
 
 /* this is only to get definitions for memcpy(), ntohl() and htonl() */
 //#include "../git-compat-util.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
+#endif
 #include <string.h>
 
 #include "sha1.h"

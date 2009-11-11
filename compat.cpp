@@ -10,18 +10,22 @@
 #include "compat.h"
 #include <sys/stat.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <assert.h>
 #ifdef _WIN32
-#include <windows.h>
 #include <Tchar.h>
 #include <io.h>
-#include <winsock2.h>
 #include <sys/timeb.h>
+#include "compat/hirestimeofday.h"
 #else
+#include <unistd.h>
 #include <sys/time.h>
 #endif
 
 namespace p2tp {
+
+#ifdef _WIN32
+static HANDLE map_handles[1024];
+#endif
 
 size_t file_size (int fd) {
     struct stat st;
@@ -50,7 +54,7 @@ void print_error(const char* msg) {
 #ifdef _WIN32
     int e = WSAGetLastError();
     if (e)
-        fprintf(stderr,"network error #%i\n",e);    
+        fprintf(stderr,"network error #%i\n",e);
 #endif
 }
 
@@ -66,8 +70,7 @@ void*   memory_map (int fd, size_t size) {
 #else
     HANDLE fhandle = (HANDLE)_get_osfhandle(fd);
     assert(fd<1024);
-    static HANDLE map_handles[1024];
-    maphandle = CreateFileMapping(     fhandle,
+    HANDLE maphandle = CreateFileMapping(     fhandle,
                                        NULL,
                                        PAGE_READWRITE,
                                        0,
@@ -76,13 +79,13 @@ void*   memory_map (int fd, size_t size) {
 	if (maphandle == NULL)
         return NULL;
     map_handles[fd] = maphandle;
-    
+
     mapping = MapViewOfFile         (  maphandle,
                                        FILE_MAP_WRITE,
                                        0,
                                        0,
                                        0  );
-        
+
     return mapping;
 #endif
 }
@@ -96,9 +99,9 @@ void    memory_unmap (int fd, void* mapping, size_t size) {
 	CloseHandle(map_handles[fd]);
 #endif
 }
-    
+
 #ifdef _WIN32
-    
+
 size_t pread(int fildes, void *buf, size_t nbyte, long offset)
 {
     _lseek(fildes,offset,SEEK_SET);
@@ -118,9 +121,17 @@ int inet_aton(const char *cp, struct in_addr *inp)
     return 1;
 }
 
-#endif
- 
-tint usec_time () {
+tint usec_time(void)
+{
+	HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
+	return tod->getTimeUSec();
+}
+
+
+#else
+
+tint usec_time(void)
+{
     struct timeval t;
 	gettimeofday(&t,NULL);
 	tint ret;
@@ -128,6 +139,8 @@ tint usec_time () {
 	ret *= 1000000;
 	ret += t.tv_usec;
 	return ret;
-}    
-    
+}
+
+#endif
+
 }

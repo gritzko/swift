@@ -9,13 +9,17 @@
 #ifndef DATAGRAM_H
 #define DATAGRAM_H
 
-#ifdef _WIN32
+#ifdef _MSC_VER
     #include "compat/stdint.h"
-    #include <winsock2.h>
-	#include "compat/unixio.h"
+#else
+    #include <stdint.h>
+#endif
+#ifdef _WIN32
+	#include <winsock2.h>
+	#include "compat.h"
 #else
     typedef int SOCKET;
-    #include <stdint.h>
+
     #include <arpa/inet.h>
     #include <sys/select.h>
     #include <sys/socket.h>
@@ -29,25 +33,17 @@
 #include <stdio.h>
 #include <string>
 #include "hashtree.h"
-#include "compat/hirestimeofday.h"
 #include "compat/util.h"
 
 
 namespace p2tp {
 
-typedef int64_t tint;
-#define TINT_HOUR ((tint)1000000*60*60)
-#define TINT_MIN ((tint)1000000*60)
-#define TINT_SEC ((tint)1000000)
-#define TINT_MSEC ((tint)1000)
-#define TINT_uSEC ((tint)1)
-#define TINT_NEVER ((tint)0x7fffffffffffffffLL)
 #define MAXDGRAMSZ 2800
 #ifndef _WIN32
 #define INVALID_SOCKET -1
 #endif
 
-    
+
 struct Address {
     struct sockaddr_in  addr;
     static uint32_t LOCALHOST;
@@ -69,7 +65,7 @@ struct Address {
         memset(&addr,0,sizeof(struct sockaddr_in));
         addr.sin_family = AF_INET;
     }
-    Address() { 
+    Address() {
         clear();
     }
     Address(const char* ip, uint16_t port)  {
@@ -92,7 +88,7 @@ struct Address {
     uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }
     uint16_t port () const { return ntohs(addr.sin_port); }
     operator sockaddr_in () const {return addr;}
-    bool operator == (const Address& b) const { 
+    bool operator == (const Address& b) const {
         return addr.sin_family==b.addr.sin_family &&
         addr.sin_port==b.addr.sin_port &&
         addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
@@ -105,8 +101,8 @@ struct Address {
     }
     bool operator != (const Address& b) const { return !(*this==b); }
 };
-    
-    
+
+
 struct Datagram {
 
 	Address addr;
@@ -210,7 +206,7 @@ std::string sock2str (struct sockaddr_in addr);
 #define dprintf(...) printf(__VA_ARGS__)
 #define eprintf(...) fprintf(stderr,__VA_ARGS__)
 //#define dprintf(...) {}
-    
+
 }
 
 #endif

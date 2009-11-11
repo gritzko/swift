@@ -9,13 +9,16 @@
 
 #include <stdlib.h>
 #include <fcntl.h>
+#ifndef _WIN32
 #include <sys/select.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <arpa/inet.h>
-#include <string.h>
 #include <unistd.h>
+#endif
+#include <sys/stat.h>
+#include <string.h>
+
 //#include <glog/logging.h>
 #include "p2tp.h"
 #include "datagram.h"
@@ -27,7 +30,7 @@ p2tp::tint Channel::last_tick = 0;
 int Channel::MAX_REORDERING = 4;
 p2tp::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
-int Channel::sockets[8] = {0,0,0,0,0,0,0,0};
+SOCKET Channel::sockets[8] = {0,0,0,0,0,0,0,0};
 int Channel::socket_count = 0;
 Address Channel::tracker;
 tbqueue Channel::send_queue;
@@ -95,15 +98,15 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
     FileTransfer* ft = new FileTransfer(filename, hash);
     int fdes = ft->file().file_descriptor();
     if (fdes>0) {
-        
+
         /*if (FileTransfer::files.size()<fdes)  // FIXME duplication
             FileTransfer::files.resize(fdes);
         FileTransfer::files[fdes] = ft;*/
-        
+
         // initiate tracker connections
         if (Channel::tracker!=Address())
             new Channel(ft);
-        
+
         return fdes;
     } else {
         delete ft;

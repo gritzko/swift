@@ -8,13 +8,14 @@
 #ifndef HIRESTIMEOFDAY_H
 #define HIRESTIMEOFDAY_H
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "compat/stdint.h"
-#include <windows.h>
 #else
 #include <stdint.h>
 #endif
-
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace p2tp {
 

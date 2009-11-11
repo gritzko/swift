@@ -38,7 +38,7 @@ TEST(Sha1HashTest,OfferDataTest) {
 
 
 TEST(Sha1HashTest,SubmitTest) {
-    FILE* f123 = fopen("123","w+");
+    FILE* f123 = fopen("123","wb+");
     fprintf(f123, "123\n");
     fclose(f123);
     HashTree ht123("123");
@@ -83,8 +83,8 @@ TEST(Sha1HashTest,SubmitTest) {
 
 int main (int argc, char** argv) {
 	//bin::init();
-	
+
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
-	
+
 }

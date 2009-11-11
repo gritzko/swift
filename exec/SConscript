@@ -2,10 +2,11 @@ import sys
 
 Import("DEBUG")
 Import("env")
+Import("libs")
 Import("libpath")
 
 cpppath = env["CPPPATH"]
-libs = ['p2tp']
+libs = ['p2tp'] + libs  # order is important, crypto needs to be last
 
 if sys.platform == "win32":
     cpppath = ".."

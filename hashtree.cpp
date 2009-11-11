@@ -12,6 +12,7 @@
 #include "sha1.h"
 #include <string.h>
 #include <stdlib.h>
+#include <io.h>
 #include <fcntl.h>
 #include "compat.h"
 
@@ -131,7 +132,7 @@ void            HashTree::Submit () {
     }
 
     root_hash_ = DeriveRoot();
-    
+
 }
 
 
@@ -191,13 +192,13 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
         return false;
     for(int i=0; i<peak_count_; i++)
         sizek_ += peaks_[i].width();
-    
+
     // bingo, we now know the file size (rounded up to a KByte)
-    
+
     size_ = sizek_<<10;
     completek_ = complete_ = 0;
 	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
-    
+
     size_t cur_size = file_size(fd_);
     if ( cur_size<=(sizek_-1)<<10  || cur_size>sizek_<<10 )
         if (file_resize(fd_, size_)) {
@@ -205,19 +206,19 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
             size_=0; // remain in the 0-state
             return false;
         }
-    
+
     // mmap the hash file into memory
     size_t expected_size = sizeof(Sha1Hash)*sizek_*2;
     if ( file_size(hash_fd_) != expected_size )
         file_resize (hash_fd_, expected_size);
-    
+
     hashes_ = (Sha1Hash*) memory_map(hash_fd_,expected_size);
     if (!hashes_) {
         size_ = sizek_ = complete_ = completek_ = 0;
         print_error("mmap failed");
         return false;
     }
-    
+
     for(int i=0; i<peak_count_; i++)
         hashes_[peaks_[i]] = peak_hashes_[i];
     return true;
@@ -300,7 +301,7 @@ bool            HashTree::OfferData (bin64_t pos, const char* data, size_t lengt
 
     if (!OfferHash(pos, Sha1Hash(data,length)))
         return false;
-    
+
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
     ack_out_.set(pos,bins::FILLED);
     pwrite(fd_,data,length,pos.base_offset()<<10);

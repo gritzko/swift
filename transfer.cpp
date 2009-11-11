@@ -7,7 +7,7 @@
  *
  */
 #ifdef _WIN32
-#include "compat/unixio.h"
+#include "compat.h"
 #else
 #include <sys/mman.h>
 #endif

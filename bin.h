@@ -9,7 +9,7 @@
 #ifndef BIN_H
 #define BIN_H
 #include <assert.h>
-#ifdef _WIN32
+#ifdef _MSC_VER
     // To avoid complaints about std::max. Appears to work in VS2008
     #undef min
     #undef max

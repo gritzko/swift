@@ -1,7 +1,7 @@
 #ifndef BIN64_H
 #define BIN64_H
 #include <assert.h>
-#ifdef _WIN32
+#ifdef _MSC_VER
     #include "compat/stdint.h"
 #else
     #include <stdint.h>
@@ -106,7 +106,7 @@ struct bin64_t {
         else
             return right();
     }
-    
+
     bin64_t twisted (uint64_t mask) const {
         return bin64_t( v ^ ((mask<<1)&~tail_bits()) );
     }

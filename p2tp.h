@@ -49,7 +49,7 @@ Messages
 #ifndef P2TP_H
 #define P2TP_H
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "compat/stdint.h"
 #else
 #include <stdint.h>
@@ -89,7 +89,7 @@ namespace p2tp {
 		P2TP_PEX_RM = 6,
 		P2TP_MESSAGE_COUNT = 7
 	} messageid_t;
-    
+
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
@@ -112,7 +112,7 @@ namespace p2tp {
         //bin64_t         RevealAck (uint64_t& offset);
         /** Rotating queue read for channels of this transmission. */
         int             RevealChannel (int& i);
-        
+
         static FileTransfer* Find (const Sha1Hash& hash);
 		static FileTransfer* file (int fd) {
             return fd<files.size() ? files[fd] : NULL;
@@ -132,15 +132,15 @@ namespace p2tp {
 		static std::vector<FileTransfer*> files;
 
         HashTree        file_;
-        
+
         /** Piece picker strategy. */
         PiecePicker*    picker_;
-        
+
         /** Channels working for this transfer. */
         binqueue        hs_in_;
         int             hs_in_offset_;
         std::deque<Address>        pex_in_;
-        
+
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
 
@@ -157,9 +157,9 @@ namespace p2tp {
         friend void    Close (int fd) ;
 	};
 
-    
+
 #include "ext/send_control.h"
-    
+
 
     class PiecePicker {
     public:
@@ -169,14 +169,14 @@ namespace p2tp {
         virtual void    Received (bin64_t b) = 0;
     };
 
-    
+
     class PeerSelector {
     public:
         virtual void AddPeer (const Address& addr, const Sha1Hash& root) = 0;
         virtual Address GetPeer (const Sha1Hash& for_root) = 0;
     };
 
-    
+
     class DataStorer {
     public:
         DataStorer (const Sha1Hash& id, size_t size);
@@ -224,7 +224,7 @@ namespace p2tp {
         FileTransfer& transfer() { return *transfer_; }
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
-        
+
 		static int DecodeID(int scrambled);
 		static int EncodeID(int unscrambled);
 		static Channel* channel(int i) {
@@ -271,7 +271,7 @@ namespace p2tp {
         tint        next_send_time_;
         tint        peer_send_time_;
         static      tbqueue send_queue;
-        
+
         void        RequeueSend (tint next_time);
         int         PeerBPS() const {
             return TINT_SEC / dip_avg_ * 1024;
@@ -285,7 +285,7 @@ namespace p2tp {
 
 		static int      MAX_REORDERING;
 		static tint     TIMEOUT;
-        static int      sockets[8];
+        static SOCKET   sockets[8];
         static int      socket_count;
 		static tint     last_tick;
 
@@ -297,7 +297,7 @@ namespace p2tp {
         friend void     AddPeer (Address address, const Sha1Hash& root);
         friend void     SetTracker(const Address& tracker);
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
-        
+
         friend class FileTransfer; // FIXME!!!
         friend class SendController; // FIXME!!!
 	};
@@ -323,9 +323,9 @@ namespace p2tp {
         root hash is zero, the peer might be talked to regarding any transmission
         (likely, a tracker, cache or an archive). */
     void    AddPeer (Address address, const Sha1Hash& root=Sha1Hash::ZERO);
-    
+
     void    SetTracker(const Address& tracker);
-    
+
     /** Returns size of the file in bytes, 0 if unknown. Might be rounded up to a kilobyte
         before the transmission is complete. */
     uint64_t  Size (int fdes);
