@@ -17,6 +17,7 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <sys/stat.h>
+#include <io.h>
 #else
 #include <sys/mman.h>
 #endif

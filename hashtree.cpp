@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include "compat.h"
 
+
 using namespace p2tp;
 
 #define HASHSZ 20
