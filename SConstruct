@@ -82,7 +82,7 @@ else:
 	#	env.Append(CXXFLAGS="-g")
 
 	# Set libs to link to
-	libs = ['stdc++','gtest','pthread','crypto']
+	libs = ['stdc++','gtest','pthread']
 	if 'LIBPATH' in os.environ:
   	    libpath = os.environ['LIBPATH']
 	else:

@@ -34,6 +34,7 @@
 #include <string>
 #include "hashtree.h"
 #include "compat/util.h"
+#include "compat.h"
 
 
 namespace p2tp {

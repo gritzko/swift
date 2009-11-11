@@ -12,7 +12,6 @@
 #include "sha1.h"
 #include <string.h>
 #include <stdlib.h>
-#include <io.h>
 #include <fcntl.h>
 #include "compat.h"
 
