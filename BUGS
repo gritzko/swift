@@ -11,11 +11,14 @@
     v check hints agains ack_out?_
     v check data against ack_in
     v channel suspend/wake. 3 cong modes state machine - ???
+    * release hints for a dormant channel
     * minimize the number of template instantiations
     v Channel thinks how much it HINTs a second,
       picker thinks which HINTs are snubbed
+    * files <1sec download : how HINTs are sent?
     * dead Channels are not killed => cannot open a new one
         (have a channel already)
     v peers don't cooperate
     * RecoverProgress fails sometime
     * leecher can't see file is done already
+    * why leecher waits 1sec?

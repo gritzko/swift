@@ -25,16 +25,19 @@ bool    PingPongController::MaySendData(){
 }
     
 tint    PingPongController::NextSendTime () {
+    if (unanswered_>=3)
+        return TINT_NEVER;
     return ch_->last_send_time_ + ch_->rtt_avg_ + ch_->dev_avg_*4;  // remind on timeout
 }
     
 void    PingPongController::OnDataSent(bin64_t b) {
-    if ( (ch_->last_recv_time_ && ch_->last_recv_time_<NOW-TINT_SEC*3) || //no reply
-         (b==bin64_t::ALL && MaySendData()) ) // nothing to send
+    unanswered_++;
+    if ( (b==bin64_t::ALL && MaySendData()) ) // nothing to send
         Swap(new KeepAliveController(this));
 }
     
 void    PingPongController::OnDataRecvd(bin64_t b) {
+    unanswered_ = 0;
 }
     
 void    PingPongController::OnAckRcvd(bin64_t ackd) {
@@ -51,6 +54,8 @@ bool    KeepAliveController::MaySendData() {
 tint    KeepAliveController::NextSendTime () {
     if (!delay_)
         delay_ = ch_->rtt_avg_;
+    if (ch_->last_recv_time_ < ch_->last_send_time_-TINT_MIN)
+        return TINT_NEVER;
     return ch_->last_send_time_ + delay_;
 }
     

@@ -444,7 +444,8 @@ void    Channel::RequeueSend (tint next_time) {
     if (next_time==next_send_time_)
         return;
     next_send_time_ = next_time;
-    send_queue.push_back(tintbin(next_time,id));
+    send_queue.push_back
+        (tintbin(next_time==TINT_NEVER?NOW+TINT_MIN:next_time,id));
     push_heap(send_queue.begin(),send_queue.end(),tblater);
     dprintf("%s requeue #%i for %s\n",tintstr(),id,tintstr(next_time));
 }
@@ -461,7 +462,9 @@ void    Channel::Loop (tint howlong) {
         while (!send_queue.empty()) {
             send_time = send_queue.front().time;
             sender = channel((int)send_queue.front().bin);
-            if (sender && sender->next_send_time_==send_time)
+            if (sender)
+                if ( sender->next_send_time_==send_time ||
+                     sender->next_send_time_==TINT_NEVER )
                 break;
             sender = NULL; // it was a stale entry
             pop_heap(send_queue.begin(), send_queue.end(), tblater);
@@ -469,7 +472,7 @@ void    Channel::Loop (tint howlong) {
         }
         if (send_time>limit)
             send_time = limit;
-        if ( sender && send_time <= NOW ) {
+        if ( sender && sender->next_send_time_ <= NOW ) {
             dprintf("%s #%i sch_send %s\n",tintstr(),sender->id,
                     tintstr(send_time));
             sender->Send();
@@ -477,12 +480,17 @@ void    Channel::Loop (tint howlong) {
             sender->RequeueSend(sender->cc_->NextSendTime());
             pop_heap(send_queue.begin(), send_queue.end(), tblater);
             send_queue.pop_back();
-        } else {
+        } else if ( send_time > NOW ) {
             tint towait = send_time - NOW;
             dprintf("%s waiting %lliusec\n",tintstr(),towait);
             int rd = Datagram::Wait(socket_count,sockets,towait);
             if (rd!=INVALID_SOCKET)
                 Recv(rd);
+        } else { //if (sender->next_send_time_==TINT_NEVER) { 
+            dprintf("%s #%i closed sendctrl\n",tintstr(),sender->id);
+            delete sender;
+            pop_heap(send_queue.begin(), send_queue.end(), tblater);
+            send_queue.pop_back();
         }
         
     } while (Datagram::Time()<limit);

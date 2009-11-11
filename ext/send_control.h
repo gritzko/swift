@@ -47,10 +47,12 @@ struct SendController {
 
 struct PingPongController : public SendController {
     
-    int     fails_;
+    int     unanswered_;
 
-    PingPongController (SendController* orig) : SendController(orig), fails_(0) {} 
-    PingPongController (Channel* ch) : fails_(0), SendController(ch) {}
+    PingPongController (SendController* orig) :
+        SendController(orig), unanswered_(0) {} 
+    PingPongController (Channel* ch) : 
+        unanswered_(0), SendController(ch) {}
     const char* type() const { return "PingPong"; }
     bool    MaySendData();
     tint    NextSendTime ();
@@ -66,8 +68,8 @@ struct KeepAliveController : public SendController {
 
     tint delay_;
     
-    KeepAliveController(SendController* prev) : SendController(prev),
-    delay_(0) {}
+    KeepAliveController(SendController* prev, tint delay=0) : 
+        SendController(prev), delay_(delay) {}
     const char* type() const { return "KeepAlive"; }
     bool    MaySendData();
     tint    NextSendTime () ;

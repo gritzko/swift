@@ -51,6 +51,7 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 
 Channel::~Channel () {
 	channels[id] = NULL;
+    delete cc_;
 }
 
 
