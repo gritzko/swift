@@ -23,3 +23,5 @@
     * leecher can't see file is done already
     * why leecher waits 1sec?
     * hint queue buildup
+    * file operations are not 64-bit ready
+        http://mail.python.org/pipermail/patches/2000-June/000848.html
