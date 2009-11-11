@@ -40,7 +40,8 @@ void	Channel::AddPeakHashes (Datagram& dgram) {
 
 void	Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
-    while (pos!=peak && ack_in_.get(pos.parent())==bins::EMPTY) {
+    while (pos!=peak && !data_out_cap_.within(pos.parent()) &&
+            ack_in_.get(pos.parent())==bins::EMPTY) {
         bin64_t uncle = pos.sibling();
 		dgram.Push8(P2TP_HASH);
 		dgram.Push32((uint32_t)uncle);
@@ -55,8 +56,11 @@ void	Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
 bin64_t		Channel::DequeueHint () { // TODO: resilience
     bin64_t send = bin64_t::NONE;
     while (!hint_in_.empty() && send==bin64_t::NONE) {
-        bin64_t hint = hint_in_.front();
+        bin64_t hint = hint_in_.front().bin;
+        tint time = hint_in_.front().time;
         hint_in_.pop_front();
+        if (time < NOW-8*rtt_avg_)
+            continue;
         send = file().ack_out().find_filtered
             (ack_in_,hint,0,bins::FILLED);
         dprintf("%s #%i dequeued %lli\n",tintstr(),id,send.base_offset());
@@ -102,8 +106,10 @@ void    Channel::ClearStaleDataOut() {
     while ( data_out_.size() && data_out_.front().time < 
            NOW - rtt_avg_ - dev_avg_*4 )
         data_out_.pop_front();
-    if (data_out_.size()!=oldsize)
+    if (data_out_.size()!=oldsize) {
         cc_->OnAckRcvd(bin64_t::NONE);
+        data_out_cap_ = bin64_t::ALL;
+    }
     while (data_out_.size() && ack_in_.get(data_out_.front().bin)==bins::FILLED)
         data_out_.pop_front();
 }
@@ -220,6 +226,7 @@ bin64_t		Channel::AddData (Datagram& dgram) {
     dgram.Push(buf,r);
     dprintf("%s #%i +data (%lli)\n",tintstr(),id,tosend.base_offset());
     data_out_.push_back(tosend);
+    data_out_cap_ = tosend;
     // FIXME BUG this makes data_out_ all stale  ack_in_.set(tosend);
 	return tosend;
 }
@@ -307,7 +314,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
     if (ok) {
         data_in_ = tintbin(NOW,pos);
         if (last_recv_time_) {
-            tint dip = NOW - last_recv_time_;
+            tint dip = NOW - last_recv_time_; // FIXME: was it an ACK?
             dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
         }
         transfer().picker().Received(pos); // so dirty; FIXME FIXME FIXME

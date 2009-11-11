@@ -249,10 +249,11 @@ namespace p2tp {
 		tintbin		data_in_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;
+        bin64_t     data_out_cap_;
         /** Index in the history array. */
 		bins        ack_out_;
 		/**	Transmit schedule: in most cases filled with the peer's hints */
-		binqueue    hint_in_;
+		tbqueue    hint_in_;
 		/** Hints sent (to detect and reschedule ignored hints). */
 		tbqueue		hint_out_;
 		/** The congestion control strategy. */
