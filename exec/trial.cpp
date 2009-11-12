@@ -21,7 +21,7 @@ int main (int argn, char** args) {
     p2tp::LibraryInit();
     const char* filename = "team.jpg";
     Address tracker("130.161.211.198:10000"),
-            bindaddr(INADDR_ANY,10000);
+            bindaddr((uint32_t)INADDR_ANY,10000);
     if (0>p2tp::Listen(bindaddr)) {
         print_error("cannot bind");
         return 1;

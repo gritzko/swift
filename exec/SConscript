@@ -21,6 +21,14 @@ else:
 
 print "tests: libpath is",libpath
 
+
+env.Program( 
+    target='trial',
+    source=['trial.cpp'],
+    CPPPATH=cpppath,
+    LIBS=libs,
+    LIBPATH=libpath )
+
 env.Program( 
     target='seeder',
     source=['seeder.cpp'],
