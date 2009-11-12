@@ -8,6 +8,8 @@
  */
 #include "p2tp.h"
 #include <time.h>
+#include <string>
+#include "compat/util.h"
 
 
 using namespace p2tp;
@@ -19,7 +21,13 @@ int main (int argn, char** args) {
     srand(time(NULL));
     Sha1Hash root_hash(true,"32e5d9d2d8c0f6073e2820cf47b15b58c2e42a23");
     p2tp::LibraryInit();
-    const char* filename = "team.jpg";
+
+    // Arno: use tempdir
+    std::string tmpdir = gettmpdir();
+    std::string sfn = tmpdir+"team.jpg";
+    const char* filename = sfn.c_str();
+
+
     Address tracker("130.161.211.198:10000"),
             bindaddr((uint32_t)INADDR_ANY,10000);
     if (0>p2tp::Listen(bindaddr)) {
