@@ -21,7 +21,6 @@ using namespace p2tp;
 
 std::vector<FileTransfer*> FileTransfer::files(20);
 
-int FileTransfer::instance = 0;
 #define BINHASHSIZE (sizeof(bin64_t)+sizeof(Sha1Hash))
 
 #include "ext/seq_picker.cpp"

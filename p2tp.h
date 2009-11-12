@@ -125,8 +125,6 @@ namespace p2tp {
         int             fd () const { return file_.file_descriptor(); }
         const Sha1Hash& root_hash () const { return file_.root_hash(); }
 
-        static int instance; // FIXME this smells
-
     private:
 
 		static std::vector<FileTransfer*> files;

@@ -291,7 +291,7 @@ void	Channel::Recv (Datagram& dgram) {
 	}
     cc_->OnDataRecvd(data);
     last_recv_time_ = NOW;
-    if (data!=bin64_t::ALL)
+    if (data!=bin64_t::ALL && next_send_time_>NOW+TINT_MSEC)
         Send(); //RequeueSend(NOW);
 }
 
