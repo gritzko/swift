@@ -55,6 +55,8 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 
 Channel::~Channel () {
 	channels[id] = NULL;
+    for(int i=0; i<hint_out_.size(); i++)
+        transfer().picker().Expired(hint_out_[i].bin);
     delete cc_;
 }
 
