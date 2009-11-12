@@ -17,7 +17,6 @@ using namespace p2tp;
 int main (int argn, char** args) {
 
     srand(time(NULL));
-    FileTransfer::instance = rand();
 
     if (argn<4) {
         fprintf(stderr,"parameters: root_hash filename tracker_ip:port [own_ip:port]\n");

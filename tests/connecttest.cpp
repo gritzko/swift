@@ -30,7 +30,7 @@ TEST(P2TP,CwndTest) {
 
 	int file = p2tp::Open("doc/sofi.jpg");
     FileTransfer* fileobj = FileTransfer::file(file);
-    FileTransfer::instance++;
+    //FileTransfer::instance++;
 
     p2tp::SetTracker(Address("127.0.0.1",7001));
 

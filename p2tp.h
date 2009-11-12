@@ -265,6 +265,7 @@ namespace p2tp {
         /** Smoothed averages for RTT, RTT deviation and data interarrival periods. */
         tint        rtt_avg_, dev_avg_, dip_avg_;
         tint        last_send_time_;
+        tint        last_data_time_;
         tint        last_recv_time_;
         tint        next_send_time_;
         tint        peer_send_time_;

@@ -52,7 +52,6 @@ TEST(TransferTest,TransferFile) {
 
     // retrieve it
     unlink("copy");
-    FileTransfer::instance = 1;
     FileTransfer* leech_transfer = new FileTransfer("copy",seed->root_hash());
     HashTree* leech = & leech_transfer->file();
     leech_transfer->picker().Randomize(0);
@@ -72,7 +71,6 @@ TEST(TransferTest,TransferFile) {
     for (int i=0; i<5; i++) {
         if (i==2) { // now: stop, save, start
             delete leech_transfer;
-            FileTransfer::instance = 1;
             leech_transfer = new FileTransfer("copy",seed->root_hash());
             leech = & leech_transfer->file();
             leech_transfer->picker().Randomize(0);

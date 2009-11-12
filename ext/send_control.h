@@ -85,8 +85,7 @@ struct CwndController : public SendController {
     double  cwnd_;
     tint    last_change_;
     
-    CwndController(SendController* orig, int cwnd=1) :
-    SendController(orig), cwnd_(cwnd), last_change_(0) {    }
+    CwndController(SendController* orig, int cwnd=1) ;
     
     bool    MaySendData() ;
     tint    NextSendTime () ;

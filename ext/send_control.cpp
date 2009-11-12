@@ -63,8 +63,8 @@ void    KeepAliveController::OnDataSent(bin64_t b) {
     delay_ *= 2;
     if (delay_>TINT_SEC*58)
         delay_ = TINT_SEC*58;
-    if (b!=bin64_t::ALL)
-        Swap(new PingPongController(this));
+    if (b!=bin64_t::ALL && b!=bin64_t::NONE)
+        Swap(new SlowStartController(this));
 }
     
 void    KeepAliveController::OnDataRecvd(bin64_t b) {
@@ -74,6 +74,11 @@ void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
 }
     
 
+CwndController::CwndController(SendController* orig, int cwnd) :
+SendController(orig), cwnd_(cwnd), last_change_(0) {    
+    ch_->rtt_avg_ = TINT_SEC; // cannot trust the past value
+    ch_->dev_avg_ = 0;
+}
 
 bool    CwndController::MaySendData() {
     dprintf("%s #%i sendctrl may send %i < %f & %s (rtt %lli)\n",tintstr(),
@@ -94,7 +99,7 @@ tint    CwndController::NextSendTime () {
 void    CwndController::OnDataSent(bin64_t b) {
     if (b==bin64_t::ALL || b==bin64_t::NONE) {
         if (MaySendData())
-            Swap(new PingPongController(this));
+            Swap(new KeepAliveController(this));
     } 
 }
     

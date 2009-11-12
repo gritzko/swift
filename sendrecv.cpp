@@ -313,10 +313,11 @@ bin64_t Channel::OnData (Datagram& dgram) {
     dprintf("%s #%i %cdata (%lli)\n",tintstr(),id,ok?'-':'!',pos.offset());
     if (ok) {
         data_in_ = tintbin(NOW,pos);
-        if (last_recv_time_) {
-            tint dip = NOW - last_recv_time_; // FIXME: was it an ACK?
+        if (last_data_time_) {
+            tint dip = NOW - last_data_time_;
             dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
         }
+        last_data_time_ = NOW;
         transfer().picker().Received(pos); // so dirty; FIXME FIXME FIXME
         return pos;
     } else
