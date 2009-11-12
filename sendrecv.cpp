@@ -40,7 +40,7 @@ void	Channel::AddPeakHashes (Datagram& dgram) {
 
 void	Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
-    while (pos!=peak && !data_out_cap_.within(pos.parent()) &&
+    while (pos!=peak && ((NOW&7)==7 || !data_out_cap_.within(pos.parent())) &&
             ack_in_.get(pos.parent())==bins::EMPTY) {
         bin64_t uncle = pos.sibling();
 		dgram.Push8(P2TP_HASH);
