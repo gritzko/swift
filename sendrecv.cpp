@@ -292,6 +292,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
     if (!ok) 
         return bin64_t::NONE;
     data_in_ = tintbin(NOW,pos);
+    transfer().picker().Received(pos); // FIXME ugly
     if (last_data_time_) {
         tint dip = NOW - last_data_time_;
         dip_avg_ = ( dip_avg_*3 + dip ) >> 2;

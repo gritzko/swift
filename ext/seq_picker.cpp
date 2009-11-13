@@ -65,4 +65,8 @@ public:
         return hint;
     }
     
+    void Received (bin64_t bin) {
+        ack_hint_out_.set(bin);
+    }
+    
 };

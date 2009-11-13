@@ -188,6 +188,7 @@ namespace p2tp {
     public:
         virtual void Randomize (uint64_t twist) = 0;
         virtual bin64_t Pick (bins& offered, uint64_t max_width, tint expires) = 0;
+        virtual void Received (bin64_t bin) = 0;
     };
 
 
