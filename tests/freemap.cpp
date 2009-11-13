@@ -44,7 +44,9 @@ TEST(FreemapTest,Freemap) {
     for (int t=0; t<1000000; t++) {
         if (t<500000 || t>504000) {
             uint8_t lr = rand_norm(28);
-            bin64_t alloc = space.find(top,lr);
+            bin64_t alloc = space.find(top);
+            while (alloc.layer()>lr)
+                alloc = alloc.left();
             ASSERT_NE(0ULL,~alloc);
             EXPECT_EQ(bins::EMPTY, space.get(alloc));
             space.set(alloc,bins::FILLED);
