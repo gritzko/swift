@@ -46,7 +46,11 @@ void    PingPongController::OnAckRcvd(bin64_t ackd) {
 }
 
 
-    
+KeepAliveController::KeepAliveController(SendController* prev, tint delay) : 
+SendController(prev), delay_(delay) {
+    ch_->dev_avg_ = TINT_SEC; // without active measurement, rtt is unreliable
+}
+
 bool    KeepAliveController::MaySendData() {
     return true;
 }
@@ -60,7 +64,7 @@ tint    KeepAliveController::NextSendTime () {
 }
     
 void    KeepAliveController::OnDataSent(bin64_t b) {
-    delay_ *= 2;
+    delay_ = (NOW - std::max(ch_->last_send_time_,ch_->last_recv_time_)) * 3 / 2;
     if (delay_>TINT_SEC*58)
         delay_ = TINT_SEC*58;
     if (b!=bin64_t::ALL && b!=bin64_t::NONE)
@@ -76,15 +80,14 @@ void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
 
 CwndController::CwndController(SendController* orig, int cwnd) :
 SendController(orig), cwnd_(cwnd), last_change_(0) {    
-    ch_->rtt_avg_ = TINT_SEC; // cannot trust the past value
-    ch_->dev_avg_ = 0;
 }
 
 bool    CwndController::MaySendData() {
     dprintf("%s #%i sendctrl may send %i < %f & %s (rtt %lli)\n",tintstr(),
             ch_->id,(int)ch_->data_out_.size(),cwnd_,tintstr(NextSendTime()),
             ch_->rtt_avg_);
-    return ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime();
+    return  ch_->data_out_.empty() ||
+            (ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime());
 }
     
 tint    CwndController::NextSendTime () {

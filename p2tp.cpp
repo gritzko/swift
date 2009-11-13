@@ -42,7 +42,8 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
     socket_(socket==-1?sockets[0]:socket), // FIXME
     data_out_cap_(bin64_t::ALL), last_data_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
-    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC)
+    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC),
+    hint_out_(0), hint_out_mark_(), hint_out_am_(0)
 {
     if (peer_==Address())
         peer_ = tracker;
@@ -55,8 +56,6 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 
 Channel::~Channel () {
 	channels[id] = NULL;
-    for(int i=0; i<hint_out_.size(); i++)
-        transfer().picker().Expired(hint_out_[i].bin);
     delete cc_;
 }
 

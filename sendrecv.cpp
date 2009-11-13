@@ -6,8 +6,6 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include <algorithm>
-//#include <glog/logging.h>
 #include "p2tp.h"
 #include "compat/util.h"
 
@@ -59,10 +57,10 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
         bin64_t hint = hint_in_.front().bin;
         tint time = hint_in_.front().time;
         hint_in_.pop_front();
-        if (time < NOW-8*rtt_avg_)
+        if (time < NOW-2*TINT_SEC ) //NOW-8*rtt_avg_)
             continue;
-        send = file().ack_out().find_filtered
-            (ack_in_,hint,0,bins::FILLED);
+        send = file().ack_out().find_filtered(ack_in_,hint,bins::FILLED);
+        send = send.left_foot(); // single packet
         dprintf("%s #%i dequeued %lli\n",tintstr(),id,send.base_offset());
         if (send!=bin64_t::NONE)
             while (send!=hint) {
@@ -145,57 +143,38 @@ void	Channel::Send () {
 
 void	Channel::AddHint (Datagram& dgram) {
 
-    while (!hint_out_.empty()) {
-        tintbin f = hint_out_.front();
-        if (f.time<NOW-rtt_avg_*8) {
-            hint_out_.pop_front();
-            dprintf("%s #%i !hint (%i,%lli)\n",
-                    tintstr(),id,(int)f.bin.layer(),f.bin.offset());
-            transfer().picker().Expired(f.bin);
-        } else {
-            int status = file().ack_out().get(f.bin);
-            if (status==bins::EMPTY) {
-                break;
-            } else if (status==bins::FILLED) {
-                hint_out_.pop_front();
-                transfer().picker().Expired(f.bin);
-            } else { // mixed
-                hint_out_.front().bin = f.bin.right();
-                f.bin = f.bin.left();
-                hint_out_.push_front(f);
-            } // FIXME: simplify this mess
-        }
-    }
-    /*while (!hint_out_.empty() &&
-            (hint_out_.front().time<NOW-TINT_SEC ||
-            file().ack_out().get(hint_out_.front().bin)==bins::FILLED ) ) {
-        file().picker().Expired(hint_out_.front().bin);
-        hint_out_.pop_front();
-    }*/
-    uint64_t hinted = 0;
-    for(tbqueue::iterator i=hint_out_.begin(); i!=hint_out_.end(); i++)
-        hinted += i->bin.width();
-    //int bps = PeerBPS();
-    //double kbps = max(4,TINT_SEC / dip_avg_);
-    double peer_cwnd = rtt_avg_ / dip_avg_;
-    if (peer_cwnd<1)
+    int peer_cwnd = (int)(rtt_avg_ / dip_avg_);
+    if (!peer_cwnd)
         peer_cwnd = 1;
-    dprintf("%s #%i hinted %lli peer_cwnd %lli/%lli=%f\n",
-            tintstr(),id,hinted,rtt_avg_,dip_avg_,((float)rtt_avg_/dip_avg_));
-
-    if ( 4*peer_cwnd > hinted ) { //hinted*1024 < peer_cwnd*4 ) {
+    int peer_pps = TINT_SEC / dip_avg_;
+    if (!peer_pps)
+        peer_pps = 1;
+    dprintf("%s #%i hint_out_ %lli+%lli mark (%i,%lli) peer_cwnd %lli/%lli=%f\n",
+            tintstr(),id,hint_out_,hint_out_am_,(int)hint_out_mark_.bin.layer(),
+            hint_out_mark_.bin.offset(),
+            rtt_avg_,dip_avg_,((float)rtt_avg_/dip_avg_));
+    
+    if ( hint_out_mark_.time < NOW - TINT_SEC*2 ) { //NOW-rtt_avg_*8-dev_avg_) {
+        hint_out_mark_.bin=bin64_t::NONE;
+        hint_out_ = hint_out_am_;
+        hint_out_am_ = 0;
+    }
+    
+    if ( peer_pps > hint_out_+hint_out_am_ ) {  //4*peer_cwnd
         
-        uint8_t layer = 2; // actually, enough
-        bin64_t hint = transfer().picker().Pick(ack_in_,layer);
-        // FIXME FIXME FIXME: any layer
-        if (hint==bin64_t::NONE)
-            hint = transfer().picker().Pick(ack_in_,0);
+        int diff = peer_pps - hint_out_ - hint_out_am_;  // 4*peer_cwnd
+        if (diff>4 && diff>2*peer_cwnd)
+            diff >>= 1;
+        bin64_t hint = transfer().picker().Pick(ack_in_,diff,NOW+TINT_SEC*3/2); //rtt_avg_*8+TINT_MSEC*10
         
         if (hint!=bin64_t::NONE) {
-            hint_out_.push_back(hint);
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
             dprintf("%s #%i +hint (%i,%lli)\n",tintstr(),id,hint.layer(),hint.offset());
+            if (hint_out_mark_.bin==bin64_t::NONE)
+                hint_out_mark_ = hint;
+            hint_out_am_ += hint.width();
+            //hint_out_ += hint.width();
         }
         
     }
@@ -252,8 +231,7 @@ void	Channel::AddAck (Datagram& dgram) {
         data_in_ = tintbin(0,bin64_t::NONE);
 	}
     for(int count=0; count<4; count++) {
-        bin64_t ack = file().ack_out().find_filtered(ack_out_, bin64_t::ALL, 0, bins::FILLED);
-        // TODO bins::ANY_LAYER
+        bin64_t ack = file().ack_out().find_filtered(ack_out_, bin64_t::ALL, bins::FILLED);
         if (ack==bin64_t::NONE)
             break;
         ack = file().ack_out().cover(ack);
@@ -292,7 +270,7 @@ void	Channel::Recv (Datagram& dgram) {
     cc_->OnDataRecvd(data);
     last_recv_time_ = NOW;
     if (data!=bin64_t::ALL && next_send_time_>NOW+TINT_MSEC)
-        Send(); //RequeueSend(NOW);
+        Send();
 }
 
 
@@ -311,17 +289,24 @@ bin64_t Channel::OnData (Datagram& dgram) {
     int length = dgram.Pull(&data,1024);
     bool ok = file().OfferData(pos, (char*)data, length) ;
     dprintf("%s #%i %cdata (%lli)\n",tintstr(),id,ok?'-':'!',pos.offset());
-    if (ok) {
-        data_in_ = tintbin(NOW,pos);
-        if (last_data_time_) {
-            tint dip = NOW - last_data_time_;
-            dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
-        }
-        last_data_time_ = NOW;
-        transfer().picker().Received(pos); // so dirty; FIXME FIXME FIXME
-        return pos;
-    } else
+    if (!ok) 
         return bin64_t::NONE;
+    data_in_ = tintbin(NOW,pos);
+    if (last_data_time_) {
+        tint dip = NOW - last_data_time_;
+        dip_avg_ = ( dip_avg_*3 + dip ) >> 2;
+    }
+    last_data_time_ = NOW;
+    if (pos.within(hint_out_mark_.bin)) {
+        hint_out_mark_.bin = bin64_t::NONE;
+        hint_out_ = hint_out_am_;
+        hint_out_am_ = 0;
+    }
+    if (hint_out_)
+        hint_out_--;
+    else if (hint_out_am_) // probably, the marking HINT was lost or whatever
+        hint_out_am_--;
+    return pos;
 }
 
 
@@ -366,7 +351,7 @@ void Channel::OnTs (Datagram& dgram) {
 void	Channel::OnHint (Datagram& dgram) {
 	bin64_t hint = dgram.Pull32();
 	hint_in_.push_back(hint);
-    ack_in_.set(hint,bins::EMPTY);
+    //ack_in_.set(hint,bins::EMPTY);
     //RequeueSend(cc_->OnHintRecvd(hint));
     dprintf("%s #%i -hint (%i,%lli)\n",tintstr(),id,hint.layer(),hint.offset());
 }
@@ -400,7 +385,7 @@ void    Channel::AddPex (Datagram& dgram) {
 }
 
 
-void	Channel::Recv (int socket) {
+void	Channel::RecvDatagram (int socket) {
 	Datagram data(socket);
 	data.Recv();
 	if (data.size()<4) 
@@ -494,7 +479,7 @@ void    Channel::Loop (tint howlong) {
             dprintf("%s waiting %lliusec\n",tintstr(),towait);
             int rd = Datagram::Wait(socket_count,sockets,towait);
             if (rd!=INVALID_SOCKET)
-                Recv(rd);
+                RecvDatagram(rd);
         } else { //if (sender->next_send_time_==TINT_NEVER) { 
             dprintf("%s #%i closed sendctrl\n",tintstr(),sender->id);
             delete sender;

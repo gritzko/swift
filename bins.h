@@ -27,10 +27,10 @@ public:
     
     void        copy_range (bins& origin, bin64_t range);
     
-    bin64_t     find (const bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
+    bin64_t     find (const bin64_t range, fill_t seek=EMPTY) ;
     
     bin64_t     find_filtered
-        (bins& filter, bin64_t range, const uint8_t layer, fill_t seek=EMPTY) ;
+        (bins& filter, bin64_t range, fill_t seek=EMPTY) ;
     
     void        remove (bins& b);
     
@@ -87,7 +87,7 @@ private:
         cells[(half>>1)|0xf] &= ~(1<<(half&0x1f));
     }
     
-    void extend_range();
+    void        extend_range();
     
     uint16_t    alloc_cell ();
     void        free_cell (uint16_t cell);

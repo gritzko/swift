@@ -19,6 +19,20 @@ const char* BTF = "test_file";
 Sha1Hash A,B,C,D,E,AB,CD,ABCD,E0,E000,ABCDE000,ROOT;
 
 
+TEST(TransferTest,TBHeap) {
+    tbheap tbh;
+    ASSERT_TRUE(tbh.is_empty());
+    tbh.push(tintbin(3,bin64_t::NONE));
+    tbh.push(tintbin(1,bin64_t::NONE));
+    ASSERT_EQ(2,tbh.size());
+    tbh.push(tintbin(2,bin64_t::ALL));
+    ASSERT_EQ(1,tbh.pop().time);
+    ASSERT_EQ(bin64_t::ALL,tbh.peek().bin);
+    ASSERT_EQ(2,tbh.pop().time);
+    ASSERT_EQ(3,tbh.pop().time);
+}
+
+
 TEST(TransferTest,TransferFile) {
 
     AB = Sha1Hash(A,B);
@@ -77,7 +91,7 @@ TEST(TransferTest,TransferFile) {
             EXPECT_EQ(2,leech->packets_complete());
             EXPECT_EQ(bin64_t(2,0),leech->peak(0));
         }
-        bin64_t next = leech_transfer->picker().Pick(seed->ack_out(),0);
+        bin64_t next = leech_transfer->picker().Pick(seed->ack_out(),1,TINT_NEVER);
         ASSERT_NE(bin64_t::NONE,next);
         ASSERT_TRUE(next.base_offset()<5);
         uint8_t buf[1024];         //size_t len = seed->storer->ReadData(next,&buf);

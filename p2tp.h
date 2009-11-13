@@ -54,8 +54,9 @@ Messages
 #else
 #include <stdint.h>
 #endif
-#include <vector>
 #include <deque>
+#include <vector>
+#include <algorithm>
 #include <string>
 #include "bin64.h"
 #include "bins.h"
@@ -72,11 +73,35 @@ namespace p2tp {
         tintbin() : time(0), bin(bin64_t::NONE) {}
         tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
         tintbin(bin64_t bin_) : time(NOW), bin(bin_) {}
+        bool operator < (const tintbin& b) const 
+            { return time > b.time; }
+        bool operator == (const tintbin& b) const
+            { return time==b.time && bin==b.bin; }
     };
 
 	typedef std::deque<tintbin> tbqueue;
     typedef std::deque<bin64_t> binqueue;
     typedef Address   Address;
+
+    class tbheap {
+        tbqueue data_;
+    public:
+        int size () const { return data_.size(); }
+        bool is_empty () const { return data_.empty(); }
+        tintbin         pop() {
+            tintbin ret = data_.front();
+            std::pop_heap(data_.begin(),data_.end());
+            data_.pop_back();
+            return ret;
+        }
+        void            push(const tintbin& tb) {
+            data_.push_back(tb);
+            push_heap(data_.begin(),data_.end());
+        }
+        const tintbin&  peek() const {
+            return data_.front();
+        }
+    };
 
 	typedef enum {
 		P2TP_HANDSHAKE = 0,
@@ -162,9 +187,7 @@ namespace p2tp {
     class PiecePicker {
     public:
         virtual void Randomize (uint64_t twist) = 0;
-        virtual bin64_t Pick (bins& offered, uint8_t layer) = 0;
-        virtual void    Expired (bin64_t b) = 0;
-        virtual void    Received (bin64_t b) = 0;
+        virtual bin64_t Pick (bins& offered, uint64_t max_width, tint expires) = 0;
     };
 
 
@@ -194,7 +217,7 @@ namespace p2tp {
 		Channel	(FileTransfer* file, int socket=-1, Address peer=Address());
 		~Channel();
 
-		static void	Recv (int socket);
+		static void	RecvDatagram (int socket);
         static void Loop (tint till);
 
 		void		Recv (Datagram& dgram);
@@ -251,9 +274,12 @@ namespace p2tp {
         /** Index in the history array. */
 		bins        ack_out_;
 		/**	Transmit schedule: in most cases filled with the peer's hints */
-		tbqueue    hint_in_;
+		tbqueue     hint_in_;
 		/** Hints sent (to detect and reschedule ignored hints). */
-		tbqueue		hint_out_;
+		//  tbqueue		hint_out_;
+        uint64_t    hint_out_;
+        tintbin     hint_out_mark_;
+        uint64_t    hint_out_am_;
 		/** The congestion control strategy. */
 		SendController	*cc_;
         /** Types of messages the peer accepts. */

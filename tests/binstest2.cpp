@@ -120,7 +120,7 @@ TEST(BinsTest,Find){
     hole.set(bin64_t(4,0),bins::FILLED);
     hole.set(bin64_t(1,1),bins::EMPTY);
     hole.set(bin64_t(0,7),bins::EMPTY);
-    bin64_t f = hole.find(bin64_t(4,0),0);
+    bin64_t f = hole.find(bin64_t(4,0)).left_foot();
     EXPECT_EQ(bin64_t(0,2),f);
     
 }
@@ -222,7 +222,7 @@ TEST(BinsTest,FindFiltered) {
     filter.set(bin64_t(1,4));
     filter.set(bin64_t(0,13));
     
-    bin64_t x = data.find_filtered(filter,bin64_t(4,0),0);
+    bin64_t x = data.find_filtered(filter,bin64_t(4,0)).left_foot();
     EXPECT_EQ(bin64_t(0,12),x);
     
 }
@@ -250,9 +250,9 @@ TEST(BinsTest,FindFiltered2) {
     for(int j=1; j<1024; j+=2)
         filter.set(bin64_t(0,j));
     filter.set(bin64_t(0,501),bins::EMPTY);
-    EXPECT_EQ(bin64_t(0,501),data.find_filtered(filter,bin64_t(10,0),0));
+    EXPECT_EQ(bin64_t(0,501),data.find_filtered(filter,bin64_t(10,0)).left_foot());
     data.set(bin64_t(0,501));
-    EXPECT_EQ(bin64_t::NONE,data.find_filtered(filter,bin64_t(10,0),0));
+    EXPECT_EQ(bin64_t::NONE,data.find_filtered(filter,bin64_t(10,0)).left_foot());
     
 }
     
@@ -297,7 +297,9 @@ TEST(BinsTest,Twist) {
     b.twist(1<<3);
     EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,3)));
     EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,2)));
-    bin64_t tw = b.find(bin64_t(5,0),3,bins::FILLED);
+    bin64_t tw = b.find(bin64_t(5,0),bins::FILLED);
+    while (tw.width()>(1<<3))
+        tw = tw.left();
     tw = tw.twisted(1<<3);
     EXPECT_EQ(bin64_t(3,2),tw);
     b.twist(0);

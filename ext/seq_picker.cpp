@@ -16,6 +16,7 @@ class SeqPiecePicker : public PiecePicker {
     bins            ack_hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
+    tbheap          hint_out_; // FIXME since I use fixed 1.5 sec expiration, may replace for a queue
     
 public:
     
@@ -32,17 +33,19 @@ public:
         twist_ = twist;
     }
     
-    virtual bin64_t Pick (bins& offer, uint8_t layer) {
+    virtual bin64_t Pick (bins& offer, uint64_t max_width, tint expires) {
+        while (hint_out_.size() && hint_out_.peek().time<NOW)
+            ack_hint_out_.copy_range(file().ack_out(), hint_out_.pop().bin);
         //dprintf("twist is %lli\n",twist_);
-        if (!file().size())
-            return bin64_t(0,0); // a hack to get peak hashes; FIXME
+        if (!file().size()) {
+            return bin64_t(0,0); // whoever sends it first
+        }
         twist_ &= (file().peak(0)) & ((1<<6)-1);
         if (twist_) {
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
         }
-        bin64_t hint = offer.find_filtered
-                (ack_hint_out_,bin64_t::ALL,layer,bins::FILLED);
+        bin64_t hint = offer.find_filtered (ack_hint_out_,bin64_t::ALL,bins::FILLED);
         if (twist_) {
             hint = hint.twisted(twist_);
             offer.twist(0);
@@ -50,31 +53,16 @@ public:
         }
         if (hint==bin64_t::NONE)
             return hint; // TODO: end-game mode
-        while (hint.layer()>layer)
+        while (hint.width()>max_width)
             hint = hint.left();
         assert(ack_hint_out_.get(hint)==bins::EMPTY);
-        if (file().ack_out().get(hint)!=bins::EMPTY) {
+        if (hint.offset() && file().ack_out().get(hint)!=bins::EMPTY) { // FIXME DEBUG remove
             eprintf("bogus hint: (%i,%lli)\n",(int)hint.layer(),hint.offset());
             exit(1);
         }
         ack_hint_out_.set(hint);
+        hint_out_.push(tintbin(expires,hint));
         return hint;
-        /*for (int l=layer; l>=0; l--) {
-            for(int i=0; i<file_->peak_count(); i++) {
-                bin64_t pick = may_pick.find(file_->peak(i),l,bins::FILLED);
-                if (pick!=bin64_t::NONE)
-                    return pick;
-            }
-        }
-        return bin64_t::NONE;*/
-    }
-    
-    virtual void    Received (bin64_t b) {
-        ack_hint_out_.set(b,bins::FILLED);
-    }
-    
-    virtual void    Expired (bin64_t b) {
-        ack_hint_out_.copy_range(file().ack_out(),b);
     }
     
 };

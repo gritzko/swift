@@ -68,8 +68,7 @@ struct KeepAliveController : public SendController {
 
     tint delay_;
     
-    KeepAliveController(SendController* prev, tint delay=0) : 
-        SendController(prev), delay_(delay) {}
+    KeepAliveController(SendController* prev, tint delay=0) ;
     const char* type() const { return "KeepAlive"; }
     bool    MaySendData();
     tint    NextSendTime () ;

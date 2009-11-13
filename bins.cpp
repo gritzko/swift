@@ -231,13 +231,13 @@ void iterator::parent () {
 }
 
 
-bin64_t bins::find (const bin64_t range, const uint8_t layer, fill_t seek) {
+bin64_t bins::find (const bin64_t range, fill_t seek) {
     iterator i(this,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( i.layer()>layer && (i.deep() || *i!=stop) )
+        while ( i.deep() || (*i!=stop && *i!=seek) )
             i.left();
-        if (i.layer()==layer && !i.deep() && *i==seek)
+        if (!i.deep() && *i==seek)
             return i.bin();
         while (i.bin().is_right() && i.bin()!=range)
             i.parent();
@@ -359,25 +359,22 @@ bin64_t     bins::cover(bin64_t val) {
 
 
 bin64_t     bins::find_filtered 
-    (bins& filter, bin64_t range, const uint8_t layer, fill_t seek)  
+    (bins& filter, bin64_t range, fill_t seek)  
 {
     if (range==bin64_t::ALL)
         range = bin64_t ( height>filter.height ? height : filter.height, 0 );
     iterator ti(this,range,true), fi(&filter,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
-        while ( ti.layer()>layer ) {
-            bool go = fi.deep() ?
+        while ( 
+                fi.deep() ?
                 (ti.deep() || *ti!=stop)  :
-                (ti.deep() ? *fi!=FILLED : (*ti^stop)&~*fi );
-            if (go) {
-                ti.left(); fi.left();                
-            } else 
-                break;
+                (ti.deep() ? *fi!=FILLED : ( ((*ti^stop)&~*fi) && (*ti!=seek || *fi!=EMPTY) ) ) 
+              ) 
+        {
+            ti.left(); fi.left();                
         }
-        //while ( i.bin().layer()>layer && (i.deep() || *i!=stop || j.deep() || *j!=FILLED) )
-        //    i.left(), j.left(); // TODO may optimize a lot here 
-        if (ti.layer()==layer && !ti.deep() && *ti==seek && *fi==EMPTY)
+        if (!ti.deep() && *ti==seek && !fi.deep() && *fi==EMPTY)
             return ti.bin();
         while (ti.bin().is_right() && ti.bin()!=range)
             ti.parent(), fi.parent();

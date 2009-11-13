@@ -91,6 +91,8 @@ struct bin64_t {
     }
 
     bool    within (bin64_t maybe_asc) {
+        if (maybe_asc==bin64_t::NONE)
+            return false;
         uint64_t short_tail = maybe_asc.tail_bits();
         if (tail_bits()>short_tail)
             return false;
@@ -123,6 +125,8 @@ struct bin64_t {
     bool is_right() const { return !is_left(); }
 
     bin64_t left_foot () const {
+        if (v==NONE)
+            return NONE;
         return bin64_t(0,base_offset());
     }
 
