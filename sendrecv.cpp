@@ -57,8 +57,8 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
         bin64_t hint = hint_in_.front().bin;
         tint time = hint_in_.front().time;
         hint_in_.pop_front();
-        if (time < NOW-2*TINT_SEC ) //NOW-8*rtt_avg_)
-            continue;
+        //if (time < NOW-2*TINT_SEC ) //NOW-8*rtt_avg_)
+        //    continue;
         send = file().ack_out().find_filtered(ack_in_,hint,bins::FILLED);
         send = send.left_foot(); // single packet
         dprintf("%s #%i dequeued %lli\n",tintstr(),id,send.base_offset());
@@ -156,8 +156,8 @@ void	Channel::AddHint (Datagram& dgram) {
     
     if ( hint_out_mark_.time < NOW - TINT_SEC*2 ) { //NOW-rtt_avg_*8-dev_avg_) {
         hint_out_mark_.bin=bin64_t::NONE;
-        hint_out_ = hint_out_am_;
-        hint_out_am_ = 0;
+        //hint_out_ = hint_out_am_;
+        //hint_out_am_ = 0;
     }
     
     if ( peer_pps > hint_out_+hint_out_am_ ) {  //4*peer_cwnd
@@ -171,8 +171,11 @@ void	Channel::AddHint (Datagram& dgram) {
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
             dprintf("%s #%i +hint (%i,%lli)\n",tintstr(),id,hint.layer(),hint.offset());
-            if (hint_out_mark_.bin==bin64_t::NONE)
-                hint_out_mark_ = hint;
+            if (hint_out_mark_.bin==bin64_t::NONE) {
+                hint_out_mark_ = tintbin(NOW,hint);
+                hint_out_ = hint_out_am_;
+                hint_out_am_ = 0;
+            }
             hint_out_am_ += hint.width();
             //hint_out_ += hint.width();
         }
@@ -300,8 +303,6 @@ bin64_t Channel::OnData (Datagram& dgram) {
     last_data_time_ = NOW;
     if (pos.within(hint_out_mark_.bin)) {
         hint_out_mark_.bin = bin64_t::NONE;
-        hint_out_ = hint_out_am_;
-        hint_out_am_ = 0;
     }
     if (hint_out_)
         hint_out_--;
