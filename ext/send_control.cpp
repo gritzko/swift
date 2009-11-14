@@ -30,10 +30,8 @@ bool    PingPongController::MaySendData() {
 
 void    PingPongController::OnDataSent(bin64_t b) {
     Schedule(NOW+ch_->rtt_avg_+std::max(ch_->dev_avg_*4,500*TINT_MSEC));
-    if (++sent_>=10)
+    if (++sent_>=10 || ++unanswered_>=3)
         Swap(new KeepAliveController(this));
-    else if (++unanswered_>=3)
-        Schedule(TINT_NEVER);
 }
 
 void    PingPongController::OnDataRecvd(bin64_t b) {
@@ -42,8 +40,10 @@ void    PingPongController::OnDataRecvd(bin64_t b) {
 }
 
 void    PingPongController::OnAckRcvd(bin64_t ackd) {
-    if (ackd!=bin64_t::NONE)
+    if (ackd!=bin64_t::NONE) {
+        Schedule(NOW);
         Swap(new SlowStartController(this));
+    }
 }
 
 
@@ -148,8 +148,10 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
 void SlowStartController::OnAckRcvd (bin64_t pos) {
     if (pos!=bin64_t::NONE) {
         cwnd_ += 1;
-        if (TINT_SEC*cwnd_/ch_->rtt_avg_>=10)
+        if (TINT_SEC*cwnd_/ch_->rtt_avg_>=10) {
+            Schedule(NOW);
             Swap(new AIMDController(this,cwnd_));
+        }
     } else 
         cwnd_ /= 2;
 }
