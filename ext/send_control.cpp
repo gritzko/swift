@@ -20,61 +20,51 @@ void    SendController::Swap (SendController* newctrl) {
 }
 
 
-bool    PingPongController::MaySendData(){
-    return ch_->data_out_.empty();
+void    SendController::Schedule (tint next_time) {
+    ch_->Schedule(next_time);
 }
-    
-tint    PingPongController::NextSendTime () {
-    if (unanswered_>=3)
-        return TINT_NEVER;
-    return ch_->last_send_time_ + ch_->rtt_avg_ + ch_->dev_avg_*4;  // remind on timeout
-}
-    
-void    PingPongController::OnDataSent(bin64_t b) {
-    unanswered_++;
-    if ( (b==bin64_t::ALL && MaySendData()) ) // nothing to send
-        Swap(new KeepAliveController(this));
-}
-    
-void    PingPongController::OnDataRecvd(bin64_t b) {
-    unanswered_ = 0;
-}
-    
-void    PingPongController::OnAckRcvd(bin64_t ackd) {
-    //if (ch_->data_out_.empty())
-    Swap(new SlowStartController(this));
+
+
+
+KeepAliveController::KeepAliveController (Channel* ch) : SendController(ch), delay_(ch->rtt_avg_) {
 }
 
 
 KeepAliveController::KeepAliveController(SendController* prev, tint delay) : 
 SendController(prev), delay_(delay) {
-    ch_->dev_avg_ = TINT_SEC; // without active measurement, rtt is unreliable
+    ch_->dev_avg_ = TINT_SEC; // without constant active measurement, rtt is unreliable
+    delay_=ch_->rtt_avg_;
 }
 
 bool    KeepAliveController::MaySendData() {
     return true;
 }
     
-tint    KeepAliveController::NextSendTime () {
-    if (!delay_)
-        delay_ = ch_->rtt_avg_;
-    if (ch_->last_recv_time_ < ch_->last_send_time_-TINT_MIN)
-        return TINT_NEVER;
-    return ch_->last_send_time_ + delay_;
-}
-    
+
 void    KeepAliveController::OnDataSent(bin64_t b) {
-    delay_ = (NOW - std::max(ch_->last_send_time_,ch_->last_recv_time_)) * 3 / 2;
-    if (delay_>TINT_SEC*58)
-        delay_ = TINT_SEC*58;
-    if (b!=bin64_t::ALL && b!=bin64_t::NONE)
+    if (b==bin64_t::ALL || b==bin64_t::NONE) {
+        delay_ = delay_ * 2; // backing off
+        if (delay_>TINT_SEC*58) // keep NAT mappings alive
+            delay_ = TINT_SEC*58;
+        if (delay_>=4*TINT_SEC && ch_->last_recv_time_ < NOW-TINT_MIN)
+            Schedule(TINT_NEVER); // no response; enter close timeout
+        else
+            Schedule(NOW+delay_); // all right, just keep it alive
+    } else {
+        Schedule(NOW+ch_->rtt_avg_); // cwnd==1 => next send in 1 rtt
         Swap(new SlowStartController(this));
+    }
 }
     
 void    KeepAliveController::OnDataRecvd(bin64_t b) {
+    if (b!=bin64_t::NONE && b!=bin64_t::ALL) { // channel is alive
+        delay_ = ch_->rtt_avg_;
+        Schedule(NOW); // schedule an ACK; TODO: aggregate
+    }
 }
     
 void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
+    // probably to something sent by CwndControllers before this one got installed
 }
     
 
@@ -83,30 +73,36 @@ SendController(orig), cwnd_(cwnd), last_change_(0) {
 }
 
 bool    CwndController::MaySendData() {
+    tint spacing = ch_->rtt_avg_ / cwnd_;
     dprintf("%s #%i sendctrl may send %i < %f & %s (rtt %lli)\n",tintstr(),
-            ch_->id,(int)ch_->data_out_.size(),cwnd_,tintstr(NextSendTime()),
-            ch_->rtt_avg_);
+            ch_->id,(int)ch_->data_out_.size(),cwnd_,
+            tintstr(ch_->last_send_data_time_+spacing), ch_->rtt_avg_);
     return  ch_->data_out_.empty() ||
-            (ch_->data_out_.size() < cwnd_  &&  NOW >= NextSendTime());
+            (ch_->data_out_.size() < cwnd_  &&  NOW-ch_->last_send_data_time_ >= spacing);
 }
     
-tint    CwndController::NextSendTime () {
-    tint sendtime;
-    if (ch_->data_out_.size() < cwnd_)
-        sendtime = ch_->last_send_time_ + (ch_->rtt_avg_ / cwnd_);
-    else
-        sendtime = ch_->last_send_time_ + ch_->rtt_avg_ + ch_->dev_avg_ * 4 ;
-    return sendtime;
-}
-    
+
 void    CwndController::OnDataSent(bin64_t b) {
-    if (b==bin64_t::ALL || b==bin64_t::NONE) {
-        if (MaySendData())
-            Swap(new KeepAliveController(this));
-    } 
+    if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) { // no more data
+        Schedule(NOW+ch_->rtt_avg_);
+        Swap(new KeepAliveController(this));
+    } else {
+        tint spacing = ch_->rtt_avg_ / cwnd_;
+        if (ch_->data_out_.size() < cwnd_) { // have cwnd; not the right time yet
+            Schedule(ch_->last_send_data_time_+spacing);
+        } else {    // no free cwnd
+            tint timeout = std::max( ch_->rtt_avg_+ch_->dev_avg_*4, 500*TINT_MSEC );
+            assert(!ch_->data_out_.empty());
+            Schedule(ch_->data_out_.front().time+timeout); // wait for ACK or timeout
+        }
+    }
 }
-    
+
+
 void    CwndController::OnDataRecvd(bin64_t b) {
+    if (b!=bin64_t::NONE && b!=bin64_t::ALL) {
+        Schedule(NOW); // send ACK; todo: aggregate ACKs
+    }
 }
     
 void    CwndController::OnAckRcvd(bin64_t ackd) {
@@ -122,6 +118,8 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
         else 
             cwnd_ += 1.0/cwnd_;
         dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
+        tint spacing = ch_->rtt_avg_ / cwnd_;
+        Schedule(ch_->last_send_time_+spacing);
     }
 }
 
@@ -135,17 +133,3 @@ void SlowStartController::OnAckRcvd (bin64_t pos) {
         cwnd_ /= 2;
 }
     
-
-void AIMDController::OnAckRcvd (bin64_t pos) {
-    if (pos==bin64_t::NONE) {
-        dprintf("%s #%i sendctrl loss detected\n",tintstr(),ch_->id);
-        if (NOW>last_change_+ch_->rtt_avg_) {
-            cwnd_ /= 2;
-            last_change_ = NOW;
-        }
-    } else {
-        cwnd_ += 1.0/cwnd_;
-        dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
-    }
-}
- 

@@ -51,7 +51,7 @@ TEST(BinsTest,SetGet) {
 TEST(BinsTest,Iterator) {
     bins b;
     b.set(bin64_t(3,1));
-    iterator i(&b,0,false);
+    iterator i(&b,bin64_t(0,0),false);
     while (!i.solid())
         i.left();
     EXPECT_EQ(bin64_t(3,0),i.bin());

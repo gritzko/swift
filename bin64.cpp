@@ -21,6 +21,15 @@ uint32_t bin64_t::to32() const {
     return NONE32;
 }
 
+bin64_t::bin64_t(const uint32_t val) {
+    if (val==ALL32)
+        v = ALL;
+    else if (val==NONE32)
+        v = NONE;
+    else
+        v = val;
+}
+
 bin64_t bin64_t::next_dfsio (uint8_t floor) {
     /*while (ret.is_right())
         ret = ret.parent();
@@ -53,4 +62,19 @@ int bin64_t::peaks (uint64_t length, bin64_t* peaks) {
     }
     peaks[pp] = NONE;
     return pp;
+}
+
+#include <stdio.h>
+
+const char* bin64_t::str () const {
+    static char _b64sr[4][32];
+    static int _rsc;
+    _rsc = (_rsc+1) & 3;
+    if (v==ALL)
+        return "(ALL)";
+    else if (v==NONE)
+        return "(NONE)";
+    else
+        sprintf(_b64sr[_rsc],"(%i,%lli)",(int)layer(),offset());
+    return _b64sr[_rsc];
 }

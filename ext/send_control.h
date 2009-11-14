@@ -21,11 +21,11 @@ struct SendController {
     SendController(SendController* orig) : ch_(orig->ch_) { }
     
     void    Swap (SendController* replacement);
+    void    Schedule (tint time);
     
     virtual const char* type() const = 0;
     
     virtual bool    MaySendData() = 0;
-    virtual tint    NextSendTime () = 0;
     
     /** A datagram was sent to the peer.
      *  @param data the bin number for the data sent; bin64_t::NONE if only
@@ -45,33 +45,19 @@ struct SendController {
 };
 
 
-struct PingPongController : public SendController {
-    
-    int     unanswered_;
-
-    PingPongController (SendController* orig) :
-        SendController(orig), unanswered_(0) {} 
-    PingPongController (Channel* ch) : 
-        unanswered_(0), SendController(ch) {}
-    const char* type() const { return "PingPong"; }
-    bool    MaySendData();
-    tint    NextSendTime ();
-    void    OnDataSent(bin64_t b);
-    void    OnDataRecvd(bin64_t b);
-    void    OnAckRcvd(bin64_t ackd) ;
-    ~PingPongController() {}
-    
-};
-
-
+/** Mission of the keepalive controller to keep the channel
+    alive as no data sending happens; If no data is transmitted
+    in either direction, inter-packet times grow exponentially
+    till 58 sec, which refresh period is deemed necessary to keep
+    NAT mappings alive. */
 struct KeepAliveController : public SendController {
 
     tint delay_;
     
+    KeepAliveController (Channel* ch);
     KeepAliveController(SendController* prev, tint delay=0) ;
     const char* type() const { return "KeepAlive"; }
     bool    MaySendData();
-    tint    NextSendTime () ;
     void    OnDataSent(bin64_t b) ;
     void    OnDataRecvd(bin64_t b) ;
     void    OnAckRcvd(bin64_t ackd) ;
@@ -79,6 +65,7 @@ struct KeepAliveController : public SendController {
 };
 
 
+/** Base class for any congestion window based algorithm. */
 struct CwndController : public SendController {
     
     double  cwnd_;
@@ -87,7 +74,6 @@ struct CwndController : public SendController {
     CwndController(SendController* orig, int cwnd=1) ;
     
     bool    MaySendData() ;
-    tint    NextSendTime () ;
     void    OnDataSent(bin64_t b) ;
     void    OnDataRecvd(bin64_t b) ;
     void    OnAckRcvd(bin64_t ackd) ;
@@ -95,6 +81,7 @@ struct CwndController : public SendController {
 };
 
 
+/** TCP-like exponential "slow" start algorithm. */
 struct SlowStartController : public CwndController {
     
     SlowStartController(SendController* orig, int cwnd=1) : CwndController(orig,cwnd) {}
@@ -104,11 +91,14 @@ struct SlowStartController : public CwndController {
 };
 
 
+/** The classics: additive increase - multiplicative decrease algorithm.
+    A naive version of "standard" TCP congestion control. Potentially useful
+    for seedboxes, so needs to be improved. (QUBIC?) */
 struct AIMDController : public CwndController {
     
     AIMDController(SendController* orig, int cwnd=1) : CwndController(orig,cwnd) {}
     const char* type() const { return "AIMD"; }
-    void    OnAckRcvd(bin64_t ackd) ;
+    //void    OnAckRcvd(bin64_t ackd) ;
     
 };
 

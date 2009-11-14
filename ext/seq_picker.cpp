@@ -16,7 +16,6 @@ class SeqPiecePicker : public PiecePicker {
     bins            ack_hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
-    tbheap          hint_out_; // FIXME since I use fixed 1.5 sec expiration, may replace for a queue
     
 public:
     
@@ -34,8 +33,6 @@ public:
     }
     
     virtual bin64_t Pick (bins& offer, uint64_t max_width, tint expires) {
-        while (hint_out_.size() && hint_out_.peek().time<NOW)
-            ack_hint_out_.copy_range(file().ack_out(), hint_out_.pop().bin);
         //dprintf("twist is %lli\n",twist_);
         if (!file().size()) {
             return bin64_t(0,0); // whoever sends it first
@@ -57,16 +54,19 @@ public:
             hint = hint.left();
         assert(ack_hint_out_.get(hint)==bins::EMPTY);
         if (hint.offset() && file().ack_out().get(hint)!=bins::EMPTY) { // FIXME DEBUG remove
-            eprintf("bogus hint: (%i,%lli)\n",(int)hint.layer(),hint.offset());
+            eprintf("bogus hint: %s\n",hint.str());
             exit(1);
         }
         ack_hint_out_.set(hint);
-        hint_out_.push(tintbin(expires,hint));
         return hint;
     }
     
     void Received (bin64_t bin) {
         ack_hint_out_.set(bin);
+    }
+    
+    void Expired (bin64_t bin) {
+        ack_hint_out_.copy_range(file().ack_out(), bin);
     }
     
 };

@@ -70,13 +70,15 @@ namespace p2tp {
         tint    time;
         bin64_t bin;
         tintbin(const tintbin& b) : time(b.time), bin(b.bin) {}
-        tintbin() : time(0), bin(bin64_t::NONE) {}
+        tintbin() : time(TINT_NEVER), bin(bin64_t::NONE) {}
         tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
         tintbin(bin64_t bin_) : time(NOW), bin(bin_) {}
         bool operator < (const tintbin& b) const 
             { return time > b.time; }
         bool operator == (const tintbin& b) const
             { return time==b.time && bin==b.bin; }
+        bool operator != (const tintbin& b) const
+            { return !(*this==b); }
     };
 
 	typedef std::deque<tintbin> tbqueue;
@@ -188,6 +190,7 @@ namespace p2tp {
     public:
         virtual void Randomize (uint64_t twist) = 0;
         virtual bin64_t Pick (bins& offered, uint64_t max_width, tint expires) = 0;
+        virtual void Expired (bin64_t bin) = 0;
         virtual void Received (bin64_t bin) = 0;
     };
 
@@ -277,10 +280,7 @@ namespace p2tp {
 		/**	Transmit schedule: in most cases filled with the peer's hints */
 		tbqueue     hint_in_;
 		/** Hints sent (to detect and reschedule ignored hints). */
-		//  tbqueue		hint_out_;
-        uint64_t    hint_out_;
-        tintbin     hint_out_mark_;
-        uint64_t    hint_out_am_;
+        tbqueue     hint_out_;
 		/** The congestion control strategy. */
 		SendController	*cc_;
         /** Types of messages the peer accepts. */
@@ -292,20 +292,23 @@ namespace p2tp {
         /** Smoothed averages for RTT, RTT deviation and data interarrival periods. */
         tint        rtt_avg_, dev_avg_, dip_avg_;
         tint        last_send_time_;
-        tint        last_data_time_;
         tint        last_recv_time_;
+        tint        last_send_data_time_;
+        tint        last_recv_data_time_;
         tint        next_send_time_;
         tint        peer_send_time_;
-        static      tbqueue send_queue;
+        static      tbheap send_queue;
 
-        void        RequeueSend (tint next_time);
         int         PeerBPS() const {
             return TINT_SEC / dip_avg_ * 1024;
         }
         /** Get a request for one packet from the queue of peer's requests. */
         bin64_t		DequeueHint();
         void        ClearStaleDataOut ();
-        //void        CleanStaleHints();
+        void        CleanStaleHintOut();
+        void        CleanFulfilledHints(bin64_t pos);
+        void        CleanFulfilledDataOut(bin64_t pos);
+        void        Schedule(tint send_time);
 
         static PeerSelector* peer_selector;
 

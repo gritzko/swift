@@ -51,7 +51,7 @@ TEST(TransferTest,TransferFile) {
     
     FileTransfer* seed_transfer = new FileTransfer(BTF);
     HashTree* seed = & seed_transfer->file();
-    EXPECT_TRUE(A==seed->hash(0));
+    EXPECT_TRUE(A==seed->hash(bin64_t(0,0)));
     EXPECT_TRUE(E==seed->hash(bin64_t(0,4)));
     EXPECT_TRUE(ABCD==seed->hash(bin64_t(2,0)));
     EXPECT_TRUE(ROOT==seed->root_hash());

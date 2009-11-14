@@ -31,10 +31,8 @@ const char* tintstr (tint time) {
     static char ret_str[4][32]; // wow
     static int i;
     i = (i+1) & 3;
-    if (time==TINT_NEVER) {
-        strcpy(ret_str[i],"NEVER");
-        return ret_str[i];
-    }
+    if (time==TINT_NEVER)
+        return "NEVER";
     time -= Datagram::epoch;
     assert(time>=0);
     int hours = time/TINT_HOUR;

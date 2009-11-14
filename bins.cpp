@@ -251,6 +251,8 @@ bin64_t bins::find (const bin64_t range, fill_t seek) {
 
 
 uint16_t bins::get (bin64_t bin) {
+    if (bin==bin64_t::NONE)
+        return EMPTY;
     iterator i(this,bin,true);
     //while ( i.pos!=bin && 
     //        (i.deep() || (*i!=BIN_FULL && *i!=BIN_EMPTY)) )
@@ -281,6 +283,8 @@ uint64_t bins::mass () {
 
 
 void bins::set (bin64_t bin, fill_t val) {
+    if (bin==bin64_t::NONE)
+        return;
     assert(val==FILLED || val==EMPTY);
     iterator i(this,bin,false);
     while (i.bin()!=bin && (i.deep() || *i!=val))
@@ -303,7 +307,7 @@ uint64_t*   bins::get_stripes (int& count) {
     count = 0;
     uint16_t cur = bins::EMPTY;
     stripes[count++] = 0;
-    iterator i(this,0,false);
+    iterator i(this,bin64_t(0,0),false);
     while (!i.solid())
         i.left();
 

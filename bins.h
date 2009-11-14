@@ -122,7 +122,7 @@ public: // rm this
     uint8_t     layer_;
     bin64_t     pos;  // TODO: half[] layer bin
 public:
-    iterator(bins* host, bin64_t start=0, bool split=false);
+    iterator(bins* host, bin64_t start=bin64_t(0,0), bool split=false);
     ~iterator();
     bool deep () { return host->deep(half); }
     bool solid () { 

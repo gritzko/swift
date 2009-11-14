@@ -25,3 +25,4 @@
     * hint queue buildup
     * file operations are not 64-bit ready
         http://mail.python.org/pipermail/patches/2000-June/000848.html
+    * recovery: last packet

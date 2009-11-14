@@ -33,24 +33,23 @@ std::vector<Channel*> Channel::channels(1);
 SOCKET Channel::sockets[8] = {0,0,0,0,0,0,0,0};
 int Channel::socket_count = 0;
 Address Channel::tracker;
-tbqueue Channel::send_queue;
+tbheap Channel::send_queue;
 #include "ext/simple_selector.cpp"
 PeerSelector* Channel::peer_selector = new SimpleSelector();
 
 Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 	transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
-    data_out_cap_(bin64_t::ALL), last_data_time_(0),
+    data_out_cap_(bin64_t::ALL), last_send_data_time_(0), last_recv_data_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
-    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC),
-    hint_out_(0), hint_out_mark_(), hint_out_am_(0)
+    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC)
 {
     if (peer_==Address())
         peer_ = tracker;
 	this->id = channels.size();
 	channels.push_back(this);
-    cc_ = new PingPongController(this);
-    RequeueSend(NOW);
+    cc_ = new KeepAliveController(this);
+    Schedule(NOW); // FIXME ugly
 }
 
 

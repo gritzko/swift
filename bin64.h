@@ -25,6 +25,7 @@ struct bin64_t {
 
     bin64_t() : v(NONE) {}
     bin64_t(const bin64_t&b) : v(b.v) {}
+    bin64_t(const uint32_t val) ;
     bin64_t(const uint64_t val) : v(val) {}
     bin64_t(uint8_t layer, uint64_t offset) :
         v( (offset<<(layer+1)) | ((1ULL<<layer)-1) ) {}
@@ -141,6 +142,8 @@ struct bin64_t {
     bin64_t width () const {
         return (tail_bits()+1)>>1;
     }
+    
+    const char* str () const;
 
     /** The array must have 64 cells, as it is the max
      number of peaks possible +1 (and there are no reason

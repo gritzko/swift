@@ -17,13 +17,13 @@
 #include "p2tp.h"
 #include "compat/util.h"
 
+#include "ext/seq_picker.cpp" // FIXME FIXME FIXME FIXME 
+
 using namespace p2tp;
 
 std::vector<FileTransfer*> FileTransfer::files(20);
 
 #define BINHASHSIZE (sizeof(bin64_t)+sizeof(Sha1Hash))
-
-#include "ext/seq_picker.cpp"
 
 // FIXME: separate Bootstrap() and Download(), then Size(), Progress(), SeqProgress()
 
