@@ -153,7 +153,7 @@ void	Channel::AddHint (Datagram& dgram) {
     if (!peer_pps)
         peer_pps = 1;
     
-    if ( hint_out_mass < 4*peer_cwnd ) {
+    if ( hint_out_mass < peer_pps ) { //4*peer_cwnd ) {
         
         int diff = 5*peer_cwnd - hint_out_mass;
         if (diff>4 && diff>2*peer_cwnd)
@@ -228,7 +228,7 @@ void	Channel::AddTs (Datagram& dgram) {
 void	Channel::AddAck (Datagram& dgram) {
 	if (data_in_.bin!=bin64_t::NONE) {
         AddTs(dgram);
-        bin64_t pos = data_in_.bin;
+        bin64_t pos = file().ack_out().cover(data_in_.bin);
 		dgram.Push8(P2TP_ACK);
 		dgram.Push32(pos);
 		//dgram.Push64(data_in_.time);
