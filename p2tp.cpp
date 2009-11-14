@@ -48,7 +48,7 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
         peer_ = tracker;
 	this->id = channels.size();
 	channels.push_back(this);
-    cc_ = new KeepAliveController(this);
+    cc_ = new PingPongController(this);
     Schedule(NOW); // FIXME ugly
 }
 

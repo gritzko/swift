@@ -44,7 +44,22 @@ struct SendController {
     virtual         ~SendController() {}
 };
 
-
+struct PingPongController : public SendController {
+    
+    int     sent_, unanswered_;
+    
+    PingPongController (SendController* orig) :
+        SendController(orig), sent_(0), unanswered_(0) {} 
+    PingPongController (Channel* ch) : 
+        unanswered_(0), sent_(0), SendController(ch) {}
+    const char* type() const { return "PingPong"; }
+    bool    MaySendData();
+    void    OnDataSent(bin64_t b);
+    void    OnDataRecvd(bin64_t b);
+    void    OnAckRcvd(bin64_t ackd) ;
+    ~PingPongController() {}
+    
+};
 /** Mission of the keepalive controller to keep the channel
     alive as no data sending happens; If no data is transmitted
     in either direction, inter-packet times grow exponentially

@@ -24,6 +24,27 @@ void    SendController::Schedule (tint next_time) {
     ch_->Schedule(next_time);
 }
 
+bool    PingPongController::MaySendData() {
+    return ch_->data_out_.empty();
+}
+
+void    PingPongController::OnDataSent(bin64_t b) {
+    Schedule(NOW+ch_->rtt_avg_+std::max(ch_->dev_avg_*4,500*TINT_MSEC));
+    if (++sent_>=10)
+        Swap(new KeepAliveController(this));
+    else if (++unanswered_>=3)
+        Schedule(TINT_NEVER);
+}
+
+void    PingPongController::OnDataRecvd(bin64_t b) {
+    unanswered_ = 0;
+    Schedule(NOW); // pong
+}
+
+void    PingPongController::OnAckRcvd(bin64_t ackd) {
+    if (ackd!=bin64_t::NONE)
+        Swap(new SlowStartController(this));
+}
 
 
 KeepAliveController::KeepAliveController (Channel* ch) : SendController(ch), delay_(ch->rtt_avg_) {
@@ -60,9 +81,6 @@ void    KeepAliveController::OnDataRecvd(bin64_t b) {
     if (b!=bin64_t::NONE && b!=bin64_t::ALL) { // channel is alive
         delay_ = ch_->rtt_avg_;
         Schedule(NOW); // schedule an ACK; TODO: aggregate
-    } else  {
-        delay_ = ch_->rtt_avg_;
-        Schedule(NOW);
     }
 }
     
