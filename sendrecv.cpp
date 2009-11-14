@@ -275,10 +275,6 @@ void	Channel::Recv (Datagram& dgram) {
 	}
     cc_->OnDataRecvd(data);
     last_recv_time_ = NOW;
-    if (data!=bin64_t::ALL && next_send_time_>NOW+TINT_MSEC) {
-        Datagram::Time();
-        Send();
-    }
 }
 
 
@@ -483,9 +479,11 @@ void    Channel::Loop (tint howlong) {
             int rd = Datagram::Wait(socket_count,sockets,towait);
             if (rd!=INVALID_SOCKET)
                 RecvDatagram(rd);
-        } else if (sender) { // FIXME FIXME FIXME REWRITE!!!  if (sender->next_send_time_==TINT_NEVER) { 
+        } else  { // FIXME FIXME FIXME REWRITE!!!  if (sender->next_send_time_==TINT_NEVER) { 
+            if (sender) {
             dprintf("%s #%i closed sendctrl\n",tintstr(),sender->id);
             delete sender;
+            }
             send_queue.pop();
         }
         
@@ -495,8 +493,6 @@ void    Channel::Loop (tint howlong) {
 
  
 void Channel::Schedule (tint next_time) {
-    if (next_time==next_send_time_)
-        return;
     next_send_time_ = next_time;
     if (next_time==TINT_NEVER)
         next_time = NOW + TINT_MIN; // 1min timeout

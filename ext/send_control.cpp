@@ -43,13 +43,13 @@ bool    KeepAliveController::MaySendData() {
 
 void    KeepAliveController::OnDataSent(bin64_t b) {
     if (b==bin64_t::ALL || b==bin64_t::NONE) {
-        delay_ = delay_ * 2; // backing off
         if (delay_>TINT_SEC*58) // keep NAT mappings alive
             delay_ = TINT_SEC*58;
         if (delay_>=4*TINT_SEC && ch_->last_recv_time_ < NOW-TINT_MIN)
             Schedule(TINT_NEVER); // no response; enter close timeout
         else
             Schedule(NOW+delay_); // all right, just keep it alive
+        delay_ = delay_ * 2; // backing off
     } else {
         Schedule(NOW+ch_->rtt_avg_); // cwnd==1 => next send in 1 rtt
         Swap(new SlowStartController(this));
@@ -60,6 +60,9 @@ void    KeepAliveController::OnDataRecvd(bin64_t b) {
     if (b!=bin64_t::NONE && b!=bin64_t::ALL) { // channel is alive
         delay_ = ch_->rtt_avg_;
         Schedule(NOW); // schedule an ACK; TODO: aggregate
+    } else  {
+        delay_ = ch_->rtt_avg_;
+        Schedule(NOW);
     }
 }
     
@@ -118,9 +121,9 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
         else 
             cwnd_ += 1.0/cwnd_;
         dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
-        tint spacing = ch_->rtt_avg_ / cwnd_;
-        Schedule(ch_->last_send_time_+spacing);
     }
+    tint spacing = ch_->rtt_avg_ / cwnd_;
+    Schedule(ch_->last_send_time_+spacing);
 }
 
 
