@@ -104,10 +104,11 @@ bool    CwndController::MaySendData() {
     
 
 void    CwndController::OnDataSent(bin64_t b) {
-    if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) { // no more data
-        Schedule(NOW+ch_->rtt_avg_);
-        Swap(new KeepAliveController(this));
-    } else {
+    if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) { // no more data (no hints?)
+        Schedule(NOW+ch_->rtt_avg_); // soft pause; nothing to send yet
+        if (ch_->last_send_data_time_ < NOW-ch_->rtt_avg_)
+            Swap(new KeepAliveController(this)); // really, nothing to send
+    } else { // FIXME: mandatory rescheduling after send/recv; based on state
         tint spacing = ch_->rtt_avg_ / cwnd_;
         if (ch_->data_out_.size() < cwnd_) { // have cwnd; not the right time yet
             Schedule(ch_->last_send_data_time_+spacing);
