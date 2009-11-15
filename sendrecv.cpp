@@ -68,8 +68,8 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
             }
     }
     uint64_t mass = 0;
-    for(int i=0; i<hint_in_.size(), i++)
-        mass += hint_in_[i].width();
+    for(int i=0; i<hint_in_.size(); i++)
+        mass += hint_in_[i].bin.width();
     dprintf("%s #%i dequeued %lli [%lli]\n",tintstr(),id,send.base_offset(),mass);
     return send;
 }
