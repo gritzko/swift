@@ -61,13 +61,16 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
             continue;
         send = file().ack_out().find_filtered(ack_in_,hint,bins::FILLED);
         send = send.left_foot(); // single packet
-        dprintf("%s #%i dequeued %lli\n",tintstr(),id,send.base_offset());
         if (send!=bin64_t::NONE)
             while (send!=hint) {
                 hint = hint.towards(send);
                 hint_in_.push_front(hint.sibling());
             }
     }
+    uint64_t mass = 0;
+    for(int i=0; i<hint_in_.size(), i++)
+        mass += hint_in_[i].width();
+    dprintf("%s #%i dequeued %lli [%lli]\n",tintstr(),id,send.base_offset(),mass);
     return send;
 }
 
@@ -163,7 +166,7 @@ void	Channel::AddHint (Datagram& dgram) {
         if (hint!=bin64_t::NONE) {
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
-            dprintf("%s #%i +hint %s\n",tintstr(),id,hint.str());
+            dprintf("%s #%i +hint %s [%lli]\n",tintstr(),id,hint.str(),hint_out_mass);
             hint_out_.push_back(hint);
         } else
             printf("%s #%i Xhint\n",tintstr(),id);
@@ -221,11 +224,16 @@ bin64_t		Channel::AddData (Datagram& dgram) {
 void	Channel::AddTs (Datagram& dgram) {
     dgram.Push8(P2TP_TS);
     dgram.Push64(data_in_.time);
-    dprintf("%s #%i +ts %lli\n",tintstr(),id,data_in_.time);
+    dprintf("%s #%i +ts %s\n",tintstr(),id,tintstr(data_in_.time));
 }
 
 
 void	Channel::AddAck (Datagram& dgram) {
+    if (data_in_dbl_!=bin64_t::NONE) {
+		dgram.Push8(P2TP_ACK);
+		dgram.Push32(data_in_dbl_);
+        data_in_dbl_=bin64_t::NONE;
+    }
 	if (data_in_.bin!=bin64_t::NONE) {
         AddTs(dgram);
         bin64_t pos = file().ack_out().cover(data_in_.bin);
@@ -235,6 +243,8 @@ void	Channel::AddAck (Datagram& dgram) {
         ack_out_.set(pos);
         dprintf("%s #%i +ack %s %s\n",tintstr(),id,pos.str(),tintstr(data_in_.time));
         data_in_ = tintbin(0,bin64_t::NONE);
+        if (pos.layer()>2)
+            data_in_dbl_ = pos;
 	}
     for(int count=0; count<4; count++) {
         bin64_t ack = file().ack_out().find_filtered(ack_out_, bin64_t::ALL, bins::FILLED);
@@ -314,7 +324,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
     uint8_t *data;
     int length = dgram.Pull(&data,1024);
     bool ok = (pos==bin64_t::NONE) || file().OfferData(pos, (char*)data, length) ;
-    dprintf("%s #%i %cdata (%lli)\n",tintstr(),id,ok?'-':'!',pos.offset());
+    dprintf("%s #%i %cdata %s\n",tintstr(),id,ok?'-':'!',pos.str());
     if (!ok) 
         return bin64_t::NONE;
     data_in_ = tintbin(NOW,pos);

@@ -272,6 +272,7 @@ namespace p2tp {
 		bins		ack_in_;
 		/**	Last data received; needs to be acked immediately. */
 		tintbin		data_in_;
+        bin64_t     data_in_dbl_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;
         bin64_t     data_out_cap_;

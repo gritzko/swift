@@ -42,7 +42,8 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
     socket_(socket==-1?sockets[0]:socket), // FIXME
     data_out_cap_(bin64_t::ALL), last_send_data_time_(0), last_recv_data_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
-    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC)
+    last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC),
+    data_in_dbl_(bin64_t::NONE)
 {
     if (peer_==Address())
         peer_ = tracker;
