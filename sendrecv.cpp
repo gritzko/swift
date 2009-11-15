@@ -94,7 +94,8 @@ void	Channel::AddHandshake (Datagram& dgram) {
 void    Channel::ClearStaleDataOut() {
     int oldsize = data_out_.size();
     tint timeout = NOW - max( rtt_avg_-dev_avg_*4, 500*TINT_MSEC );
-    while ( data_out_.size() && data_out_.front().time < timeout ) {
+    while ( data_out_.size() && data_out_.front().time < timeout &&
+            ack_in_.get(data_out_.front().bin)==bins::EMPTY ) {
         dprintf("%s #%i Tdata %s\n",tintstr(),id,data_out_.front().bin.str());
         data_out_.pop_front();
     }
