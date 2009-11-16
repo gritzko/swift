@@ -204,7 +204,11 @@ struct Datagram {
 
 const char* tintstr(tint t=0);
 std::string sock2str (struct sockaddr_in addr);
+#ifdef DEBUG
 #define dprintf(...) printf(__VA_ARGS__)
+#else
+#define dprintf(...) {}
+#endif
 #define eprintf(...) fprintf(stderr,__VA_ARGS__)
 //#define dprintf(...) {}
 
