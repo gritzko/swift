@@ -59,9 +59,8 @@ struct Address {
     void set_ipv4 (uint32_t ipv4) {
         addr.sin_addr.s_addr = htonl(ipv4);
     }
-    void set_ipv4 (const char* ipv4_str) {
-        inet_aton(ipv4_str,&(addr.sin_addr));
-    }
+    void set_ipv4 (const char* ipv4_str) ;
+    //{    inet_aton(ipv4_str,&(addr.sin_addr));    }
     void clear () {
         memset(&addr,0,sizeof(struct sockaddr_in));
         addr.sin_family = AF_INET;

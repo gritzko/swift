@@ -13,6 +13,12 @@
 
 using namespace p2tp;
 
+TEST(Datagram, AddressTest) {
+    Address addr("127.0.0.1:1000");
+    EXPECT_EQ(INADDR_LOOPBACK,addr.ipv4());
+    EXPECT_EQ(1000,addr.port());
+}
+
 
 TEST(Datagram, BinaryTest) {
 	SOCKET socket = Datagram::Bind(7001);

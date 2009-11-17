@@ -14,6 +14,7 @@
 #else
     #include <arpa/inet.h>
 #endif
+#include <netdb.h>
 #include "datagram.h"
 #include "compat.h"
 
@@ -46,6 +47,16 @@ const char* tintstr (tint time) {
     int usecs = time/TINT_uSEC;
     sprintf(ret_str[i],"%i_%02i_%02i_%03i_%03i",hours,mins,secs,msecs,usecs);
     return ret_str[i];
+}
+    
+void Address::set_ipv4 (const char* ip_str) {
+    struct hostent *h = gethostbyname(ip_str);
+    if (h == NULL) {
+    	print_error("cannot lookup address");
+    	return;
+    } else {
+        addr.sin_addr.s_addr = *(u_long *) h->h_addr_list[0];
+    }
 }
     
     
@@ -137,7 +148,7 @@ tint Datagram::Time () {
 SOCKET Datagram::Bind (Address addr_) {
     struct sockaddr_in addr = addr_;
 	SOCKET fd;
-	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
+	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20, enable=1;
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		print_error("socket() fails");
         return INVALID_SOCKET;
@@ -153,6 +164,7 @@ SOCKET Datagram::Bind (Address addr_) {
         print_error("setsockopt2 fails");
         return INVALID_SOCKET;
     }
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&enable, sizeof(int));
 #else
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 		return INVALID_SOCKET;
@@ -164,6 +176,7 @@ SOCKET Datagram::Bind (Address addr_) {
         print_error("setsockopt2 fails");
         return INVALID_SOCKET;
     }
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 #endif
     dprintf("socket buffers: %i send %i recv\n",sndbuf,rcvbuf);
 	if (::bind(fd, (sockaddr*)&addr, len) != 0) {
