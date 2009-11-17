@@ -17,6 +17,10 @@ TEST(Datagram, AddressTest) {
     Address addr("127.0.0.1:1000");
     EXPECT_EQ(INADDR_LOOPBACK,addr.ipv4());
     EXPECT_EQ(1000,addr.port());
+    Address das2("node300.das2.ewi.tudelft.nl:20000");
+    Address das2b("130.161.211.200:20000");
+    EXPECT_EQ(das2.ipv4(),das2b.ipv4());
+    EXPECT_EQ(20000,das2.port());
 }
 
 

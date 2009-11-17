@@ -62,10 +62,10 @@ void Address::set_ipv4 (const char* ip_str) {
     
 Address::Address(const char* ip_port) {
     clear();
-    if (strlen(ip_port)>=32)
+    if (strlen(ip_port)>=1024)
         return;
-    char ipp[32];
-    strncpy(ipp,ip_port,32);
+    char ipp[1024];
+    strncpy(ipp,ip_port,1024);
     char* semi = strchr(ipp,':');
     if (semi) {
         *semi = 0;
