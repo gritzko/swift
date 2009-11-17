@@ -19,7 +19,7 @@
 
 namespace p2tp {
 
-tint Datagram::now = Datagram::Time()%360000000LL;
+tint Datagram::now = Datagram::Time()/360000000LL*360000000LL;
 tint Datagram::epoch = now;
 uint32_t Address::LOCALHOST = INADDR_LOOPBACK;
 uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0, 
