@@ -89,6 +89,9 @@ else:
 	    libpath = ""
 	    print "To use external libs, set LIBPATH environment variable to list of colon-separated lib dirs"
 
+if DEBUG:
+	env.Append(CXXFLAGS="-DDEBUG")
+
 env.StaticLibrary (
     target= target,
     source = source,
