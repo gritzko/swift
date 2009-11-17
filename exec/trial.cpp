@@ -27,8 +27,23 @@ int main (int argn, char** args) {
     std::string sfn = tmpdir+"team.jpg";
     const char* filename = sfn.c_str();
 
+    char servstr[256];
+    struct hostent *h = gethostbyname("mughal.tribler.org");
+    if (h == NULL)
+    {
+    	print_error("cannot nslookup");
+    	return 1;
+    }
+    else
+    {
+         struct in_addr addr;
+		 addr.s_addr = *(u_long *) h->h_addr_list[0];
+		 sprintf(servstr,"%s:%d", inet_ntoa(addr), 10000);
+    }
 
-    Address tracker("130.161.211.198:10000"),
+    printf("Server %s\n",servstr);
+
+    Address tracker(servstr),
             bindaddr((uint32_t)INADDR_ANY,10000);
     if (0>p2tp::Listen(bindaddr)) {
         print_error("cannot bind");

@@ -7,7 +7,11 @@
  *
  */
 #include "p2tp.h"
-
+#ifdef _MSC_VER
+    // To avoid complaints about std::max. Appears to work in VS2008
+    #undef min
+    #undef max
+#endif
 
 using namespace p2tp;
 
@@ -51,7 +55,7 @@ KeepAliveController::KeepAliveController (Channel* ch) : SendController(ch), del
 }
 
 
-KeepAliveController::KeepAliveController(SendController* prev, tint delay) : 
+KeepAliveController::KeepAliveController(SendController* prev, tint delay) :
 SendController(prev), delay_(delay) {
     ch_->dev_avg_ = TINT_SEC; // without constant active measurement, rtt is unreliable
     delay_=ch_->rtt_avg_;
@@ -60,7 +64,7 @@ SendController(prev), delay_(delay) {
 bool    KeepAliveController::MaySendData() {
     return true;
 }
-    
+
 
 void    KeepAliveController::OnDataSent(bin64_t b) {
     if (b==bin64_t::ALL || b==bin64_t::NONE) {
@@ -76,21 +80,21 @@ void    KeepAliveController::OnDataSent(bin64_t b) {
         Swap(new SlowStartController(this));
     }
 }
-    
+
 void    KeepAliveController::OnDataRecvd(bin64_t b) {
     if (b!=bin64_t::NONE && b!=bin64_t::ALL) { // channel is alive
         delay_ = ch_->rtt_avg_;
         Schedule(NOW); // schedule an ACK; TODO: aggregate
     }
 }
-    
+
 void    KeepAliveController::OnAckRcvd(bin64_t ackd) {
     // probably to something sent by CwndControllers before this one got installed
 }
-    
+
 
 CwndController::CwndController(SendController* orig, int cwnd) :
-SendController(orig), cwnd_(cwnd), last_change_(0) {    
+SendController(orig), cwnd_(cwnd), last_change_(0) {
 }
 
 bool    CwndController::MaySendData() {
@@ -101,7 +105,7 @@ bool    CwndController::MaySendData() {
     return  ch_->data_out_.empty() ||
             (ch_->data_out_.size() < cwnd_  &&  NOW-ch_->last_send_data_time_ >= spacing);
 }
-    
+
 
 void    CwndController::OnDataSent(bin64_t b) {
     if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) { // no more data (no hints?)
@@ -126,7 +130,7 @@ void    CwndController::OnDataRecvd(bin64_t b) {
         Schedule(NOW); // send ACK; todo: aggregate ACKs
     }
 }
-    
+
 void    CwndController::OnAckRcvd(bin64_t ackd) {
     if (ackd==bin64_t::NONE) {
         dprintf("%s #%i sendctrl loss detected\n",tintstr(),ch_->id);
@@ -137,7 +141,7 @@ void    CwndController::OnAckRcvd(bin64_t ackd) {
     } else {
         if (cwnd_<1)
             cwnd_ *= 2;
-        else 
+        else
             cwnd_ += 1.0/cwnd_;
         dprintf("%s #%i sendctrl cwnd to %f\n",tintstr(),ch_->id,cwnd_);
     }
@@ -153,7 +157,7 @@ void SlowStartController::OnAckRcvd (bin64_t pos) {
             Schedule(NOW);
             Swap(new AIMDController(this,cwnd_));
         }
-    } else 
+    } else
         cwnd_ /= 2;
 }
-    
+
