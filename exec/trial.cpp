@@ -10,6 +10,9 @@
 #include <time.h>
 #include <string>
 #include "compat/util.h"
+#ifndef _WIN32
+#include <netdb.h>
+#endif
 
 
 using namespace p2tp;
