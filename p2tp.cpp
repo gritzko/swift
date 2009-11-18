@@ -67,10 +67,10 @@ void     p2tp::SetTracker(const Address& tracker) {
 
 
 int Channel::DecodeID(int scrambled) {
-	return scrambled ^ (int)Datagram::epoch;
+	return scrambled ^ (int)Datagram::start;
 }
 int Channel::EncodeID(int unscrambled) {
-	return unscrambled ^ (int)Datagram::epoch;
+	return unscrambled ^ (int)Datagram::start;
 }
 
 
