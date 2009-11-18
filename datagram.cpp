@@ -13,8 +13,9 @@
     typedef int socklen_t;
 #else
     #include <arpa/inet.h>
+    #include <netdb.h>
 #endif
-#include <netdb.h>
+
 #include "datagram.h"
 #include "compat.h"
 
@@ -23,7 +24,7 @@ namespace p2tp {
 tint Datagram::now = Datagram::Time()/360000000LL*360000000LL;
 tint Datagram::epoch = now;
 uint32_t Address::LOCALHOST = INADDR_LOOPBACK;
-uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0, 
+uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0,
          Datagram::bytes_up=0, Datagram::bytes_down=0;
 
 const char* tintstr (tint time) {
@@ -48,7 +49,7 @@ const char* tintstr (tint time) {
     sprintf(ret_str[i],"%i_%02i_%02i_%03i_%03i",hours,mins,secs,msecs,usecs);
     return ret_str[i];
 }
-    
+
 void Address::set_ipv4 (const char* ip_str) {
     struct hostent *h = gethostbyname(ip_str);
     if (h == NULL) {
@@ -58,8 +59,8 @@ void Address::set_ipv4 (const char* ip_str) {
         addr.sin_addr.s_addr = *(u_long *) h->h_addr_list[0];
     }
 }
-    
-    
+
+
 Address::Address(const char* ip_port) {
     clear();
     if (strlen(ip_port)>=1024)
@@ -81,8 +82,8 @@ Address::Address(const char* ip_port) {
         }
     }
 }
-    
-    
+
+
 int Datagram::Send () {
 	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
 				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
@@ -134,7 +135,7 @@ SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
 				return sockets[i];
 	} else if (sel<0) {
 		print_error("select fails");
-    } 
+    }
     return INVALID_SOCKET;
 }
 
@@ -148,7 +149,7 @@ tint Datagram::Time () {
 SOCKET Datagram::Bind (Address addr_) {
     struct sockaddr_in addr = addr_;
 	SOCKET fd;
-	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20, enable=1;
+	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		print_error("socket() fails");
         return INVALID_SOCKET;
@@ -166,6 +167,7 @@ SOCKET Datagram::Bind (Address addr_) {
     }
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&enable, sizeof(int));
 #else
+    int enable=1;
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 		return INVALID_SOCKET;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int)) < 0 ) {

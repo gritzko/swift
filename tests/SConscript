@@ -6,7 +6,10 @@ Import("libs")
 Import("libpath")
 
 cpppath = env["CPPPATH"]
-libs = ['p2tp','gtest'] + libs  # order is important, crypto needs to be last
+if DEBUG:
+	libs = ['p2tp','gtestd'] + libs  # order is important, crypto needs to be last
+else:
+	libs = ['p2tp','gtest'] + libs  # order is important, crypto needs to be last
 
 if sys.platform == "win32":
     cpppath = ".."
