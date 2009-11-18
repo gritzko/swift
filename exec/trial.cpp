@@ -30,8 +30,9 @@ int main (int argn, char** args) {
     std::string sfn = tmpdir+"team.jpg";
     const char* filename = sfn.c_str();
 
-    Address tracker("victor.tribler.org:12345"),
-            bindaddr((uint32_t)INADDR_ANY,10000);
+    Address tracker("victor.p2p-next.org:12345"),
+            bindaddr((uint32_t)INADDR_ANY,10000),
+            fallback("victor2.p2p-next.org:12345");
 
     if (0>p2tp::Listen(bindaddr)) {
         print_error("cannot bind");
@@ -40,9 +41,11 @@ int main (int argn, char** args) {
 	p2tp::SetTracker(tracker);
 	int file = p2tp::Open(filename,root_hash);
     printf("Downloading %s\n",root_hash.hex().c_str());
-    int count = 100;
+    int count = 200;
     while (!p2tp::IsComplete(file) && count-->0) {
 	    p2tp::Loop(TINT_SEC/10);
+        if (count==100) 
+            FileTransfer::file(file)->OnPexIn(fallback);
         printf("done %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
                p2tp::Complete(file), p2tp::Size(file), p2tp::SeqComplete(file),
                Datagram::dgrams_up, Datagram::bytes_up,
