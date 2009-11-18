@@ -2,7 +2,7 @@
  *  datagram.h
  *  serp++
  *
- *  Created by Victor Grishchenko on 3/9/09.
+ *  Created by Victor Grishchenko, Arno Bakker on 3/9/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
