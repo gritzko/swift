@@ -171,7 +171,7 @@ namespace p2tp {
         
         tint            init_time_;
 
-    protected:
+    public:
         void            OnDataIn (bin64_t pos);
         void            OnPexIn (const Address& addr);
 
