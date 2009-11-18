@@ -168,6 +168,8 @@ namespace p2tp {
 
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
+        
+        tint            init_time_;
 
     protected:
         void            OnDataIn (bin64_t pos);

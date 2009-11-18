@@ -35,6 +35,7 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
     files[fd()] = this;
     picker_ = new SeqPiecePicker(this);
     picker_->Randomize(rand()&63);
+    init_time_ = Datagram::Time();
 }
 
 

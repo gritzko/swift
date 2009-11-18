@@ -50,6 +50,7 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 	this->id = channels.size();
 	channels.push_back(this);
     cc_ = new PingPongController(this);
+    dprintf("%s #%i init %s\n",tintstr(),id,peer_.str().c_str());
     Schedule(NOW); // FIXME ugly
 }
 
