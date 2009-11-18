@@ -281,7 +281,7 @@ void	Channel::Recv (Datagram& dgram) {
 			case P2TP_HINT:		OnHint(dgram); break;
             case P2TP_PEX_ADD:  OnPex(dgram); break;
 			default:
-				//LOG(ERROR) << this->id_string() << " malformed datagram";
+				eprintf("%s #%i ?msg id unknown %i\n",tintstr(),id,(int)type);
 				return;
 		}
 	}
