@@ -70,7 +70,7 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
     uint64_t mass = 0;
     for(int i=0; i<hint_in_.size(); i++)
         mass += hint_in_[i].bin.width();
-    dprintf("%s #%i dequeued %lli [%lli]\n",tintstr(),id,send.base_offset(),mass);
+    dprintf("%s #%i dequeued %s [%lli]\n",tintstr(),id,send.str(),mass);
     return send;
 }
 
@@ -158,10 +158,10 @@ void	Channel::AddHint (Datagram& dgram) {
         peer_pps = 1;
     
     if ( hint_out_mass < peer_pps ) { //4*peer_cwnd ) {
-        
-        int diff = 5*peer_cwnd - hint_out_mass;
-        if (diff>4 && diff>2*peer_cwnd)
-            diff >>= 1;
+            
+        int diff = peer_pps - hint_out_mass;
+        //if (diff>4 && diff>2*peer_cwnd)
+        //    diff >>= 1;
         bin64_t hint = transfer().picker().Pick(ack_in_,diff,rtt_avg_*8+TINT_MSEC*100);
         
         if (hint!=bin64_t::NONE) {
@@ -170,7 +170,7 @@ void	Channel::AddHint (Datagram& dgram) {
             dprintf("%s #%i +hint %s [%lli]\n",tintstr(),id,hint.str(),hint_out_mass);
             hint_out_.push_back(hint);
         } else
-            printf("%s #%i Xhint\n",tintstr(),id);
+            dprintf("%s #%i .hint\n",tintstr(),id);
         
     }
 }
@@ -261,6 +261,7 @@ void	Channel::AddAck (Datagram& dgram) {
 
 
 void	Channel::Recv (Datagram& dgram) {
+    dprintf("%s #%i recvd %i\n",tintstr(),id,dgram.size()+4);
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
