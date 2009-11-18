@@ -134,7 +134,7 @@ void	Channel::Send () {
 
 
 void	Channel::CleanStaleHintOut () {
-    tint timed_out = NOW - 8*rtt_avg_;
+    tint timed_out = NOW - 8*rtt_avg_; // FIXME BULLSHIT (take rtt=0)
 	while ( !hint_out_.empty() && hint_out_.front().time < timed_out ) {
         transfer().picker().Expired(hint_out_.front().bin);
 		hint_out_.pop_front();
@@ -437,7 +437,8 @@ void	Channel::RecvDatagram (int socket) {
 			RETLOG ("hash unknown, no such file");
         dprintf("%s #0 -hash ALL %s\n",tintstr(),hash.hex().c_str());
         for(binqueue::iterator i=file->hs_in_.begin(); i!=file->hs_in_.end(); i++)
-            if (channels[*i] && channels[*i]->peer_==data.addr) 
+            if (channels[*i] && channels[*i]->peer_==data.addr && 
+                channels[*i]->last_recv_time_>NOW-TINT_SEC*2) 
                 RETLOG("have a channel already");
 		channel = new Channel(file, socket, data.address());
 	} else {
