@@ -84,8 +84,9 @@ void	Channel::AddHandshake (Datagram& dgram) {
                 tintstr(),id,file().root_hash().hex().c_str());
 	}
 	dgram.Push8(P2TP_HANDSHAKE);
-	dgram.Push32(EncodeID(id));
-    dprintf("%s #%i +hs\n",tintstr(),id);
+    int encoded = EncodeID(id);
+	dgram.Push32(encoded);
+    dprintf("%s #%i +hs %i\n",tintstr(),id,encoded);
     ack_out_.clear();
     AddAck(dgram);
 }
