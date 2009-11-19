@@ -51,8 +51,11 @@ int main (int argn, char** args) {
                Datagram::dgrams_up, Datagram::bytes_up,
                Datagram::dgrams_down, Datagram::bytes_down );
     }
+    int ret = !p2tp::IsComplete(file);
 
 	p2tp::Close(file);
 	p2tp::Shutdown();
+
+    return ret;
 
 }
