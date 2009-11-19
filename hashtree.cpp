@@ -84,8 +84,10 @@ peak_count_(0), hashes_(NULL), size_(0), sizek_(0),
 complete_(0), completek_(0)
 {
 	fd_ = open(filename,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-	if (fd_<0)
+	if (fd_<0) {
+        print_error("cannot open the file");
         return;
+    }
     char hfn[1024] = "";
     if (!hash_filename) {
         strcat(hfn, filename);
@@ -93,8 +95,10 @@ complete_(0), completek_(0)
     } else
         strcpy(hfn,hash_filename);
     hash_fd_ = open(hfn,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (hash_fd_<0)
+    if (hash_fd_<0) {
+        print_error("cannot open hash file");
         return;
+    }
     if (root_hash_==Sha1Hash::ZERO) { // fresh submit, hash it
         assert(file_size(fd_));
         Submit();
