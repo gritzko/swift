@@ -15,6 +15,12 @@
 #include <fcntl.h>
 #include "compat.h"
 
+#ifdef _WIN32
+#define OPENFLAGS 		O_RDWR|O_CREAT|_O_BINARY
+#else
+#define OPENFLAGS 		O_RDWR|O_CREAT
+#endif
+
 
 using namespace p2tp;
 
@@ -77,7 +83,7 @@ root_hash_(root_hash), fd_(0), hash_fd_(0), data_recheck_(true),
 peak_count_(0), hashes_(NULL), size_(0), sizek_(0),
 complete_(0), completek_(0)
 {
-	fd_ = open(filename,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	fd_ = open(filename,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd_<0)
         return;
     char hfn[1024] = "";
@@ -86,7 +92,7 @@ complete_(0), completek_(0)
         strcat(hfn, ".mhash");
     } else
         strcpy(hfn,hash_filename);
-    hash_fd_ = open(hfn,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    hash_fd_ = open(hfn,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     if (hash_fd_<0)
         return;
     if (root_hash_==Sha1Hash::ZERO) { // fresh submit, hash it
