@@ -337,7 +337,8 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) {
         }
         static const int MAX_REORDERING = 2;  // the triple-ACK principle
         if (max_ack_off>MAX_REORDERING) {
-            while (max_ack_off && ack_in_.is_filled(data_out_.front().bin)) {
+            while (max_ack_off && (data_out_.front().bin==bin64_t::NONE
+                                   || ack_in_.is_filled(data_out_.front().bin)) ) {
                 data_out_.pop_front();
                 max_ack_off--;
             }
@@ -352,7 +353,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) {
     }
     tint timeout = NOW - rtt_avg_ - 4*std::max(dev_avg_,TINT_MSEC*50);
     while (!data_out_.empty() && data_out_.front().time<timeout) {
-        if (ack_in_.is_empty(data_out_.front().bin)) {
+        if (data_out_.front().bin!=bin64_t::NONE && ack_in_.is_empty(data_out_.front().bin)) {
             cc_->OnAckRcvd(bin64_t::NONE);
             data_out_cap_ = bin64_t::ALL;
             dprintf("%s #%i Tdata %s\n",tintstr(),id,data_out_.front().bin.str());

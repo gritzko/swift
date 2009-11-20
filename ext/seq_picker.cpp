@@ -64,7 +64,7 @@ public:
             hint = hint.left();
         assert(ack_hint_out_.get(hint)==bins::EMPTY);
         ack_hint_out_.set(hint);
-        hint_out_.push_back(hint);
+        hint_out_.push_back(tintbin(NOW,hint));
         return hint;
     }
     
