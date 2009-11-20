@@ -421,6 +421,17 @@ uint64_t    bins::seq_length () {
     return i.pos.base_offset() + (*i==FILLED ? 1 : 0);
 }
 
+
+bool        bins::is_empty (bin64_t range)  {
+    if (range==bin64_t::ALL) 
+        return !deep(0) && !halves[0];
+    iterator i(this,range,false);
+    while ( i.pos!=range && (i.deep() || !i.solid()) )
+        i.towards(range);
+    return !i.deep() && *i==EMPTY;
+}
+
+
 binheap::binheap() {
     size_ = 32;
     heap_ = (bin64_t*) malloc(size_*sizeof(bin64_t));

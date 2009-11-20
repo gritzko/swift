@@ -14,6 +14,7 @@ using namespace p2tp;
 class SeqPiecePicker : public PiecePicker {
     
     bins            ack_hint_out_;
+    tbqueue         hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
     
@@ -33,10 +34,14 @@ public:
     }
     
     virtual bin64_t Pick (bins& offer, uint64_t max_width, tint expires) {
-        //dprintf("twist is %lli\n",twist_);
+        while (hint_out_.size() && hint_out_.front().time<NOW-TINT_SEC*3/2) {
+            ack_hint_out_.copy_range(file().ack_out(), hint_out_.front().bin);
+            hint_out_.pop_front();
+        }
         if (!file().size()) {
             return bin64_t(0,0); // whoever sends it first
         }
+    retry:
         twist_ &= (file().peak(0)) & ((1<<6)-1);
         if (twist_) {
             offer.twist(twist_);
@@ -48,25 +53,19 @@ public:
             offer.twist(0);
             ack_hint_out_.twist(0);
         }
-        if (hint==bin64_t::NONE)
+        if (hint==bin64_t::NONE) {
             return hint; // TODO: end-game mode
+        }
+        if (!file().ack_out().is_empty(hint)) { // unhinted/late data
+            ack_hint_out_.copy_range(file().ack_out(), hint);
+            goto retry;
+        }
         while (hint.width()>max_width)
             hint = hint.left();
         assert(ack_hint_out_.get(hint)==bins::EMPTY);
-        if (hint.offset() && file().ack_out().get(hint)!=bins::EMPTY) { // FIXME DEBUG remove
-            eprintf("bogus hint: %s\n",hint.str());
-            exit(1);
-        }
         ack_hint_out_.set(hint);
+        hint_out_.push_back(hint);
         return hint;
-    }
-    
-    void Received (bin64_t bin) {
-        ack_hint_out_.set(bin);
-    }
-    
-    void Expired (bin64_t bin) {
-        ack_hint_out_.copy_range(file().ack_out(), bin);
     }
     
 };

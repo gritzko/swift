@@ -46,7 +46,7 @@ public:
 
     uint64_t    mass ();
     
-    bool        is_empty () const { return !deep(0) && !halves[0]; }
+    bool        is_empty (bin64_t range=bin64_t::ALL) ;
 
     void        clear ();
     

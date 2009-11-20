@@ -36,7 +36,7 @@ int main (int argn, char** args) {
     }
 
     assert(0<p2tp::Listen(bindaddr));
-    printf("seeder bound to %s\n",bindaddr.str().c_str());
+    printf("seeder bound to %s\n",bindaddr.str());
 
 
 	int file = p2tp::Open(filename);

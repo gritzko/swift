@@ -173,7 +173,8 @@ void            HashTree::RecoverProgress () {
         if (hashes_[pos]==Sha1Hash::ZERO)
             continue;
         size_t rd = read(fd_,buf,1<<10);
-        assert(rd==(1<<10) || p==packet_size()-1); // FIXME BUG
+        if (rd!=(1<<10) && p!=packet_size()-1)
+            break;
         if (rd==(1<<10) && !memcmp(buf, zeros, rd) &&
                 hashes_[pos]!=kilo_zero) // FIXME
             continue;
@@ -182,6 +183,8 @@ void            HashTree::RecoverProgress () {
         ack_out_.set(pos);
         completek_++;
         complete_+=rd;
+        if (rd!=(1<<10) && p==packet_size()-1)
+            size_ = ((sizek_-1)<<10) + rd;
     }
 }
 

@@ -35,7 +35,7 @@ int main (int argn, char** args) {
     Address tracker(args[3]), bindaddr;
 
     if (tracker==Address()) {
-        fprintf(stderr,"Tracker address format: [1.2.3.4:]12345\n");
+        fprintf(stderr,"Tracker address format: [1.2.3.4:]12345, not %s\n",args[3]);
         return -2;
     }
     if (argn>=5)

@@ -93,11 +93,13 @@ struct Address {
         addr.sin_port==b.addr.sin_port &&
         addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
     }
-    std::string str () const {
-        char s[32];
-        sprintf(s,"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
+    const char* str () const {
+        static char rs[4][32];
+        static int i;
+        i = (i+1) & 3;
+        sprintf(rs[i],"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
                 (ipv4()>>8)&0xff,ipv4()&0xff,port());
-        return std::string(s);
+        return rs[i];
     }
     bool operator != (const Address& b) const { return !(*this==b); }
 };

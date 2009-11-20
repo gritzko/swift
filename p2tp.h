@@ -192,8 +192,6 @@ namespace p2tp {
     public:
         virtual void Randomize (uint64_t twist) = 0;
         virtual bin64_t Pick (bins& offered, uint64_t max_width, tint expires) = 0;
-        virtual void Expired (bin64_t bin) = 0;
-        virtual void Received (bin64_t bin) = 0;
     };
 
 
@@ -284,6 +282,7 @@ namespace p2tp {
 		tbqueue     hint_in_;
 		/** Hints sent (to detect and reschedule ignored hints). */
         tbqueue     hint_out_;
+        uint64_t    hint_out_size_;
 		/** The congestion control strategy. */
 		SendController	*cc_;
         /** Types of messages the peer accepts. */
@@ -309,7 +308,7 @@ namespace p2tp {
         bin64_t		DequeueHint();
         void        ClearStaleDataOut ();
         void        CleanStaleHintOut();
-        void        CleanFulfilledHints(bin64_t pos);
+        void        CleanHintOut(bin64_t pos);
         void        CleanFulfilledDataOut(bin64_t pos);
         void        Schedule(tint send_time);
 
@@ -372,9 +371,6 @@ namespace p2tp {
 
 	//uint32_t Width (const tbinvec& v);
 
-
-// FIXME kill this macro
-#define RETLOG(str) { fprintf(stderr,"%s\n",str); return; }
 
 	/** Must be called by any client using the library */
 	void LibraryInit(void);
