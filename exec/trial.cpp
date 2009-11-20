@@ -20,7 +20,7 @@ using namespace p2tp;
 
 /** P2TP downloader. Params: root hash, filename, tracker ip/port, own ip/port */
 int main (int argn, char** args) {
-
+    THIS IS NOT TRIAL BRANCH
     srand(time(NULL));
     Sha1Hash root_hash(true,"32e5d9d2d8c0f6073e2820cf47b15b58c2e42a23");
     p2tp::LibraryInit();
@@ -28,7 +28,10 @@ int main (int argn, char** args) {
     // Arno: use tempdir
     std::string tmpdir = gettmpdir();
     std::string sfn = tmpdir+"team.jpg";
-    const char* filename = sfn.c_str();
+    std::string hfn = tmpdir+"team.jpg.mhash";
+    const char* filename = strdup(sfn.c_str());
+    unlink(filename);
+    unlink(hfn.c_str());
 
     Address tracker("victor.p2p-next.org:12345"),
             bindaddr((uint32_t)INADDR_ANY,10000),
