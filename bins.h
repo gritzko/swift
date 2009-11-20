@@ -14,7 +14,7 @@
 class bins {
     
 public:
-    typedef enum { FILLED=0xffff, EMPTY=0x0000 } fill_t;
+    typedef enum { FILLED=0xffff, EMPTY=0x0000, MIXED=0x5555 } fill_t;
     static const int NOJOIN;
     
     bins();
@@ -46,11 +46,14 @@ public:
 
     uint64_t    mass ();
     
-    bool        is_empty (bin64_t range=bin64_t::ALL) ;
+    bool        is_solid (bin64_t range=bin64_t::ALL, fill_t val=MIXED) ;
+    bool        is_empty (bin64_t range=bin64_t::ALL) { return is_solid(range,EMPTY); }
+    bool        is_filled (bin64_t range=bin64_t::ALL) { return is_solid(range,FILLED); }
 
     void        clear ();
     
     static bool is_mixed (uint16_t val) { return val!=EMPTY && val!=FILLED; }
+    static bool is_solid (uint16_t val) { return val==EMPTY || val==FILLED; }
 
     void        twist (uint64_t mask);
     
@@ -126,8 +129,7 @@ public:
     ~iterator();
     bool deep () { return host->deep(half); }
     bool solid () { 
-        return !deep() && (host->halves[half]==bins::FILLED || 
-                host->halves[half]==bins::EMPTY); 
+        return !deep() && bins::is_solid(host->halves[half]); 
     }
     void sibling () { half^=1; pos=pos.sibling(); }
     bool end () { return half==1; }

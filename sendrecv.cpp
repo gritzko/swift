@@ -87,23 +87,6 @@ void	Channel::AddHandshake (Datagram& dgram) {
 }
 
 
-void    Channel::ClearStaleDataOut() {
-    int oldsize = data_out_.size();
-    tint timeout = NOW - max( rtt_avg_-dev_avg_*4, 500*TINT_MSEC );
-    while ( data_out_.size() && data_out_.front().time < timeout &&
-            ack_in_.get(data_out_.front().bin)==bins::EMPTY ) {
-        dprintf("%s #%i Tdata %s\n",tintstr(),id,data_out_.front().bin.str());
-        data_out_.pop_front();
-    }
-    if (data_out_.size()!=oldsize) {
-        cc_->OnAckRcvd(bin64_t::NONE);
-        data_out_cap_ = bin64_t::ALL;
-    }
-    while (data_out_.size() && (data_out_.front()==tintbin() || ack_in_.get(data_out_.front().bin)==bins::FILLED))
-        data_out_.pop_front();
-}
-
-
 void	Channel::Send () {
     Datagram dgram(socket_,peer());
     dgram.Push32(peer_channel_id_);
@@ -114,7 +97,7 @@ void	Channel::Send () {
         if (!file().is_complete())
             AddHint(dgram);
         AddPex(dgram);
-        ClearStaleDataOut();
+        CleanDataOut();
         data = AddData(dgram);
     } else {
         AddHandshake(dgram);
@@ -329,20 +312,54 @@ bin64_t Channel::OnData (Datagram& dgram) {
 }
 
 
-void    Channel::CleanFulfilledDataOut (bin64_t ackd_pos) {
-    for (int i=0; i<8 && i<data_out_.size(); i++) 
-        if (data_out_[i]!=tintbin() && data_out_[i].bin.within(ackd_pos)) {
-            tint rtt = NOW-data_out_[i].time;
-            rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
-            dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
-            dprintf("%s #%i rtt %lli dev %lli\n",
-                    tintstr(),id,rtt_avg_,dev_avg_);
-            cc_->OnAckRcvd(data_out_[i].bin);
-            data_out_[i]=tintbin();
+void    Channel::CleanDataOut (bin64_t ackd_pos) {
+    
+    int max_ack_off = 0;
+    
+    if (ackd_pos!=bin64_t::NONE) {
+        for (int i=0; i<8 && i<data_out_.size(); i++) {
+            if (data_out_[i]!=tintbin() && data_out_[i].bin.within(ackd_pos)) {
+                tint rtt = NOW-data_out_[i].time;
+                rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
+                dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
+                dprintf("%s #%i rtt %lli dev %lli\n",tintstr(),id,rtt_avg_,dev_avg_);
+                bin64_t pos = data_out_[i].bin;
+                cc_->OnAckRcvd(pos);
+                data_out_[i]=tintbin();
+                max_ack_off = i;
+                if (ackd_pos==pos)
+                    break;
+            }
         }
-    while ( data_out_.size() && ( data_out_.front()==tintbin() ||
-                                 ack_in_.get(data_out_.front().bin)==bins::FILLED ) )
+        while (!data_out_.empty() && data_out_.front().bin==bin64_t::NONE) {
+            data_out_.pop_front();
+            max_ack_off--;
+        }
+        static const int MAX_REORDERING = 2;  // the triple-ACK principle
+        if (max_ack_off>MAX_REORDERING) {
+            while (max_ack_off && ack_in_.is_filled(data_out_.front().bin)) {
+                data_out_.pop_front();
+                max_ack_off--;
+            }
+            while (max_ack_off>MAX_REORDERING) {
+                cc_->OnAckRcvd(bin64_t::NONE);
+                data_out_.pop_front();
+                max_ack_off--;
+                data_out_cap_ = bin64_t::ALL;
+                dprintf("%s #%i Rdata %s\n",tintstr(),id,data_out_.front().bin.str());
+            }
+        }
+    }
+    tint timeout = NOW - rtt_avg_ - 4*std::max(dev_avg_,TINT_MSEC*50);
+    while (!data_out_.empty() && data_out_.front().time<timeout) {
+        if (ack_in_.is_empty(data_out_.front().bin)) {
+            cc_->OnAckRcvd(bin64_t::NONE);
+            data_out_cap_ = bin64_t::ALL;
+            dprintf("%s #%i Tdata %s\n",tintstr(),id,data_out_.front().bin.str());
+        }
         data_out_.pop_front();
+    }
+
 }
 
 
@@ -354,7 +371,7 @@ void	Channel::OnAck (Datagram& dgram) {
     }
     dprintf("%s #%i -ack %s\n",tintstr(),id,ackd_pos.str());
     ack_in_.set(ackd_pos);
-    CleanFulfilledDataOut(ackd_pos);
+    CleanDataOut(ackd_pos);
 }
 
 

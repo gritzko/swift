@@ -316,6 +316,39 @@ TEST(BinsTest,SeqLength) {
     EXPECT_EQ(11,b.seq_length());
 }
 
+TEST(BinsTest,EmptyFilled) {
+    // 1112 3312  2111 ....
+    bins b;
+    
+    EXPECT_TRUE(b.is_empty(bin64_t::ALL));
+    
+    b.set(bin64_t(1,0));
+    b.set(bin64_t(0,2));
+    b.set(bin64_t(0,6));
+    b.set(bin64_t(1,5));
+    b.set(bin64_t(0,9));
+    
+    EXPECT_FALSE(b.is_empty(bin64_t::ALL));
+    
+    EXPECT_TRUE(b.is_empty(bin64_t(2,3)));
+    EXPECT_FALSE(b.is_filled(bin64_t(2,3)));
+    EXPECT_TRUE(b.is_solid(bin64_t(2,3),bins::MIXED));
+    EXPECT_TRUE(b.is_filled(bin64_t(1,0)));
+    EXPECT_TRUE(b.is_filled(bin64_t(1,5)));
+    EXPECT_FALSE(b.is_filled(bin64_t(1,3)));
+    
+    b.set(bin64_t(0,3));
+    b.set(bin64_t(0,7));
+    b.set(bin64_t(0,8));
+    
+    EXPECT_TRUE(b.is_filled(bin64_t(2,0)));
+    EXPECT_TRUE(b.is_filled(bin64_t(2,2)));    
+    EXPECT_FALSE(b.is_filled(bin64_t(2,1)));    
+
+    b.set(bin64_t(1,2));
+    EXPECT_TRUE(b.is_filled(bin64_t(2,1)));    
+}
+
 TEST(BinheapTest,Eat) {
     
     binheap b;

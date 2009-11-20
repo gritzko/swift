@@ -306,10 +306,9 @@ namespace p2tp {
         }
         /** Get a request for one packet from the queue of peer's requests. */
         bin64_t		DequeueHint();
-        void        ClearStaleDataOut ();
+        void        CleanDataOut (bin64_t acks_pos=bin64_t::NONE);
         void        CleanStaleHintOut();
         void        CleanHintOut(bin64_t pos);
-        void        CleanFulfilledDataOut(bin64_t pos);
         void        Schedule(tint send_time);
 
         static PeerSelector* peer_selector;

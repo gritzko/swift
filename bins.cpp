@@ -259,7 +259,7 @@ uint16_t bins::get (bin64_t bin) {
     //    i.towards(bin);
     //printf("at %i ",i.half);
     //dump("get made");
-    return *i; // deep cell is never 0xffff or 0x0000
+    return *i; // deep cell is never 0xffff or 0x0000; FIXME: API caveat
 }
 
 
@@ -422,13 +422,13 @@ uint64_t    bins::seq_length () {
 }
 
 
-bool        bins::is_empty (bin64_t range)  {
+bool        bins::is_solid (bin64_t range, fill_t val)  {
     if (range==bin64_t::ALL) 
-        return !deep(0) && !halves[0];
+        return !deep(0) && (is_mixed(val) || halves[0]==val);
     iterator i(this,range,false);
     while ( i.pos!=range && (i.deep() || !i.solid()) )
         i.towards(range);
-    return !i.deep() && *i==EMPTY;
+    return i.solid() && (is_mixed(val) || *i==val);
 }
 
 
