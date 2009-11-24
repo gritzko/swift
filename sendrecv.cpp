@@ -54,6 +54,9 @@ bin64_t		Channel::DequeueHint () { // TODO: resilience
         hint_in_.pop_front();
         if (time < NOW-TINT_SEC*3/2 ) //NOW-8*rtt_avg_)
             continue;
+        // Totally flawed:
+        // a. May empty the queue when you least expect
+        // b. May lose parts of partially ACKd HINTs
         send = file().ack_out().find_filtered(ack_in_,hint,bins::FILLED);
         send = send.left_foot(); // single packet
         if (send!=bin64_t::NONE)
@@ -275,7 +278,7 @@ void    Channel::CleanHintOut (bin64_t pos) {
     while (hi<hint_out_.size() && !pos.within(hint_out_[hi].bin))
         hi++;
     if (hi==hint_out_.size())
-        return;
+        return; // something not hinted or hinted in far past
     while (hi--) { // removing likely snubbed hints
         hint_out_size_ -= hint_out_.front().bin.width();
         hint_out_.pop_front();

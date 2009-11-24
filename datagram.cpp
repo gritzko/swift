@@ -102,7 +102,7 @@ int Datagram::Recv () {
 	socklen_t addrlen = sizeof(struct sockaddr_in);
 	offset = 0;
 	length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
-					   (struct sockaddr*)&(addr), &addrlen);
+					   (struct sockaddr*)&(addr.addr), &addrlen);
 	if (length<0) {
         length = 0;
         print_error("error on recv");

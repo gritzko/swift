@@ -51,7 +51,8 @@ void    PingPongController::OnAckRcvd(bin64_t ackd) {
 }
 
 
-KeepAliveController::KeepAliveController (Channel* ch) : SendController(ch), delay_(ch->rtt_avg_) {
+KeepAliveController::KeepAliveController (Channel* ch) : 
+SendController(ch), delay_(ch->rtt_avg_) {
 }
 
 
@@ -108,7 +109,7 @@ bool    CwndController::MaySendData() {
 
 
 void    CwndController::OnDataSent(bin64_t b) {
-    if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) { // no more data (no hints?)
+    if ( (b==bin64_t::ALL || b==bin64_t::NONE) && MaySendData() ) {// no more data (no hints?)
         Schedule(NOW+ch_->rtt_avg_); // soft pause; nothing to send yet
         if (ch_->last_send_data_time_ < NOW-ch_->rtt_avg_)
             Swap(new KeepAliveController(this)); // really, nothing to send

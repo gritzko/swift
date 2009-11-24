@@ -44,6 +44,9 @@ FileTransfer::~FileTransfer ()
 {
 
     files[fd()] = NULL;
+    for(int i=0; i<Channel::channels.size(); i++) 
+        if (Channel::channels[i] && Channel::channels[i]->transfer_==this) 
+            delete Channel::channels[i];
 }
 
 

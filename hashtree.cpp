@@ -85,6 +85,7 @@ complete_(0), completek_(0)
 {
 	fd_ = open(filename,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd_<0) {
+        fd_ = 0;
         print_error("cannot open the file");
         return;
     }
@@ -96,6 +97,7 @@ complete_(0), completek_(0)
         strcpy(hfn,hash_filename);
     hash_fd_ = open(hfn,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     if (hash_fd_<0) {
+        hash_fd_ = 0;
         print_error("cannot open hash file");
         return;
     }
@@ -110,7 +112,7 @@ complete_(0), completek_(0)
 
 void            HashTree::Submit () {
     size_ = file_size(fd_);
-	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
+	sizek_ = (size_ + 1023) >> 10;
     peak_count_ = bin64_t::peaks(sizek_,peaks_);
     int hashes_size = Sha1Hash::SIZE*sizek_*2;
     file_resize(hash_fd_,hashes_size);
@@ -150,7 +152,7 @@ void            HashTree::Submit () {
  for some optimizations. */
 void            HashTree::RecoverProgress () {
     size_t size = file_size(fd_);
-	size_t sizek = (size>>10) + ((size&1023) ? 1 : 0);
+	size_t sizek = (size + 1023) >> 10;
     bin64_t peaks[64];
     int peak_count = bin64_t::peaks(sizek,peaks);
     for(int i=0; i<peak_count; i++) {
@@ -211,7 +213,7 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
 
     size_ = sizek_<<10;
     completek_ = complete_ = 0;
-	sizek_ = (size_>>10) + ((size_&1023) ? 1 : 0);
+	sizek_ = (size_ + 1023) >> 10;
 
     size_t cur_size = file_size(fd_);
     if ( cur_size<=(sizek_-1)<<10  || cur_size>sizek_<<10 )
@@ -343,5 +345,7 @@ HashTree::~HashTree () {
         memory_unmap(hash_fd_, hashes_, sizek_*2*sizeof(Sha1Hash));
     if (fd_)
         close(fd_);
+    if (hash_fd_)
+        close(hash_fd_);
 }
 
