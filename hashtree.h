@@ -17,43 +17,43 @@ namespace p2tp {
 
 
 struct Sha1Hash {
-	uint8_t	bits[20];
+    uint8_t    bits[20];
 
-	Sha1Hash() { memset(bits,0,20); }
-	Sha1Hash(const Sha1Hash& left, const Sha1Hash& right);
-	Sha1Hash(const char* str, size_t length=-1);
-	Sha1Hash(const uint8_t* data, size_t length);
-	Sha1Hash(bool hex, const char* hash);
-	
-	std::string	hex() const;
-	bool	operator == (const Sha1Hash& b) const
-		{ return 0==memcmp(bits,b.bits,SIZE); }
-	bool	operator != (const Sha1Hash& b) const { return !(*this==b); }
+    Sha1Hash() { memset(bits,0,20); }
+    Sha1Hash(const Sha1Hash& left, const Sha1Hash& right);
+    Sha1Hash(const char* str, size_t length=-1);
+    Sha1Hash(const uint8_t* data, size_t length);
+    Sha1Hash(bool hex, const char* hash);
+    
+    std::string    hex() const;
+    bool    operator == (const Sha1Hash& b) const
+        { return 0==memcmp(bits,b.bits,SIZE); }
+    bool    operator != (const Sha1Hash& b) const { return !(*this==b); }
     const char* operator * () const { return (char*) bits; }
-	
-	const static Sha1Hash ZERO;
-	const static size_t SIZE;
+    
+    const static Sha1Hash ZERO;
+    const static size_t SIZE;
 };
 
 
 class HashTree {
 
     /** Merkle hash tree: root */
-	Sha1Hash        root_hash_;
+    Sha1Hash        root_hash_;
     Sha1Hash        *hashes_;
     /** Merkle hash tree: peak hashes */
     Sha1Hash        peak_hashes_[64];
     bin64_t         peaks_[64];
     int             peak_count_;
     /** File descriptor to put hashes to */
-	int             fd_;
+    int             fd_;
     int             hash_fd_;
     /** Whether to re-hash files. */
     bool            data_recheck_;
     /** Base size, as derived from the hashes. */
     size_t          size_;
     size_t          sizek_;
-    /**	Part of the tree currently checked. */
+    /**    Part of the tree currently checked. */
     size_t          complete_;
     size_t          completek_;
     bins            ack_out_;
@@ -66,8 +66,8 @@ protected:
     bool            OfferPeakHash (bin64_t pos, const Sha1Hash& hash);
     
 public:
-	
-	HashTree (const char* file_name, const Sha1Hash& root=Sha1Hash::ZERO, 
+    
+    HashTree (const char* file_name, const Sha1Hash& root=Sha1Hash::ZERO, 
               const char* hash_filename=NULL);
     
     /** Offer a hash; returns true if it verified; false otherwise.
@@ -95,10 +95,10 @@ public:
     bool            is_complete () 
         { return size_ && complete_==size_; }
     bins&           ack_out () { return ack_out_; }
-	
-	~HashTree ();
+    
+    ~HashTree ();
 
-	
+    
 };
 
 }

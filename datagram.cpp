@@ -54,8 +54,8 @@ const char* tintstr (tint time) {
 void Address::set_ipv4 (const char* ip_str) {
     struct hostent *h = gethostbyname(ip_str);
     if (h == NULL) {
-    	print_error("cannot lookup address");
-    	return;
+        print_error("cannot lookup address");
+        return;
     } else {
         addr.sin_addr.s_addr = *(u_long *) h->h_addr_list[0];
     }
@@ -86,142 +86,142 @@ Address::Address(const char* ip_port) {
 
 
 int Datagram::Send () {
-	int r = sendto(sock,(const char *)buf+offset,length-offset,0,
-				   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
+    int r = sendto(sock,(const char *)buf+offset,length-offset,0,
+                   (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
     if (r<0)
         perror("can't send");
-	//offset=0;
-	//length=0;
+    //offset=0;
+    //length=0;
     dgrams_up++;
     bytes_up+=size();
-	Time();
-	return r;
+    Time();
+    return r;
 }
 
 int Datagram::Recv () {
-	socklen_t addrlen = sizeof(struct sockaddr_in);
-	offset = 0;
-	length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
-					   (struct sockaddr*)&(addr.addr), &addrlen);
-	if (length<0) {
+    socklen_t addrlen = sizeof(struct sockaddr_in);
+    offset = 0;
+    length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
+                       (struct sockaddr*)&(addr.addr), &addrlen);
+    if (length<0) {
         length = 0;
         print_error("error on recv");
     }
     dgrams_down++;
     bytes_down+=length;
-	Time();
-	return length;
+    Time();
+    return length;
 }
 
 
 SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
-	struct timeval timeout;
-	timeout.tv_sec = usec/TINT_SEC;
-	timeout.tv_usec = usec%TINT_SEC;
-	int max_sock_fd = 0;
-	fd_set bases, err;
-	FD_ZERO(&bases);
-	FD_ZERO(&err);
-	for(int i=0; i<sockcnt; i++) {
-		FD_SET(sockets[i],&bases);
-		FD_SET(sockets[i],&err);
-		if (sockets[i]>max_sock_fd)
-			max_sock_fd = sockets[i];
-	}
-	int sel = select(max_sock_fd+1, &bases, NULL, &err, &timeout);
+    struct timeval timeout;
+    timeout.tv_sec = usec/TINT_SEC;
+    timeout.tv_usec = usec%TINT_SEC;
+    int max_sock_fd = 0;
+    fd_set bases, err;
+    FD_ZERO(&bases);
+    FD_ZERO(&err);
+    for(int i=0; i<sockcnt; i++) {
+        FD_SET(sockets[i],&bases);
+        FD_SET(sockets[i],&err);
+        if (sockets[i]>max_sock_fd)
+            max_sock_fd = sockets[i];
+    }
+    int sel = select(max_sock_fd+1, &bases, NULL, &err, &timeout);
     Time();
-	if (sel>0) {
-		for (int i=0; i<=sockcnt; i++)
-			if (FD_ISSET(sockets[i],&bases))
-				return sockets[i];
-	} else if (sel<0) {
-		print_error("select fails");
+    if (sel>0) {
+        for (int i=0; i<=sockcnt; i++)
+            if (FD_ISSET(sockets[i],&bases))
+                return sockets[i];
+    } else if (sel<0) {
+        print_error("select fails");
     }
     return INVALID_SOCKET;
 }
 
 tint Datagram::Time () {
-	//HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
-	//tint ret = tod->getTimeUSec();
-	//DLOG(INFO)<<"now is "<<ret;
-	return now = usec_time();
+    //HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
+    //tint ret = tod->getTimeUSec();
+    //DLOG(INFO)<<"now is "<<ret;
+    return now = usec_time();
 }
 
 SOCKET Datagram::Bind (Address addr_) {
     struct sockaddr_in addr = addr_;
-	SOCKET fd;
-	int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
-	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		print_error("socket() fails");
+    SOCKET fd;
+    int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        print_error("socket() fails");
         return INVALID_SOCKET;
     }
 #ifdef _WIN32
-	u_long enable = 1;
-	ioctlsocket(fd, FIONBIO, &enable);
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&sndbuf, sizeof(int)) != 0 ) {
+    u_long enable = 1;
+    ioctlsocket(fd, FIONBIO, &enable);
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&sndbuf, sizeof(int)) != 0 ) {
         print_error("setsockopt fails");
         return INVALID_SOCKET;
     }
-   	if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&rcvbuf, sizeof(int)) != 0 ) {
+       if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&rcvbuf, sizeof(int)) != 0 ) {
         print_error("setsockopt2 fails");
         return INVALID_SOCKET;
     }
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&enable, sizeof(int));
 #else
     int enable=1;
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-		return INVALID_SOCKET;
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int)) < 0 ) {
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+        return INVALID_SOCKET;
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int)) < 0 ) {
         print_error("setsockopt fails");
         return INVALID_SOCKET;
     }
-   	if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(int)) < 0 ) {
+       if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(int)) < 0 ) {
         print_error("setsockopt2 fails");
         return INVALID_SOCKET;
     }
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 #endif
     dprintf("socket buffers: %i send %i recv\n",sndbuf,rcvbuf);
-	if (::bind(fd, (sockaddr*)&addr, len) != 0) {
+    if (::bind(fd, (sockaddr*)&addr, len) != 0) {
         print_error("bind fails");
         return INVALID_SOCKET;
     }
-	return fd;
+    return fd;
 }
 
 void Datagram::Close (int sock) { // remove from fd_set
 #ifdef _WIN32
-	if (closesocket(sock)!=0)
+    if (closesocket(sock)!=0)
 #else
-	if (::close(sock)!=0)
+    if (::close(sock)!=0)
 #endif
-		print_error("on closing a socket");
+        print_error("on closing a socket");
 }
 
 
 std::string sock2str (struct sockaddr_in addr) {
-	char ipch[32];
+    char ipch[32];
 #ifdef _WIN32
-	//Vista only: InetNtop(AF_INET,&(addr.sin_addr),ipch,32);
-	// IPv4 only:
-	struct in_addr inaddr;
-	memcpy(&inaddr, &(addr.sin_addr), sizeof(inaddr));
-	strncpy(ipch, inet_ntoa(inaddr),32);
+    //Vista only: InetNtop(AF_INET,&(addr.sin_addr),ipch,32);
+    // IPv4 only:
+    struct in_addr inaddr;
+    memcpy(&inaddr, &(addr.sin_addr), sizeof(inaddr));
+    strncpy(ipch, inet_ntoa(inaddr),32);
 #else
-	inet_ntop(AF_INET,&(addr.sin_addr),ipch,32);
+    inet_ntop(AF_INET,&(addr.sin_addr),ipch,32);
 #endif
-	sprintf(ipch+strlen(ipch),":%i",ntohs(addr.sin_port));
-	return std::string(ipch);
+    sprintf(ipch+strlen(ipch),":%i",ntohs(addr.sin_port));
+    return std::string(ipch);
 }
 
 /*
 std::string Datagram::to_string () const { // TODO: pretty-print P2TP
-	std::string addrs = sock2str(addr);
-	char hex[MAXDGRAMSZ*2];
-	for(int i=offset; i<length; i++)
-		sprintf(hex+i*2,"%02x",buf[i]);
-	std::string hexs(hex+offset*2,(length-offset)*2);
-	return addrs + '\t' + hexs;
+    std::string addrs = sock2str(addr);
+    char hex[MAXDGRAMSZ*2];
+    for(int i=offset; i<length; i++)
+        sprintf(hex+i*2,"%02x",buf[i]);
+    std::string hexs(hex+offset*2,(length-offset)*2);
+    return addrs + '\t' + hexs;
 }*/
 
 }

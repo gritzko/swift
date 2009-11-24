@@ -26,9 +26,9 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
-#define open(a,b,c)	_open(a,b,c)
+#define open(a,b,c)    _open(a,b,c)
 #define S_IRUSR _S_IREAD
-#define S_IWUSR	_S_IWRITE
+#define S_IWUSR    _S_IWRITE
 #define S_IRGRP _S_IREAD
 #define S_IROTH _S_IREAD
 #endif

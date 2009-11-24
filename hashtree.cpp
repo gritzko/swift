@@ -16,9 +16,9 @@
 #include "compat.h"
 
 #ifdef _WIN32
-#define OPENFLAGS 		O_RDWR|O_CREAT|_O_BINARY
+#define OPENFLAGS         O_RDWR|O_CREAT|_O_BINARY
 #else
-#define OPENFLAGS 		O_RDWR|O_CREAT
+#define OPENFLAGS         O_RDWR|O_CREAT
 #endif
 
 
@@ -36,24 +36,24 @@ void SHA1 (const void *data, size_t length, unsigned char *hash) {
 }
 
 Sha1Hash::Sha1Hash(const Sha1Hash& left, const Sha1Hash& right) {
-	char data[HASHSZ*2];
-	memcpy(data,left.bits,SIZE);
-	memcpy(data+SIZE,right.bits,SIZE);
-	SHA1((unsigned char*)data,SIZE*2,bits);
+    char data[HASHSZ*2];
+    memcpy(data,left.bits,SIZE);
+    memcpy(data+SIZE,right.bits,SIZE);
+    SHA1((unsigned char*)data,SIZE*2,bits);
 }
 
 Sha1Hash::Sha1Hash(const char* data, size_t length) {
     if (length==-1)
         length = strlen(data);
-	SHA1((unsigned char*)data,length,bits);
+    SHA1((unsigned char*)data,length,bits);
 }
 
 Sha1Hash::Sha1Hash(const uint8_t* data, size_t length) {
-	SHA1(data,length,bits);
+    SHA1(data,length,bits);
 }
 
 Sha1Hash::Sha1Hash(bool hex, const char* hash) {
-	if (hex) {
+    if (hex) {
         char hx[3]; hx[2]=0;
         int val;
         for(int i=0; i<SIZE; i++) {
@@ -66,11 +66,11 @@ Sha1Hash::Sha1Hash(bool hex, const char* hash) {
         memcpy(bits,hash,SIZE);
 }
 
-std::string	Sha1Hash::hex() const {
-	char hex[HASHSZ*2+1];
-	for(int i=0; i<HASHSZ; i++)
-		sprintf(hex+i*2, "%02x", (int)(unsigned char)bits[i]);
-	return std::string(hex,HASHSZ*2);
+std::string    Sha1Hash::hex() const {
+    char hex[HASHSZ*2+1];
+    for(int i=0; i<HASHSZ; i++)
+        sprintf(hex+i*2, "%02x", (int)(unsigned char)bits[i]);
+    return std::string(hex,HASHSZ*2);
 }
 
 
@@ -83,8 +83,8 @@ root_hash_(root_hash), fd_(0), hash_fd_(0), data_recheck_(true),
 peak_count_(0), hashes_(NULL), size_(0), sizek_(0),
 complete_(0), completek_(0)
 {
-	fd_ = open(filename,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-	if (fd_<0) {
+    fd_ = open(filename,OPENFLAGS,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    if (fd_<0) {
         fd_ = 0;
         print_error("cannot open the file");
         return;
@@ -112,7 +112,7 @@ complete_(0), completek_(0)
 
 void            HashTree::Submit () {
     size_ = file_size(fd_);
-	sizek_ = (size_ + 1023) >> 10;
+    sizek_ = (size_ + 1023) >> 10;
     peak_count_ = bin64_t::peaks(sizek_,peaks_);
     int hashes_size = Sha1Hash::SIZE*sizek_*2;
     file_resize(hash_fd_,hashes_size);
@@ -152,7 +152,7 @@ void            HashTree::Submit () {
  for some optimizations. */
 void            HashTree::RecoverProgress () {
     size_t size = file_size(fd_);
-	size_t sizek = (size + 1023) >> 10;
+    size_t sizek = (size + 1023) >> 10;
     bin64_t peaks[64];
     int peak_count = bin64_t::peaks(sizek,peaks);
     for(int i=0; i<peak_count; i++) {
@@ -213,7 +213,7 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
 
     size_ = sizek_<<10;
     completek_ = complete_ = 0;
-	sizek_ = (size_ + 1023) >> 10;
+    sizek_ = (size_ + 1023) >> 10;
 
     size_t cur_size = file_size(fd_);
     if ( cur_size<=(sizek_-1)<<10  || cur_size>sizek_<<10 )
@@ -242,23 +242,23 @@ bool            HashTree::OfferPeakHash (bin64_t pos, const Sha1Hash& hash) {
 
 
 Sha1Hash        HashTree::DeriveRoot () {
-	int c = peak_count_-1;
-	bin64_t p = peaks_[c];
-	Sha1Hash hash = peak_hashes_[c];
-	c--;
-	while (p!=bin64_t::ALL) {
-		if (p.is_left()) {
-			p = p.parent();
-			hash = Sha1Hash(hash,Sha1Hash::ZERO);
-		} else {
-			if (c<0 || peaks_[c]!=p.sibling())
-				return Sha1Hash::ZERO;
-			hash = Sha1Hash(peak_hashes_[c],hash);
-			p = p.parent();
-			c--;
-		}
+    int c = peak_count_-1;
+    bin64_t p = peaks_[c];
+    Sha1Hash hash = peak_hashes_[c];
+    c--;
+    while (p!=bin64_t::ALL) {
+        if (p.is_left()) {
+            p = p.parent();
+            hash = Sha1Hash(hash,Sha1Hash::ZERO);
+        } else {
+            if (c<0 || peaks_[c]!=p.sibling())
+                return Sha1Hash::ZERO;
+            hash = Sha1Hash(peak_hashes_[c],hash);
+            p = p.parent();
+            c--;
+        }
         //dprintf("p %lli %s\n",(uint64_t)p,hash.hex().c_str());
-	}
+    }
     return hash;
 }
 
@@ -279,8 +279,8 @@ bin64_t         HashTree::peak_for (bin64_t pos) const {
 
 
 bool            HashTree::OfferHash (bin64_t pos, const Sha1Hash& hash) {
-	if (!size_)  // only peak hashes are accepted at this point
-		return OfferPeakHash(pos,hash);
+    if (!size_)  // only peak hashes are accepted at this point
+        return OfferPeakHash(pos,hash);
     bin64_t peak = peak_for(pos);
     if (peak==bin64_t::NONE)
         return false;
@@ -288,7 +288,7 @@ bool            HashTree::OfferHash (bin64_t pos, const Sha1Hash& hash) {
         return hash == hashes_[pos];
     if (ack_out_.get(pos.parent())!=bins::EMPTY)
         return hash==hashes_[pos]; // have this hash already, even accptd data
-	hashes_[pos] = hash;
+    hashes_[pos] = hash;
     if (!pos.is_base())
         return false; // who cares?
     bin64_t p = pos;

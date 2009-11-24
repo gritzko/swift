@@ -12,20 +12,20 @@ The P2TP protocol
 
 Messages
 
- HANDSHAKE	00, channelid
+ HANDSHAKE    00, channelid
  Communicates the channel id of the sender. The
  initial handshake packet also has the root hash
  (a HASH message).
 
- DATA		01, bin_32, buffer
+ DATA        01, bin_32, buffer
  1K of data.
 
- ACK		02, bin_32
+ ACK        02, bin_32
  ACKTS      08, bin_32, timestamp_32
  Confirms successfull delivery of data. Used for
  congestion control, as well.
 
- HINT		03, bin_32
+ HINT        03, bin_32
  Practical value of "hints" is to avoid overlap, mostly.
  Hints might be lost in the network or ignored.
  Peer might send out data without a hint.
@@ -34,13 +34,13 @@ Messages
  As peers cant pick randomly kilobyte here and there,
  they send out "long hints" for non-base bins.
 
- HASH		04, bin_32, sha1hash
+ HASH        04, bin_32, sha1hash
  SHA1 hash tree hashes for data verification. The
  connection to a fresh peer starts with bootstrapping
  him with peak hashes. Later, before sending out
  any data, a peer sends the necessary uncle hashes.
 
- PEX+/PEX-	05/06, ipv4 addr, port
+ PEX+/PEX-    05/06, ipv4 addr, port
  Peer exchange messages; reports all connected and
  disconected peers. Might has special meaning (as
  in the case with swarm supervisors).
@@ -81,7 +81,7 @@ namespace p2tp {
             { return !(*this==b); }
     };
 
-	typedef std::deque<tintbin> tbqueue;
+    typedef std::deque<tintbin> tbqueue;
     typedef std::deque<bin64_t> binqueue;
     typedef Address   Address;
 
@@ -105,32 +105,32 @@ namespace p2tp {
         }
     };
 
-	typedef enum {
-		P2TP_HANDSHAKE = 0,
-		P2TP_DATA = 1,
-		P2TP_ACK = 2,
-		P2TP_TS = 8,
-		P2TP_HINT = 3,
-		P2TP_HASH = 4,
-		P2TP_PEX_ADD = 5,
-		P2TP_PEX_RM = 6,
-		P2TP_MESSAGE_COUNT = 7
-	} messageid_t;
+    typedef enum {
+        P2TP_HANDSHAKE = 0,
+        P2TP_DATA = 1,
+        P2TP_ACK = 2,
+        P2TP_TS = 8,
+        P2TP_HINT = 3,
+        P2TP_HASH = 4,
+        P2TP_PEX_ADD = 5,
+        P2TP_PEX_RM = 6,
+        P2TP_MESSAGE_COUNT = 7
+    } messageid_t;
 
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
 
 
-	class	FileTransfer {
+    class    FileTransfer {
 
     public:
 
-		/**	Open/submit/retrieve a file.	*/
+        /**    Open/submit/retrieve a file.    */
         FileTransfer(const char *file_name, const Sha1Hash& _root_hash=Sha1Hash::ZERO);
 
-		/**	Close everything. */
-		~FileTransfer();
+        /**    Close everything. */
+        ~FileTransfer();
 
 
         /** While we need to feed ACKs to every peer, we try (1) avoid
@@ -141,7 +141,7 @@ namespace p2tp {
         int             RevealChannel (int& i);
 
         static FileTransfer* Find (const Sha1Hash& hash);
-		static FileTransfer* file (int fd) {
+        static FileTransfer* file (int fd) {
             return fd<files.size() ? files[fd] : NULL;
         }
 
@@ -154,7 +154,7 @@ namespace p2tp {
 
     private:
 
-		static std::vector<FileTransfer*> files;
+        static std::vector<FileTransfer*> files;
 
         HashTree        file_;
 
@@ -175,14 +175,14 @@ namespace p2tp {
         void            OnDataIn (bin64_t pos);
         void            OnPexIn (const Address& addr);
 
-		friend class Channel;
+        friend class Channel;
         friend uint64_t  Size (int fdes);
         friend bool      IsComplete (int fdes);
         friend uint64_t  Complete (int fdes);
         friend uint64_t  SeqComplete (int fdes);
         friend int     Open (const char* filename, const Sha1Hash& hash) ;
         friend void    Close (int fd) ;
-	};
+    };
 
 
 #include "ext/send_control.h"
@@ -210,38 +210,38 @@ namespace p2tp {
     };
 
 
-	/**	P2TP channel's "control block"; channels loosely correspond to TCP
+    /**    P2TP channel's "control block"; channels loosely correspond to TCP
         connections or FTP sessions; one channel is created for one file
         being transferred between two peers. As we don't need buffers and
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
         (There was a seductive idea to remove channels, just put the root
         hash or a fragment of it into every datagram.) */
-	struct Channel {  // normally, API users do not deal with the structure
+    struct Channel {  // normally, API users do not deal with the structure
 
-		Channel	(FileTransfer* file, int socket=-1, Address peer=Address());
-		~Channel();
+        Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
+        ~Channel();
 
-		static void	RecvDatagram (int socket);
+        static void    RecvDatagram (int socket);
         static void Loop (tint till);
 
-		void		Recv (Datagram& dgram);
-		void		Send ();
+        void        Recv (Datagram& dgram);
+        void        Send ();
 
-		void		OnAck (Datagram& dgram);
-		void		OnTs (Datagram& dgram);
-		bin64_t		OnData (Datagram& dgram);
-		void		OnHint (Datagram& dgram);
-		void		OnHash (Datagram& dgram);
-		void		OnPex (Datagram& dgram);
-		void		OnHandshake (Datagram& dgram);
-		void		AddHandshake (Datagram& dgram);
-		bin64_t		AddData (Datagram& dgram);
-		void		AddAck (Datagram& dgram);
-		void		AddTs (Datagram& dgram);
-		void		AddHint (Datagram& dgram);
-		void		AddUncleHashes (Datagram& dgram, bin64_t pos);
-		void		AddPeakHashes (Datagram& dgram);
-		void		AddPex (Datagram& dgram);
+        void        OnAck (Datagram& dgram);
+        void        OnTs (Datagram& dgram);
+        bin64_t        OnData (Datagram& dgram);
+        void        OnHint (Datagram& dgram);
+        void        OnHash (Datagram& dgram);
+        void        OnPex (Datagram& dgram);
+        void        OnHandshake (Datagram& dgram);
+        void        AddHandshake (Datagram& dgram);
+        bin64_t        AddData (Datagram& dgram);
+        void        AddAck (Datagram& dgram);
+        void        AddTs (Datagram& dgram);
+        void        AddHint (Datagram& dgram);
+        void        AddUncleHashes (Datagram& dgram, bin64_t pos);
+        void        AddPeakHashes (Datagram& dgram);
+        void        AddPex (Datagram& dgram);
 
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
@@ -250,45 +250,45 @@ namespace p2tp {
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
 
-		static int DecodeID(int scrambled);
-		static int EncodeID(int unscrambled);
-		static Channel* channel(int i) {
+        static int DecodeID(int scrambled);
+        static int EncodeID(int unscrambled);
+        static Channel* channel(int i) {
             return i<channels.size()?channels[i]:NULL;
         }
 
 
-		/** Channel id: index in the channel array. */
-		uint32_t	id;
-		/**	Socket address of the peer. */
-        Address	peer_;
-		/**	The UDP socket fd. */
-		int			socket_;
-		/**	Descriptor of the file in question. */
-		FileTransfer*	transfer_;
-		/**	Peer channel id; zero if we are trying to open a channel. */
-		uint32_t	peer_channel_id_;
+        /** Channel id: index in the channel array. */
+        uint32_t    id;
+        /**    Socket address of the peer. */
+        Address    peer_;
+        /**    The UDP socket fd. */
+        int            socket_;
+        /**    Descriptor of the file in question. */
+        FileTransfer*    transfer_;
+        /**    Peer channel id; zero if we are trying to open a channel. */
+        uint32_t    peer_channel_id_;
         bool        own_id_mentioned_;
-		/**	Peer's progress, based on acknowledgements. */
-		bins		ack_in_;
-		/**	Last data received; needs to be acked immediately. */
-		tintbin		data_in_;
+        /**    Peer's progress, based on acknowledgements. */
+        bins        ack_in_;
+        /**    Last data received; needs to be acked immediately. */
+        tintbin        data_in_;
         bin64_t     data_in_dbl_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;
         bin64_t     data_out_cap_;
         /** Index in the history array. */
-		bins        ack_out_;
-		/**	Transmit schedule: in most cases filled with the peer's hints */
-		tbqueue     hint_in_;
-		/** Hints sent (to detect and reschedule ignored hints). */
+        bins        ack_out_;
+        /**    Transmit schedule: in most cases filled with the peer's hints */
+        tbqueue     hint_in_;
+        /** Hints sent (to detect and reschedule ignored hints). */
         tbqueue     hint_out_;
         uint64_t    hint_out_size_;
-		/** The congestion control strategy. */
-		SendController	*cc_;
+        /** The congestion control strategy. */
+        SendController    *cc_;
         /** Types of messages the peer accepts. */
         uint64_t    cap_in_;
         /** For repeats. */
-		//tint		last_send_time, last_recv_time;
+        //tint        last_send_time, last_recv_time;
         /** PEX progress */
         int         pex_out_;
         /** Smoothed averages for RTT, RTT deviation and data interarrival periods. */
@@ -305,7 +305,7 @@ namespace p2tp {
             return TINT_SEC / dip_avg_ * 1024;
         }
         /** Get a request for one packet from the queue of peer's requests. */
-        bin64_t		DequeueHint();
+        bin64_t        DequeueHint();
         void        CleanDataOut (bin64_t acks_pos=bin64_t::NONE);
         void        CleanStaleHintOut();
         void        CleanHintOut(bin64_t pos);
@@ -313,14 +313,14 @@ namespace p2tp {
 
         static PeerSelector* peer_selector;
 
-		static int      MAX_REORDERING;
-		static tint     TIMEOUT;
+        static int      MAX_REORDERING;
+        static tint     TIMEOUT;
         static SOCKET   sockets[8];
         static int      socket_count;
-		static tint     last_tick;
+        static tint     last_tick;
 
         static Address  tracker;
-		static std::vector<Channel*> channels;
+        static std::vector<Channel*> channels;
 
         friend int      Listen (Address addr);
         friend void     Shutdown (int sock_des);
@@ -330,7 +330,7 @@ namespace p2tp {
 
         friend class FileTransfer; // FIXME!!!
         friend class SendController; // FIXME!!!
-	};
+    };
 
 
 
@@ -348,7 +348,7 @@ namespace p2tp {
     /** Get the root hash for the transmission. */
     const Sha1Hash& RootMerkleHash (int file) ;
     /** Close a file and a transmission. */
-    void	Close (int fd) ;
+    void    Close (int fd) ;
     /** Add a possible peer which participares in a given transmission. In the case
         root hash is zero, the peer might be talked to regarding any transmission
         (likely, a tracker, cache or an archive). */
@@ -368,11 +368,11 @@ namespace p2tp {
     uint64_t  SeqComplete (int fdes);
 
 
-	//uint32_t Width (const tbinvec& v);
+    //uint32_t Width (const tbinvec& v);
 
 
-	/** Must be called by any client using the library */
-	void LibraryInit(void);
+    /** Must be called by any client using the library */
+    void LibraryInit(void);
 
 
 } // namespace end

@@ -13,7 +13,7 @@
 
 // make it work piece by piece
 
-const uint8_t	bins::SPLIT[16] = 
+const uint8_t    bins::SPLIT[16] = 
 {0, 3, 12, 15, 48, 51, 60, 63, 192, 195, 204, 207, 240, 243, 252, 255};
 const uint8_t    bins::JOIN[16] =
 {0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15};

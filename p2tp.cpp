@@ -37,8 +37,8 @@ tbheap Channel::send_queue;
 #include "ext/simple_selector.cpp"
 PeerSelector* Channel::peer_selector = new SimpleSelector();
 
-Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
-	transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
+Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
+    transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
     data_out_cap_(bin64_t::ALL), last_send_data_time_(0), last_recv_data_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
@@ -47,8 +47,8 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 {
     if (peer_==Address())
         peer_ = tracker;
-	this->id = channels.size();
-	channels.push_back(this);
+    this->id = channels.size();
+    channels.push_back(this);
     cc_ = new PingPongController(this);
     dprintf("%s #%i init %s\n",tintstr(),id,peer_.str());
     Schedule(NOW); // FIXME ugly
@@ -56,7 +56,7 @@ Channel::Channel	(FileTransfer* transfer, int socket, Address peer_addr) :
 
 
 Channel::~Channel () {
-	channels[id] = NULL;
+    channels[id] = NULL;
     delete cc_;
 }
 
@@ -67,10 +67,10 @@ void     p2tp::SetTracker(const Address& tracker) {
 
 
 int Channel::DecodeID(int scrambled) {
-	return scrambled ^ (int)Datagram::start;
+    return scrambled ^ (int)Datagram::start;
 }
 int Channel::EncodeID(int unscrambled) {
-	return unscrambled ^ (int)Datagram::start;
+    return unscrambled ^ (int)Datagram::start;
 }
 
 
@@ -117,7 +117,7 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
 }
 
 
-void	p2tp::Close (int fd) {
+void    p2tp::Close (int fd) {
     // FIXME delete all channels
     if (fd>FileTransfer::files.size() && FileTransfer::files[fd])
         delete FileTransfer::files[fd];
@@ -169,14 +169,14 @@ const Sha1Hash& p2tp::RootMerkleHash (int file) {
 }
 
 
-/**	<h2> P2TP handshake </h2>
+/**    <h2> P2TP handshake </h2>
  Basic rules:
  <ul>
- <li>	to send a datagram, a channel must be created
+ <li>    to send a datagram, a channel must be created
  (channels are cheap and easily recycled)
- <li>	a datagram must contain either the receiving
+ <li>    a datagram must contain either the receiving
  channel id (scrambled) or the root hash
- <li>	initially, the control structure (p2tp_channel)
+ <li>    initially, the control structure (p2tp_channel)
  is mostly zeroed; intialization happens as
  conversation progresses
  </ul>

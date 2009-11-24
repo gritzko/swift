@@ -37,7 +37,7 @@ int     file_seek (int fd, size_t offset) {
 #ifndef _WIN32
     return lseek(fd,offset,SEEK_SET);
 #else
-	return _lseek(fd,offset,SEEK_SET);
+    return _lseek(fd,offset,SEEK_SET);
 #endif
 }
 
@@ -76,7 +76,7 @@ void*   memory_map (int fd, size_t size) {
                                        0,
                                        0,
                                        NULL    );
-	if (maphandle == NULL)
+    if (maphandle == NULL)
         return NULL;
     map_handles[fd] = maphandle;
 
@@ -95,8 +95,8 @@ void    memory_unmap (int fd, void* mapping, size_t size) {
     munmap(mapping,size);
     close(fd);
 #else
-	UnmapViewOfFile(mapping);
-	CloseHandle(map_handles[fd]);
+    UnmapViewOfFile(mapping);
+    CloseHandle(map_handles[fd]);
 #endif
 }
 
@@ -123,8 +123,8 @@ int inet_aton(const char *cp, struct in_addr *inp)
 
 tint usec_time(void)
 {
-	HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
-	return tod->getTimeUSec();
+    HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
+    return tod->getTimeUSec();
 }
 
 
@@ -133,12 +133,12 @@ tint usec_time(void)
 tint usec_time(void)
 {
     struct timeval t;
-	gettimeofday(&t,NULL);
-	tint ret;
-	ret = t.tv_sec;
-	ret *= 1000000;
-	ret += t.tv_usec;
-	return ret;
+    gettimeofday(&t,NULL);
+    tint ret;
+    ret = t.tv_sec;
+    ret *= 1000000;
+    ret += t.tv_usec;
+    return ret;
 }
 
 #endif
