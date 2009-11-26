@@ -33,7 +33,7 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
 
 void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
-    while (pos!=peak && ((NOW&7)==7 || !data_out_cap_.within(pos.parent())) &&
+    while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
             ack_in_.get(pos.parent())==bins::EMPTY) {
         bin64_t uncle = pos.sibling();
         dgram.Push8(P2TP_HASH);
@@ -52,8 +52,8 @@ bin64_t        Channel::DequeueHint () { // TODO: resilience
         bin64_t hint = hint_in_.front().bin;
         tint time = hint_in_.front().time;
         hint_in_.pop_front();
-        if (time < NOW-TINT_SEC*3/2 ) //NOW-8*rtt_avg_)
-            continue;
+        //if (time < NOW-TINT_SEC*3/2 ) //NOW-8*rtt_avg_)
+        //    continue;
         // Totally flawed:
         // a. May empty the queue when you least expect
         // b. May lose parts of partially ACKd HINTs
@@ -170,7 +170,13 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         if (ack_in_.is_empty() && file().size())
             AddPeakHashes(dgram);
         AddUncleHashes(dgram,tosend);
-        data_out_cap_ = tosend;
+        if (!ack_in_.is_empty()) // TODO: cwnd_>1
+            data_out_cap_ = tosend;
+    }
+
+    if (dgram.size()>254) {
+        dgram.Send(); // kind of fragmentation
+        dgram.Push32(peer_channel_id_);
     }
     
     dgram.Push8(P2TP_DATA);
@@ -363,6 +369,8 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) {
         }
         data_out_.pop_front();
     }
+    while (!data_out_.empty() && data_out_.front().bin==bin64_t::NONE)
+        data_out_.pop_front();
 
 }
 

@@ -90,12 +90,12 @@ int Datagram::Send () {
                    (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
     if (r<0)
         perror("can't send");
-    //offset=0;
-    //length=0;
     dgrams_up++;
     bytes_up+=size();
-    Time();
-    return r;
+	offset=0;
+	length=0;
+	Time();
+	return r;
 }
 
 int Datagram::Recv () {
