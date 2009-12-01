@@ -65,6 +65,11 @@ bin64_t        Channel::DequeueHint () { // TODO: resilience
                 hint_in_.push_front(hint.sibling());
             }
     }
+    if (send==bin64_t::NONE) {
+        send = file().ack_out().find_filtered(ack_in_,bin64_t::ALL,bins::FILLED);
+        if (send!=bin64_t::NONE)
+            send = send.left_foot();
+    }
     uint64_t mass = 0;
     for(int i=0; i<hint_in_.size(); i++)
         mass += hint_in_[i].bin.width();
@@ -353,10 +358,10 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) {
             }
             while (max_ack_off>MAX_REORDERING) {
                 cc_->OnAckRcvd(bin64_t::NONE);
+                dprintf("%s #%i Rdata %s\n",tintstr(),id,data_out_.front().bin.str());
                 data_out_.pop_front();
                 max_ack_off--;
                 data_out_cap_ = bin64_t::ALL;
-                dprintf("%s #%i Rdata %s\n",tintstr(),id,data_out_.front().bin.str());
             }
         }
     }
