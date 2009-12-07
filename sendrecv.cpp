@@ -67,7 +67,7 @@ bin64_t        Channel::DequeueHint () { // TODO: resilience
     }
     if (send==bin64_t::NONE) {
         send = file().ack_out().find_filtered(ack_in_,bin64_t::ALL,bins::FILLED);
-        if (send!=bin64_t::NONE)
+        if (send!=bin64_t::NONE) // NEED FIXME: twist here!!!
             send = send.left_foot();
     }
     uint64_t mass = 0;
