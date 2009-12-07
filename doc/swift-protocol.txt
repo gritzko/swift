@@ -92,7 +92,7 @@ Table of Contents
    protocol must have light footprint, even less than TCP due to the
    necessity to support numerous ongoing connections as well as to
    constantly probe the network for new possibilities. The practical
-   overhead for TCP is estimated at 40KB per connection [HTTP1MLN]. We
+   overhead for TCP is estimated at 10KB per connection [HTTP1MLN]. We
    aim at 1KB per peer connected. Also, the amount of code necessary
    to make a basic implementation must be limited to 10KLoC of C.
    Otherwise, besides the resource considerations, maintaining and
@@ -478,7 +478,7 @@ Table of Contents
    
    To unify peer exchange and NAT hole punching functionality, the
    sending pattern of PEX messages is restricted. As swift handshake
-   is able to do simple NAT hole punching [SNHP] transparently, PEX
+   is able to do simple NAT hole punching [SNP] transparently, PEX
    messages must be emitted in the way to facilitate that. Namely,
    once peer A introduces peer B to peer C by sending a PEX message to
    C, it SHOULD also send a message to B introducing C. The messages
@@ -522,26 +522,45 @@ Table of Contents
 
 5. Security Considerations
 
-   * simplify as possible (e.g. no buffer overruns)
-   Still, resource, membership subverting [] for DDoS
-   Thus, implementation MUST at least rate-limit activity to untested
-   destinations. E.g. 4 attempts a second: million peers, 1Gb/sec,
-   amplification ratio 4.
+   simplify as possible (e.g. no buffer overruns) Still, resource,
+   membership subverting [] for DDoS Thus, implementation MUST at
+   least rate-limit activity to untested destinations. E.g. 4 attempts
+   a second: million peers, 1Gb/sec, amplification ratio 4.
 
 
-6. Pending issues
+6.6. Extensibility
 
+6.1.1. Different crypto/hashing schemes
+6.1.2. IPv6
+6.1.3. Congestion control algorithms
+6.1.4. Piece picking algorithms
+6.1.5. Reciprocity algorithms
+6.1.6. 32 bit vs 64 bit
 
-6.1. Extensibility
+References
 
-   avoid unnecessary generality
-
-6.1.2. 64-bit counters
-6.1.3. Different crypto/hashing schemes
-6.1.4. IPv6
-6.1.5. Congestion control algorithms
-
-7. Normative References
-
+[RFC2119] Key words for use in RFCs to Indicate Requirement Levels
+[HTTP1MLN] Richard Jones. "A Million-user Comet Application with
+    Mochiweb", Part 3. http://www.metabrew.com/article/
+    a-million-user-comet-application-with-mochiweb-part-3
+[MOLNAT] J.J.D. Mol, J.A. Pouwelse, D.H.J. Epema and H.J. Sips:
+    "Free-riding, Fairness, and Firewalls in P2P File-Sharing"
+    8-th IEEE International Conference on Peer-to-Peer Computing
+    2008, pp 301-310
+[LUCNAT] submitted
+[BINMAP] V. Grishchenko, J. Pouwelse: "Binmaps: hybridizing bitmaps
+    and binary trees" http://bouillon.math.usu.ru/articles/
+    binmaps-alenex.pdf
+[SNP] B. Ford, P. Srisuresh, D. Kegel: "Peer-to-Peer Communication
+    Across Network Address Translators", 
+    http://www.brynosaurus.com/pub/net/p2pnat/
+[MERKLE] Merkle, R. A Digital Signature Based on a Conventional
+    Encryption Function. Proceedings CRYPTO'87, Santa Barbara, CA,
+    USA, Aug 1987. pp 369-378.
+[CUBIC] Injong Rhee, and Lisong Xu: "CUBIC: A New TCP-Friendly
+    High-Speed TCP Variant", 
+    http://www4.ncsu.edu/~rhee/export/bitcp/cubic-paper.pdf
+[LEDBAT] S. Shalunov: "Low Extra Delay Background Transport (LEDBAT)"
+    http://www.ietf.org/id/draft-ietf-ledbat-congestion-00.txt
 
 Author's address
