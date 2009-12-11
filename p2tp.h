@@ -185,9 +185,7 @@ namespace p2tp {
     };
 
 
-#include "ext/send_control.h"
-
-
+    
     class PiecePicker {
     public:
         virtual void Randomize (uint64_t twist) = 0;
