@@ -34,7 +34,7 @@ public:
     }
     
     virtual bin64_t Pick (bins& offer, uint64_t max_width, tint expires) {
-        while (hint_out_.size() && hint_out_.front().time<NOW-TINT_SEC*3/2) {
+        while (hint_out_.size() && hint_out_.front().time<NOW-TINT_SEC*3/2) { // FIXME sec
             ack_hint_out_.copy_range(file().ack_out(), hint_out_.front().bin);
             hint_out_.pop_front();
         }

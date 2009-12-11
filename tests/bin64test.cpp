@@ -39,6 +39,8 @@ TEST(Bin64Test,Overflows) {
 
     EXPECT_FALSE(bin64_t(0,1).within(bin64_t::NONE));
     EXPECT_TRUE(bin64_t(0,1).within(bin64_t::ALL));
+    EXPECT_EQ(0,bin64_t::none().width());
+    EXPECT_EQ(bin64_t::none(),bin64_t::none().twisted(123));
     /*EXPECT_EQ(bin64_t::NONE.parent(),bin64_t::NONE);
     EXPECT_EQ(bin64_t::NONE.left(),bin64_t::NONE);
     EXPECT_EQ(bin64_t::NONE.right(),bin64_t::NONE);

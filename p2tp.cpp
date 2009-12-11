@@ -40,24 +40,30 @@ PeerSelector* Channel::peer_selector = new SimpleSelector();
 Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
     transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
     socket_(socket==-1?sockets[0]:socket), // FIXME
-    data_out_cap_(bin64_t::ALL), last_send_data_time_(0), last_recv_data_time_(0),
+    data_out_cap_(bin64_t::ALL), last_data_out_time_(0), last_data_in_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
     last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC),
-    data_in_dbl_(bin64_t::NONE), hint_out_size_(0)
+    data_in_dbl_(bin64_t::NONE), hint_out_size_(0),
+    cwnd_(1), send_interval_(TINT_SEC), send_control_(PING_PONG_CONTROL),
+    sent_since_recv_(0), ack_rcvd_recent_(0), ack_not_rcvd_recent_(0),
+    last_loss_time_(0), owd_min_bin_(0), owd_min_bin_start_(NOW), owd_cur_bin_(0)
 {
     if (peer_==Address())
         peer_ = tracker;
     this->id = channels.size();
     channels.push_back(this);
-    cc_ = new PingPongController(this);
-    dprintf("%s #%i init %s\n",tintstr(),id,peer_.str());
-    Schedule(NOW); // FIXME ugly
+    transfer_->hs_in_.push_back(id);
+    for(int i=0; i<4; i++) {
+        owd_min_bins_[i] = TINT_NEVER;
+        owd_current_[i] = TINT_NEVER;
+    }
+    Reschedule();
+    dprintf("%s #%u init %s\n",tintstr(),id,peer_.str());
 }
 
 
 Channel::~Channel () {
     channels[id] = NULL;
-    delete cc_;
 }
 
 

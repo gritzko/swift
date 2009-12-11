@@ -21,15 +21,15 @@
     v peers don't cooperate
     * RecoverProgress fails sometime
     v leecher can't see file is done already
-    * why leecher waits 1sec?
+    v why leecher waits 1sec?
     * hint queue buildup
     * file operations are not 64-bit ready
         http://mail.python.org/pipermail/patches/2000-June/000848.html
     * recovery: last packet
-    * no-HINT sending to a dead peer
+    v no-HINT sending to a dead peer
     * what if rtt>1sec
-    * unHINTed repeated sending
-    * 1259859412.out#8,9 connection breaks, #8 rtt 1000, #9 hint - 
+    v unHINTed repeated sending
+    v 1259859412.out#8,9 connection breaks, #8 rtt 1000, #9 hint - 
      mudachestvo, cwnd => send int 0.5sec
      0_11_10_075_698 #9 sendctrl may send 0 < 0.000000 & 1732919509_-49_-45_-200_-111 (rtt 59661)
      0_11_10_075_698 #9 +data (0,194)
@@ -37,3 +37,8 @@
      0_11_10_575_703 #9 Tdata (0,194)
      0_11_10_575_703 #9 sendctrl may send 0 < 0.000000 & 1732919509_-49_-44_-700_-110 (rtt 59661)
     * complete peer reconnects 1259967418.out.gz
+    * underhinting causes repetition causes interarr underest causes underhinting
+    * misterious initiating handshake bursts
+    v whether sending is limited by cwnd or app
+    * actually: whether packets are ACKed faster than sent
+    * uproot DATA NONE: complicates and deceives

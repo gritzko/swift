@@ -220,8 +220,17 @@ namespace p2tp {
 
         Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
         ~Channel();
+        
+        typedef enum {
+            KEEP_ALIVE_CONTROL,
+            PING_PONG_CONTROL,
+            SLOW_START_CONTROL,
+            AIMD_CONTROL,
+            LEDBAT_CONTROL
+        } send_control_t;
 
-        static void    RecvDatagram (int socket);
+        static Channel*
+                    RecvDatagram (int socket);
         static void Loop (tint till);
 
         void        Recv (Datagram& dgram);
@@ -229,13 +238,13 @@ namespace p2tp {
 
         void        OnAck (Datagram& dgram);
         void        OnTs (Datagram& dgram);
-        bin64_t        OnData (Datagram& dgram);
+        bin64_t     OnData (Datagram& dgram);
         void        OnHint (Datagram& dgram);
         void        OnHash (Datagram& dgram);
         void        OnPex (Datagram& dgram);
         void        OnHandshake (Datagram& dgram);
         void        AddHandshake (Datagram& dgram);
-        bin64_t        AddData (Datagram& dgram);
+        bin64_t     AddData (Datagram& dgram);
         void        AddAck (Datagram& dgram);
         void        AddTs (Datagram& dgram);
         void        AddHint (Datagram& dgram);
@@ -243,13 +252,34 @@ namespace p2tp {
         void        AddPeakHashes (Datagram& dgram);
         void        AddPex (Datagram& dgram);
 
+        void        BackOffOnLosses ();
+        tint        SwitchSendControl (int control_mode);
+        tint        NextSendTime ();
+        tint        KeepAliveNextSendTime ();
+        tint        PingPongNextSendTime ();
+        tint        CwndRateNextSendTime ();
+        tint        SlowStartNextSendTime ();
+        tint        AimdNextSendTime ();
+        tint        LedbatNextSendTime ();
+        
+        static int  MAX_REORDERING;
+        static tint TIMEOUT;
+        static tint MIN_DEV;
+        static tint MAX_SEND_INTERVAL;
+        static tint LEDBAT_TARGET;
+        static float LEDBAT_GAIN;
+        static tint LEDBAT_DELAY_BIN;
+        
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
         bool        is_established () { return peer_channel_id_ && own_id_mentioned_; }
         FileTransfer& transfer() { return *transfer_; }
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
-
+        tint ack_timeout () {
+            return rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4;
+        }
+        
         static int DecodeID(int scrambled);
         static int EncodeID(int unscrambled);
         static Channel* channel(int i) {
@@ -283,8 +313,6 @@ namespace p2tp {
         /** Hints sent (to detect and reschedule ignored hints). */
         tbqueue     hint_out_;
         uint64_t    hint_out_size_;
-        /** The congestion control strategy. */
-        SendController    *cc_;
         /** Types of messages the peer accepts. */
         uint64_t    cap_in_;
         /** For repeats. */
@@ -295,29 +323,46 @@ namespace p2tp {
         tint        rtt_avg_, dev_avg_, dip_avg_;
         tint        last_send_time_;
         tint        last_recv_time_;
-        tint        last_send_data_time_;
-        tint        last_recv_data_time_;
+        tint        last_data_out_time_;
+        tint        last_data_in_time_;
+        tint        last_loss_time_;
         tint        next_send_time_;
         tint        peer_send_time_;
-        static      tbheap send_queue;
+        /** Congestion window; TODO: int, bytes. */
+        float       cwnd_;
+        /** Data sending interval. */
+        tint        send_interval_;
+        /** The congestion control strategy. */
+        int         send_control_;
+        /** Datagrams (not data) sent since last recv.    */
+        int         sent_since_recv_;
+        /** Recent acknowlegements for data previously sent.    */
+        int         ack_rcvd_recent_;
+        /** Recent non-acknowlegements (losses) of data previously sent.    */
+        int         ack_not_rcvd_recent_;
+        /** LEDBAT one-way delay machinery */
+        tint        owd_min_bins_[4];
+        int         owd_min_bin_;
+        tint        owd_min_bin_start_;
+        tint        owd_current_[4];
+        int         owd_cur_bin_;
 
         int         PeerBPS() const {
             return TINT_SEC / dip_avg_ * 1024;
         }
         /** Get a request for one packet from the queue of peer's requests. */
-        bin64_t        DequeueHint();
+        bin64_t     DequeueHint();
         void        CleanDataOut (bin64_t acks_pos=bin64_t::NONE);
         void        CleanStaleHintOut();
         void        CleanHintOut(bin64_t pos);
-        void        Schedule(tint send_time);
+        void        Reschedule();
 
         static PeerSelector* peer_selector;
 
-        static int      MAX_REORDERING;
-        static tint     TIMEOUT;
         static SOCKET   sockets[8];
         static int      socket_count;
         static tint     last_tick;
+        static tbheap   send_queue;        
 
         static Address  tracker;
         static std::vector<Channel*> channels;

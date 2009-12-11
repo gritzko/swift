@@ -54,7 +54,7 @@ void print_error(const char* msg) {
 #ifdef _WIN32
     int e = WSAGetLastError();
     if (e)
-        fprintf(stderr,"network error #%i\n",e);
+        fprintf(stderr,"network error #%u\n",e);
 #endif
 }
 

@@ -74,15 +74,18 @@ void            FileTransfer::OnPexIn (const Address& addr) {
 }
 
 
-int        FileTransfer::RevealChannel (int& pex_out_) {
+int        FileTransfer::RevealChannel (int& pex_out_) { // FIXME brainfuck
     pex_out_ -= hs_in_offset_;
     if (pex_out_<0)
         pex_out_ = 0;
     while (pex_out_<hs_in_.size()) {
         Channel* c = Channel::channels[hs_in_[pex_out_]];
         if (c && c->transfer().fd()==this->fd()) {
-            pex_out_ += hs_in_offset_ + 1;
-            return c->id;
+            if (c->own_id_mentioned_) {
+                pex_out_ += hs_in_offset_ + 1;
+                return c->id;
+            } else
+                pex_out_++;
         } else {
             hs_in_[pex_out_] = hs_in_[0];
             hs_in_.pop_front();

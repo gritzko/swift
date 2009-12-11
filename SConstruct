@@ -21,7 +21,7 @@ TestDir='tests'
 
 target = 'p2tp'
 source = [ 'bin64.cpp','sha1.cpp','hashtree.cpp','datagram.cpp','bins.cpp',
-    'transfer.cpp', 'p2tp.cpp', 'sendrecv.cpp', 'ext/send_control.cpp',
+    'transfer.cpp', 'p2tp.cpp', 'sendrecv.cpp', 'send_control.cpp',
     'compat/hirestimeofday.cpp', 'compat.cpp', 'compat/util.cpp']
 
 env = Environment()
