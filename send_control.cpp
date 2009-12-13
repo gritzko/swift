@@ -87,6 +87,7 @@ tint    Channel::PingPongNextSendTime () {
 tint    Channel::CwndRateNextSendTime () {
     send_interval_ = rtt_avg_/cwnd_;
     if (data_out_.size()<cwnd_) {
+	dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id,send_interval_);
         return last_data_out_time_ + send_interval_;
     } else {
         tint next_timeout = data_out_.front().time + ack_timeout();
@@ -100,6 +101,7 @@ void    Channel::BackOffOnLosses () {
     if (last_loss_time_<NOW-rtt_avg_) {
         cwnd_ /= 2;
         last_loss_time_ = NOW;
+	dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id,cwnd_);
     }
 }
 
@@ -108,6 +110,8 @@ tint    Channel::SlowStartNextSendTime () {
         BackOffOnLosses();
         return SwitchSendControl(AIMD_CONTROL);
     } 
+    if (send_interval_<TINT_SEC/10)
+        return SwitchSendControl(AIMD_CONTROL);
     cwnd_+=ack_rcvd_recent_;
     ack_rcvd_recent_=0;
     return CwndRateNextSendTime();
