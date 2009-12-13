@@ -226,6 +226,8 @@ namespace p2tp {
             AIMD_CONTROL,
             LEDBAT_CONTROL
         } send_control_t;
+        
+        static const char* SEND_CONTROL_MODES[];
 
         static Channel*
                     RecvDatagram (int socket);
@@ -288,9 +290,9 @@ namespace p2tp {
         /** Channel id: index in the channel array. */
         uint32_t    id;
         /**    Socket address of the peer. */
-        Address    peer_;
+        Address     peer_;
         /**    The UDP socket fd. */
-        int            socket_;
+        int         socket_;
         /**    Descriptor of the file in question. */
         FileTransfer*    transfer_;
         /**    Peer channel id; zero if we are trying to open a channel. */
@@ -299,7 +301,7 @@ namespace p2tp {
         /**    Peer's progress, based on acknowledgements. */
         bins        ack_in_;
         /**    Last data received; needs to be acked immediately. */
-        tintbin        data_in_;
+        tintbin     data_in_;
         bin64_t     data_in_dbl_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;

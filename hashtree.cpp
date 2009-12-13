@@ -315,8 +315,11 @@ bool            HashTree::OfferData (bin64_t pos, const char* data, size_t lengt
     if (peak==bin64_t::NONE)
         return false;
 
-    if (!OfferHash(pos, Sha1Hash(data,length)))
+    Sha1Hash data_hash(data,length);
+    if (!OfferHash(pos, data_hash)) {
+        printf("invalid hash for %s: %s\n",pos.str(),data_hash.hex().c_str());
         return false;
+    }
 
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
     ack_out_.set(pos,bins::FILLED);

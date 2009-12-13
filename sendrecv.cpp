@@ -97,7 +97,7 @@ void    Channel::AddHandshake (Datagram& dgram) {
     dgram.Push8(P2TP_HANDSHAKE);
     int encoded = EncodeID(id);
     dgram.Push32(encoded);
-    dprintf("%s #%u +hs %i\n",tintstr(),id,encoded);
+    dprintf("%s #%u +hs %x\n",tintstr(),id,encoded);
     ack_out_.clear();
     AddAck(dgram);
 }
@@ -119,14 +119,18 @@ void    Channel::Send () {
         AddHandshake(dgram);
         AddAck(dgram);
     }
-    dprintf("%s #%u sent %ib %s:%u\n",
+    dprintf("%s #%u sent %ib %s:%x\n",
             tintstr(),id,dgram.size(),peer().str(),peer_channel_id_);
     if (dgram.size()==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
-        if (send_control_!=KEEP_ALIVE_CONTROL) // we did our best
-            SwitchSendControl(KEEP_ALIVE_CONTROL);
-        if (NOW<last_send_time_+MAX_SEND_INTERVAL) // no need for keepalive
-            return; // don't send empty dgram
+        if (send_control_!=KEEP_ALIVE_CONTROL) {
+            if ( (cwnd_/=2) < 1 )
+                SwitchSendControl(KEEP_ALIVE_CONTROL);
+        }
+        //if (data_out_.empty() && send_control_!=KEEP_ALIVE_CONTROL)
+        //     SwitchSendControl(KEEP_ALIVE_CONTROL);// we did our best
+        //if (NOW<last_send_time_+MAX_SEND_INTERVAL) // no need for keepalive
+        //    return; // don't send empty dgram
     }
     if (dgram.Send()==-1)
         print_error("can't send datagram");
@@ -402,7 +406,7 @@ void    Channel::OnAck (Datagram& dgram) {
     }
     dprintf("%s #%u -ack %s\n",tintstr(),id,ackd_pos.str());
     ack_in_.set(ackd_pos);
-    CleanDataOut(ackd_pos);
+    CleanDataOut(ackd_pos); // FIXME do AFTER all ACKs
 }
 
 
@@ -423,7 +427,7 @@ void    Channel::OnHint (Datagram& dgram) {
 
 void Channel::OnHandshake (Datagram& dgram) {
     peer_channel_id_ = dgram.Pull32();
-    dprintf("%s #%u -hs %i\n",tintstr(),id,peer_channel_id_);
+    dprintf("%s #%u -hs %x\n",tintstr(),id,peer_channel_id_);
     // FUTURE: channel forking
 }
 
@@ -504,15 +508,15 @@ void    Channel::Loop (tint howlong) {
         tint send_time(TINT_NEVER);
         Channel* sender(NULL);
         while (!sender && !send_queue.is_empty()) { // dequeue
-            send_time = send_queue.peek().time;
-            sender = channel((int)send_queue.peek().bin);
-            send_queue.pop();
+            tintbin next = send_queue.pop();
+            send_time = next.time;
+            sender = channel((int)next.bin);
             if (sender && sender->next_send_time_!=send_time &&
                      sender->next_send_time_!=TINT_NEVER )
                 sender = NULL; // it was a stale entry
         }
         
-        if ( sender && send_time <= NOW ) { // it's time
+        if ( sender!=NULL && send_time<=NOW ) { // it's time
             
             if (sender->next_send_time_<NOW+TINT_MIN) {  // either send
                 dprintf("%s #%u sch_send %s\n",tintstr(),sender->id,
@@ -539,7 +543,7 @@ void    Channel::Loop (tint howlong) {
             
         }
         
-    } while (Datagram::Time()<limit);
+    } while (NOW<limit);
             
 }
 

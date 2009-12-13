@@ -17,6 +17,8 @@ tint Channel::MAX_SEND_INTERVAL = TINT_SEC*58;
 tint Channel::LEDBAT_TARGET = TINT_MSEC*25;
 float Channel::LEDBAT_GAIN = 1.0/LEDBAT_TARGET;
 tint Channel::LEDBAT_DELAY_BIN = TINT_SEC*30;
+const char* Channel::SEND_CONTROL_MODES[] = {"keepalive", "pingpong",
+    "slowstart", "standard_aimd", "ledbat"};
 
 
 tint    Channel::NextSendTime () {
@@ -62,13 +64,15 @@ tint    Channel::KeepAliveNextSendTime () {
         return TINT_NEVER;
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
+    if (data_in_.bin!=bin64_t::NONE)
+        return NOW;
     send_interval_ <<= 1;
     if (send_interval_>MAX_SEND_INTERVAL)
         send_interval_ = MAX_SEND_INTERVAL;
     return last_send_time_ + send_interval_;
 }
 
-tint    Channel::PingPongNextSendTime () {
+tint    Channel::PingPongNextSendTime () { // FIXME INFINITE LOOP
     if (last_recv_time_ < last_send_time_-TINT_SEC*3) {
         // FIXME keepalive <-> pingpong (peers, transition)
     } // last_data_out_time_ < last_send_time_ - TINT_SEC...
@@ -76,6 +80,8 @@ tint    Channel::PingPongNextSendTime () {
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
+    if (data_in_.bin!=bin64_t::NONE)
+        return NOW;
     if (last_recv_time_>last_send_time_)
         return NOW;
     else if (last_send_time_)
@@ -85,6 +91,8 @@ tint    Channel::PingPongNextSendTime () {
 }
 
 tint    Channel::CwndRateNextSendTime () {
+    if (data_in_.bin!=bin64_t::NONE)
+        return NOW; // TODO: delayed ACKs
     send_interval_ = rtt_avg_/cwnd_;
     if (data_out_.size()<cwnd_) {
 	dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id,send_interval_);
@@ -110,7 +118,7 @@ tint    Channel::SlowStartNextSendTime () {
         BackOffOnLosses();
         return SwitchSendControl(AIMD_CONTROL);
     } 
-    if (send_interval_<TINT_SEC/10)
+    if (rtt_avg_/cwnd_<TINT_SEC/10) 
         return SwitchSendControl(AIMD_CONTROL);
     cwnd_+=ack_rcvd_recent_;
     ack_rcvd_recent_=0;
