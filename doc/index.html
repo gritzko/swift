@@ -125,6 +125,17 @@
 		</p>
 		</div>
 		
+		<div class='fold'>	<h3>Subsetting of the protocol</h3>
+		<p>Different kinds of peers might implement different subsets of messages;
+		a "tracker", for example, uses the same protocol as every peer, except
+		it only accepts the HANDSHAKE message and the HASH message (to let peers
+		explain what content they are interested in), while returning only
+		HANDSHAKE and PEX_ADD messages (to return the list of peers).
+		Different subsets of accepted/emitted messages may correspond to push/pull
+		peers, plain trackers, hash storing trackers, live streaming peers etc.
+		</p>
+		</div>
+		
 		<div class='fold'>	<h3>Push AND pull</h3>
 		<p>The protocol allows both for PUSH (sender decides what to send) and
 		PULL (receiver explicitly requests the data). PUSH is normally used as
@@ -150,7 +161,7 @@
 	
 	<div>	<h2>The code</h2>
 		<ul>
-		<li><a href="swift.tar.gz">fairly recent tarball</a>
+		<li><a href="http://97.107.136.211/files/p2tp.tar.gz">fairly recent tarball</a>
 		<li><a href="http://github.com/gritzko/swift"><i>swift</i> at github</a>
 		</ul>
 	</div>
@@ -159,7 +170,7 @@
 	
 	<div class="fold"> <h3>Well, why "swift"?</h3>
 		<p>That name served well to many other protocols; we hope it will serve well to ours.
-		You may count it as a meta-joke. The original name for the protocol was "VicTorrent".
+		You may count it as a meta-joke. The working name for the protocol was "VicTorrent".
 		We also insist on lowercase italic <i>"swift"</i> to keep the name formally  unique
 		(for some definition of unique).</p>
 	</div>
@@ -186,7 +197,7 @@
 		
 		<div class='fold'><h4>...UDP?</h4>
 		<p>UDP, which is the thinniest wrapper around <a href="http://en.wikipedia.org/wiki/IPv4">
-		IP</a>, is our choise of underlying protocol. From the standpoint of ideology, a
+		IP</a>, is our choiсe of underlying protocol. From the standpoint of ideology, a
 		transport protocol should be implemented over IP, but unfortunately that causes
 		some chicken-and-egg problems, like a need to get into the kernel to get deployments,
 		and a need to get deployments to be accepted into the kernel.
@@ -246,7 +257,11 @@
 		</div>
 		
 		<div class='fold'><h4>...SCTP?</h4>
-		<p></p>
+		<p><a href="http://en.wikipedia.org/wiki/SCTP">SCTP</a> is a protocol fixing some
+		shortcomings of TCP mostly in the context of telephony. As it was the case with
+		DCCP, contributions of SCTP were of little interest to us, while things we really
+		needed were missing from SCTP. Still, we must admit that we employ quite a similar
+		message-oriented model (as opposed to the TCP's stream-oriented). </p>
 		</div>
 		
 	</div>

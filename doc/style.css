@@ -5,6 +5,7 @@ body {
     #-o-background-size: 100% 100%;         /* Opera 9.5 */
     #-webkit-background-size: 100% 100%;    /* Safari 3.0 */
     #-khtml-background-size: 100% 100%;     /* Konqueror 3.5.4 */
+	color: black;
 }
 
 h1, h2, h3 {
