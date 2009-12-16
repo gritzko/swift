@@ -123,11 +123,13 @@ void    Channel::Send () {
             tintstr(),id,dgram.size(),peer().str(),peer_channel_id_);
     if (dgram.size()==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
+        //dprintf("%s #%u considering keepalive %i %f %s\n",
+        //        tintstr(),id,(int)data_out_.size(),cwnd_,SEND_CONTROL_MODES[send_control_]);
         if (data_out_.size()<cwnd_ && send_control_!=KEEP_ALIVE_CONTROL) {
             if ( cwnd_ < 1 )
                 SwitchSendControl(KEEP_ALIVE_CONTROL);
             else
-                cwnd_ /= 2;
+                cwnd_ = cwnd_/2.0;
         }
         //if (data_out_.empty() && send_control_!=KEEP_ALIVE_CONTROL)
         //     SwitchSendControl(KEEP_ALIVE_CONTROL);// we did our best
