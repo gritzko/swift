@@ -128,7 +128,10 @@ tint    Channel::SlowStartNextSendTime () {
 tint    Channel::AimdNextSendTime () {
     if (ack_not_rcvd_recent_)
         BackOffOnLosses();
-    cwnd_ += ack_rcvd_recent_/cwnd_;
+    if (cwnd_>1)
+        cwnd_ += ack_rcvd_recent_/cwnd_;
+    else
+        cwnd_ *= 2;
     ack_rcvd_recent_=0;
     return CwndRateNextSendTime();
 }
