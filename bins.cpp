@@ -353,6 +353,8 @@ void    bins::remove (bins& b) {
 
 
 bin64_t     bins::cover(bin64_t val) {
+    if (val==bin64_t::NONE)
+        return val;
     iterator i(this,val,false);
     while (i.pos!=val && !i.solid())
         i.towards(val);

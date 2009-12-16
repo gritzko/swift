@@ -28,6 +28,7 @@ using namespace p2tp;
 
 p2tp::tint Channel::last_tick = 0;
 int Channel::MAX_REORDERING = 4;
+bool Channel::SELF_CONN_OK = false;
 p2tp::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
 SOCKET Channel::sockets[8] = {0,0,0,0,0,0,0,0};
@@ -46,7 +47,9 @@ Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
     data_in_dbl_(bin64_t::NONE), hint_out_size_(0),
     cwnd_(1), send_interval_(TINT_SEC), send_control_(PING_PONG_CONTROL),
     sent_since_recv_(0), ack_rcvd_recent_(0), ack_not_rcvd_recent_(0),
-    last_loss_time_(0), owd_min_bin_(0), owd_min_bin_start_(NOW), owd_cur_bin_(0)
+    last_loss_time_(0), owd_min_bin_(0), owd_min_bin_start_(NOW), 
+    owd_cur_bin_(0), dgrams_sent_(0), dgrams_rcvd_(0), 
+    data_in_(TINT_NEVER,bin64_t::NONE)
 {
     if (peer_==Address())
         peer_ = tracker;

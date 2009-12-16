@@ -24,6 +24,7 @@ TEST(P2TP,CwndTest) {
     struct stat st;
 	ASSERT_EQ(0,stat("doc/sofi.jpg", &st));
     int size = st.st_size;//, sizek = (st.st_size>>10) + (st.st_size%1024?1:0) ;
+    Channel::SELF_CONN_OK = true;
 
     int sock1 = p2tp::Listen(7001);
 	ASSERT_TRUE(sock1>=0);

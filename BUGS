@@ -42,4 +42,10 @@
     v whether sending is limited by cwnd or app
     * actually: whether packets are ACKed faster than sent
     * uproot DATA NONE: complicates and deceives
-    * r735 goes to github
+    * r735 goes to github; r741
+    * receiver is swapping => strange behavior
+    v on high losses cwnd goes to silly fractions => slows down recovery
+    * code the pingpong<->keepalive<->slowstart transition
+    * empty datagram hammering (see at linode)
+    * make a testkit!!!
+    * never back from keepalive syndrome (because of underhashing)

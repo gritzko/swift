@@ -33,7 +33,8 @@ tint    Channel::NextSendTime () {
 }
 
 tint    Channel::SwitchSendControl (int control_mode) {
-    dprintf("%s #%u sendctrl %i->%i\n",tintstr(),id,send_control_,control_mode);
+    dprintf("%s #%u sendctrl switch %s->%s\n",tintstr(),id,
+            SEND_CONTROL_MODES[send_control_],SEND_CONTROL_MODES[control_mode]);
     switch (control_mode) {
         case KEEP_ALIVE_CONTROL:
             send_interval_ = max(TINT_SEC/10,rtt_avg_);
@@ -45,6 +46,7 @@ tint    Channel::SwitchSendControl (int control_mode) {
             cwnd_ = 1;
             break;
         case SLOW_START_CONTROL:
+            cwnd_ = 1;
             break;
         case AIMD_CONTROL:
             break;
@@ -57,14 +59,12 @@ tint    Channel::SwitchSendControl (int control_mode) {
     return NextSendTime();
 }
 
-// TODO: transitions, consistently
-// TODO: may send data
 tint    Channel::KeepAliveNextSendTime () {
     if (sent_since_recv_>=3 && last_recv_time_<NOW-TINT_MIN)
         return TINT_NEVER;
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
-    if (data_in_.bin!=bin64_t::NONE)
+    if (data_in_.time!=TINT_NEVER)
         return NOW;
     send_interval_ <<= 1;
     if (send_interval_>MAX_SEND_INTERVAL)
@@ -73,33 +73,33 @@ tint    Channel::KeepAliveNextSendTime () {
 }
 
 tint    Channel::PingPongNextSendTime () { // FIXME INFINITE LOOP
-    if (last_recv_time_ < last_send_time_-TINT_SEC*3) {
-        // FIXME keepalive <-> pingpong (peers, transition)
-    } // last_data_out_time_ < last_send_time_ - TINT_SEC...
-    if (false)
+    if (dgrams_sent_>=10)
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
-    if (data_in_.bin!=bin64_t::NONE)
+    if (data_in_.time!=TINT_NEVER)
         return NOW;
     if (last_recv_time_>last_send_time_)
         return NOW;
-    else if (last_send_time_)
-        return last_send_time_ + ack_timeout();
-    else
+    if (!last_send_time_)
         return NOW;
+    return last_send_time_ + ack_timeout(); // timeout
 }
 
 tint    Channel::CwndRateNextSendTime () {
-    if (data_in_.bin!=bin64_t::NONE)
+    if (data_in_.time!=TINT_NEVER)
         return NOW; // TODO: delayed ACKs
+    //if (last_recv_time_<NOW-rtt_avg_*4)
+    //    return SwitchSendControl(KEEP_ALIVE_CONTROL);
     send_interval_ = rtt_avg_/cwnd_;
+    if (send_interval_>std::max(rtt_avg_,TINT_SEC)*4)
+        return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (data_out_.size()<cwnd_) {
-	dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id,send_interval_);
+        dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id,send_interval_);
         return last_data_out_time_ + send_interval_;
     } else {
-        tint next_timeout = data_out_.front().time + ack_timeout();
-        return last_data_out_time_ + next_timeout;
+        assert(data_out_.front().time!=TINT_NEVER);
+        return data_out_.front().time + ack_timeout();
     }
 }
 
@@ -109,7 +109,7 @@ void    Channel::BackOffOnLosses () {
     if (last_loss_time_<NOW-rtt_avg_) {
         cwnd_ /= 2;
         last_loss_time_ = NOW;
-	dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id,cwnd_);
+        dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id,cwnd_);
     }
 }
 

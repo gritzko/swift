@@ -33,7 +33,7 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
 
 void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
-    while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
+    while (pos!=peak && /*((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&*/
             ack_in_.get(pos.parent())==bins::EMPTY) {
         bin64_t uncle = pos.sibling();
         dgram.Push8(P2TP_HASH);
@@ -123,9 +123,11 @@ void    Channel::Send () {
             tintstr(),id,dgram.size(),peer().str(),peer_channel_id_);
     if (dgram.size()==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
-        if (send_control_!=KEEP_ALIVE_CONTROL) {
-            if ( (cwnd_/=2) < 1 )
+        if (data_out_.size()<cwnd_ && send_control_!=KEEP_ALIVE_CONTROL) {
+            if ( cwnd_ < 1 )
                 SwitchSendControl(KEEP_ALIVE_CONTROL);
+            else
+                cwnd_ /= 2;
         }
         //if (data_out_.empty() && send_control_!=KEEP_ALIVE_CONTROL)
         //     SwitchSendControl(KEEP_ALIVE_CONTROL);// we did our best
@@ -136,6 +138,7 @@ void    Channel::Send () {
         print_error("can't send datagram");
     last_send_time_ = NOW;
     sent_since_recv_++;
+    dgrams_sent_++;
 }
 
 
@@ -185,16 +188,14 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     } else
         dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id);
     
-    if (tosend==bin64_t::NONE && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty())) 
-        return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXME
+    if (tosend==bin64_t::NONE)// && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty())) 
+        return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
     
-    if (tosend!=bin64_t::NONE) { // hashes
-        if (ack_in_.is_empty() && file().size())
-            AddPeakHashes(dgram);
-        AddUncleHashes(dgram,tosend);
-        if (!ack_in_.is_empty()) // TODO: cwnd_>1
-            data_out_cap_ = tosend;
-    }
+    if (ack_in_.is_empty() && file().size())
+        AddPeakHashes(dgram);
+    AddUncleHashes(dgram,tosend);
+    if (!ack_in_.is_empty()) // TODO: cwnd_>1
+        data_out_cap_ = tosend;
 
     if (dgram.size()>254) {
         dgram.Send(); // kind of fragmentation
@@ -204,17 +205,15 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     dgram.Push8(P2TP_DATA);
     dgram.Push32(tosend.to32());
     
-    if (tosend!=bin64_t::NONE) { // data
-        uint8_t buf[1024];
-        size_t r = pread(file().file_descriptor(),buf,1024,tosend.base_offset()<<10); 
-        // TODO: corrupted data, retries, caching
-        if (r<0) {
-            print_error("error on reading");
-            return bin64_t::NONE;
-        }
-        assert(dgram.space()>=r+4+1);
-        dgram.Push(buf,r);
+    uint8_t buf[1024];
+    size_t r = pread(file().file_descriptor(),buf,1024,tosend.base_offset()<<10); 
+    // TODO: corrupted data, retries, caching
+    if (r<0) {
+        print_error("error on reading");
+        return bin64_t::NONE;
     }
+    assert(dgram.space()>=r+4+1);
+    dgram.Push(buf,r);
     
     last_data_out_time_ = NOW;
     data_out_.push_back(tosend);
@@ -232,20 +231,20 @@ void    Channel::AddTs (Datagram& dgram) {
 
 
 void    Channel::AddAck (Datagram& dgram) {
-    if (data_in_dbl_!=bin64_t::NONE) {
+    if (data_in_dbl_!=bin64_t::NONE) { // TODO: do redundancy better
         dgram.Push8(P2TP_ACK);
-        dgram.Push32(data_in_dbl_);
+        dgram.Push32(data_in_dbl_.to32());
         data_in_dbl_=bin64_t::NONE;
     }
-    if (data_in_.bin!=bin64_t::NONE) {
+    if (data_in_.time!=TINT_NEVER) { // TODO: ACK NONE for corrupted data
         AddTs(dgram);
         bin64_t pos = file().ack_out().cover(data_in_.bin);
         dgram.Push8(P2TP_ACK);
-        dgram.Push32(pos);
+        dgram.Push32(pos.to32());
         //dgram.Push64(data_in_.time);
         ack_out_.set(pos);
         dprintf("%s #%u +ack %s %s\n",tintstr(),id,pos.str(),tintstr(data_in_.time));
-        data_in_ = tintbin(0,bin64_t::NONE);
+        data_in_ = tintbin(TINT_NEVER,bin64_t::NONE);
         if (pos.layer()>2)
             data_in_dbl_ = pos;
     }
@@ -256,7 +255,7 @@ void    Channel::AddAck (Datagram& dgram) {
         ack = file().ack_out().cover(ack);
         ack_out_.set(ack);
         dgram.Push8(P2TP_ACK);
-        dgram.Push32(ack);
+        dgram.Push32(ack.to32());
         dprintf("%s #%u +ack %s\n",tintstr(),id,ack.str());
     }
 }
@@ -265,6 +264,7 @@ void    Channel::AddAck (Datagram& dgram) {
 void    Channel::Recv (Datagram& dgram) {
     dprintf("%s #%u recvd %i\n",tintstr(),id,dgram.size()+4);
     peer_send_time_ = 0; // has scope of 1 datagram
+    dgrams_rcvd_++;
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
@@ -328,9 +328,10 @@ bin64_t Channel::OnData (Datagram& dgram) {
     int length = dgram.Pull(&data,1024);
     bool ok = (pos==bin64_t::NONE) || file().OfferData(pos, (char*)data, length) ;
     dprintf("%s #%u %cdata %s\n",tintstr(),id,ok?'-':'!',pos.str());
+    data_in_ = tintbin(NOW,bin64_t::NONE);
     if (!ok) 
         return bin64_t::NONE;
-    data_in_ = tintbin(NOW,pos);
+    data_in_.bin = pos;
     if (pos!=bin64_t::NONE) {
         if (last_data_in_time_) {
             tint dip = NOW - last_data_in_time_;
@@ -400,7 +401,9 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
 
 void    Channel::OnAck (Datagram& dgram) {
     bin64_t ackd_pos = dgram.Pull32();
-    if (ackd_pos!=bin64_t::NONE && file().size() && ackd_pos.base_offset()>=file().packet_size()) {
+    if (ackd_pos==bin64_t::NONE)
+        return; // likely, brocken packet / insufficient hashes
+    if (file().size() && ackd_pos.base_offset()>=file().packet_size()) {
         eprintf("invalid ack: %s\n",ackd_pos.str());
         return;
     }
@@ -428,6 +431,14 @@ void    Channel::OnHint (Datagram& dgram) {
 void Channel::OnHandshake (Datagram& dgram) {
     peer_channel_id_ = dgram.Pull32();
     dprintf("%s #%u -hs %x\n",tintstr(),id,peer_channel_id_);
+    // self-connection check
+    if (!SELF_CONN_OK) {
+        uint32_t try_id = DecodeID(peer_channel_id_);
+        if (channel(try_id) && !channel(try_id)->peer_channel_id_) {
+            delete this;
+            return;
+        }
+    }
     // FUTURE: channel forking
 }
 
@@ -550,9 +561,10 @@ void    Channel::Loop (tint howlong) {
  
 void Channel::Reschedule () {
     next_send_time_ = NextSendTime();
-    if (next_send_time_!=TINT_NEVER)
+    if (next_send_time_!=TINT_NEVER) {
+        assert(next_send_time_<NOW+TINT_MIN);
         send_queue.push(tintbin(next_send_time_,id));
-    else
+    } else
         send_queue.push(tintbin(NOW+TINT_MIN,id));
     dprintf("%s requeue #%u for %s\n",tintstr(),id,tintstr(next_send_time_));
 }

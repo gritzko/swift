@@ -269,6 +269,7 @@ namespace p2tp {
         static tint LEDBAT_TARGET;
         static float LEDBAT_GAIN;
         static tint LEDBAT_DELAY_BIN;
+        static bool SELF_CONN_OK;
         
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
@@ -346,6 +347,9 @@ namespace p2tp {
         tint        owd_min_bin_start_;
         tint        owd_current_[4];
         int         owd_cur_bin_;
+        /** Stats */
+        int         dgrams_sent_;
+        int         dgrams_rcvd_;
 
         int         PeerBPS() const {
             return TINT_SEC / dip_avg_ * 1024;
