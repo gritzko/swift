@@ -33,8 +33,8 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
 
 void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
-    while (pos!=peak && /*((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&*/
-            ack_in_.get(pos.parent())==bins::EMPTY) {
+    while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
+            ack_in_.get(pos.parent())==bins::EMPTY  ) {
         bin64_t uncle = pos.sibling();
         dgram.Push8(P2TP_HASH);
         dgram.Push32((uint32_t)uncle);
@@ -125,12 +125,12 @@ void    Channel::Send () {
         data = bin64_t::ALL;
         //dprintf("%s #%u considering keepalive %i %f %s\n",
         //        tintstr(),id,(int)data_out_.size(),cwnd_,SEND_CONTROL_MODES[send_control_]);
-        if (data_out_.size()<cwnd_ && send_control_!=KEEP_ALIVE_CONTROL) {
-            if ( cwnd_ < 1 )
-                SwitchSendControl(KEEP_ALIVE_CONTROL);
-            else
-                cwnd_ = cwnd_/2.0;
-        }
+        //if (data_out_.size()<cwnd_ && send_control_!=KEEP_ALIVE_CONTROL) {
+            //if ( cwnd_ < 1 )
+            //    SwitchSendControl(KEEP_ALIVE_CONTROL);
+            //else
+            //    cwnd_ = cwnd_/2.0;
+        //}
         //if (data_out_.empty() && send_control_!=KEEP_ALIVE_CONTROL)
         //     SwitchSendControl(KEEP_ALIVE_CONTROL);// we did our best
         //if (NOW<last_send_time_+MAX_SEND_INTERVAL) // no need for keepalive
@@ -185,8 +185,11 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     bin64_t tosend = bin64_t::NONE;
     if (data_out_.size()<cwnd_ && last_data_out_time_<=NOW-send_interval_) {
         tosend = DequeueHint();
-        if (tosend==bin64_t::NONE)
-            dprintf("%s #%u out of hints #sendctrl\n",tintstr(),id);
+        if (tosend==bin64_t::NONE) {
+            dprintf("%s #%u no idea what to send #sendctrl\n",tintstr(),id);
+            if (send_control_!=KEEP_ALIVE_CONTROL)
+                SwitchSendControl(KEEP_ALIVE_CONTROL);
+        }
     } else
         dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id);
     
@@ -357,6 +360,18 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                 tint rtt = NOW-data_out_[i].time;
                 rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
                 dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
+                if (peer_send_time_) {
+                    tint owd = peer_send_time_ - data_out_[i].time;
+                    owd_cur_bin_ = (owd_cur_bin_+1) & 3;
+                    owd_current_[owd_cur_bin_] = owd;
+                    if (owd_min_bin_start_<NOW+TINT_SEC*30) {
+                        owd_min_bin_start_ = NOW;
+                        owd_min_bin_ = (owd_min_bin_+1) & 3;
+                        owd_min_bins_[owd_min_bin_] = TINT_NEVER;
+                    }
+                    if (owd_min_bins_[owd_min_bin_]>owd)
+                        owd_min_bins_[owd_min_bin_] = owd;
+                }
                 dprintf("%s #%u rtt %lli dev %lli\n",tintstr(),id,rtt_avg_,dev_avg_);
                 bin64_t pos = data_out_[i].bin;
                 ack_rcvd_recent_++;

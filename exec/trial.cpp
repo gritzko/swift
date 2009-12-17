@@ -44,7 +44,7 @@ int main (int argn, char** args) {
 	p2tp::SetTracker(tracker);
 	int file = p2tp::Open(filename,root_hash);
     printf("Downloading %s\n",root_hash.hex().c_str());
-    int count = 200;
+    int count = 400;
     while (!p2tp::IsComplete(file) && count-->0) {
 	    p2tp::Loop(TINT_SEC/10);
         if (count==100) 

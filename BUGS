@@ -49,3 +49,8 @@
     * empty datagram hammering (see at linode)
     * make a testkit!!!
     * never back from keepalive syndrome (because of underhashing)
+    * HTTP daemon, combined select() loop
+    * range requests, priorities
+    * LEDBAT
+    * CUBIC
+    v misterious mass packet losses (!data)

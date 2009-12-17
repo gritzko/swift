@@ -39,10 +39,12 @@ tint    Channel::SwitchSendControl (int control_mode) {
         case KEEP_ALIVE_CONTROL:
             send_interval_ = max(TINT_SEC/10,rtt_avg_);
             dev_avg_ = max(TINT_SEC,rtt_avg_);
+            data_out_cap_ = bin64_t::ALL;
             cwnd_ = 1;
             break;
         case PING_PONG_CONTROL:
             dev_avg_ = max(TINT_SEC,rtt_avg_);
+            data_out_cap_ = bin64_t::ALL;
             cwnd_ = 1;
             break;
         case SLOW_START_CONTROL:
@@ -103,11 +105,11 @@ tint    Channel::CwndRateNextSendTime () {
     }
 }
 
-void    Channel::BackOffOnLosses () {
+void    Channel::BackOffOnLosses (float ratio) {
     ack_rcvd_recent_ = 0;
     ack_not_rcvd_recent_ =  0;
     if (last_loss_time_<NOW-rtt_avg_) {
-        cwnd_ /= 2;
+        cwnd_ *= ratio;
         last_loss_time_ = NOW;
         dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id,cwnd_);
     }
@@ -116,10 +118,10 @@ void    Channel::BackOffOnLosses () {
 tint    Channel::SlowStartNextSendTime () {
     if (ack_not_rcvd_recent_) {
         BackOffOnLosses();
-        return SwitchSendControl(AIMD_CONTROL);
+        return SwitchSendControl(LEDBAT_CONTROL);//AIMD_CONTROL);
     } 
     if (rtt_avg_/cwnd_<TINT_SEC/10) 
-        return SwitchSendControl(AIMD_CONTROL);
+        return SwitchSendControl(LEDBAT_CONTROL);//AIMD_CONTROL);
     cwnd_+=ack_rcvd_recent_;
     ack_rcvd_recent_=0;
     return CwndRateNextSendTime();
@@ -147,11 +149,13 @@ tint Channel::LedbatNextSendTime () {
             owd_cur = owd_current_[i];
     }
     if (ack_not_rcvd_recent_)
-        BackOffOnLosses();
+        BackOffOnLosses(0.8);
     ack_rcvd_recent_ = 0;
     tint queueing_delay = owd_cur - owd_min;
     tint off_target = LEDBAT_TARGET - queueing_delay;
     cwnd_ += LEDBAT_GAIN * off_target / cwnd_;
+    dprintf("%s #%u sendctrl ledbat %lli-%lli => %3.2f\n",
+            tintstr(),id,owd_cur,owd_min,cwnd_);
     return CwndRateNextSendTime();
 }
 

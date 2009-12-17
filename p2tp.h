@@ -252,7 +252,7 @@ namespace p2tp {
         void        AddPeakHashes (Datagram& dgram);
         void        AddPex (Datagram& dgram);
 
-        void        BackOffOnLosses ();
+        void        BackOffOnLosses (float ratio=0.5);
         tint        SwitchSendControl (int control_mode);
         tint        NextSendTime ();
         tint        KeepAliveNextSendTime ();
