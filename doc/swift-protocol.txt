@@ -299,8 +299,7 @@ Table of Contents
    Merkle hashes (Sec. 4.4). A novel addition to the classical scheme
    are "bin numbers", a scheme of numbering binary intervals which
    lays them out into a vector nicely. Bin numbering is done in the
-   order of interval's right bound, then in the order of length, both
-   ascending:
+   order of interval's "center", ascending, namely:
 
                7
          3          11
