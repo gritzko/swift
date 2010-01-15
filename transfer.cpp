@@ -1,6 +1,6 @@
 /*
  *  transfer.cpp
- *  p2tp
+ *  some transfer-scope code
  *
  *  Created by Victor Grishchenko on 10/6/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.

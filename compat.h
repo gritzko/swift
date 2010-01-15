@@ -1,6 +1,6 @@
 /*
  *  compat.h
- *  p2tp
+ *  compatibility wrappers
  *
  *  Created by Arno Bakker, Victor Grishchenko
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -35,6 +35,7 @@
 
 namespace p2tp {
 
+/** tint is the time integer type; microsecond-precise. */
 typedef int64_t tint;
 #define TINT_HOUR ((tint)1000000*60*60)
 #define TINT_MIN ((tint)1000000*60)

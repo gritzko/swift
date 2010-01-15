@@ -1,6 +1,6 @@
 /*
- *  datasendrecv.cpp
- *  serp++
+ *  sendrecv.cpp
+ *  most of the swift's state machine
  *
  *  Created by Victor Grishchenko on 3/6/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -484,7 +484,7 @@ void    Channel::AddPex (Datagram& dgram) {
 Channel*    Channel::RecvDatagram (int socket) {
     Datagram data(socket);
     data.Recv();
-    Address& addr = data.addr;
+    const Address& addr = data.address();
 #define return_log(...) { eprintf(__VA_ARGS__); return NULL; }
     if (data.size()<4) 
         return_log("datagram shorter than 4 bytes %s\n",addr.str());
@@ -506,7 +506,7 @@ Channel*    Channel::RecvDatagram (int socket) {
             return_log ("hash %s unknown, no such file %s\n",hash.hex().c_str(),addr.str());
         dprintf("%s #0 -hash ALL %s\n",tintstr(),hash.hex().c_str());
         for(binqueue::iterator i=file->hs_in_.begin(); i!=file->hs_in_.end(); i++)
-            if (channels[*i] && channels[*i]->peer_==data.addr && 
+            if (channels[*i] && channels[*i]->peer_==data.address() && 
                 channels[*i]->last_recv_time_>NOW-TINT_SEC*2)
                 return_log("have a channel already to %s\n",addr.str());
         channel = new Channel(file, socket, data.address());

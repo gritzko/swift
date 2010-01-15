@@ -1,6 +1,6 @@
 /*
  *  datagram.h
- *  serp++
+ *  nice IPv4 UDP wrappers
  *
  *  Created by Victor Grishchenko, Arno Bakker on 3/9/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -45,6 +45,7 @@ namespace p2tp {
 #endif
 
 
+/** IPv4 address, just a nice wrapping around struct sockaddr_in. */
 struct Address {
     struct sockaddr_in  addr;
     static uint32_t LOCALHOST;
@@ -105,36 +106,52 @@ struct Address {
 };
 
 
-struct Datagram {
+/** UDP datagram class, a nice wrapping around sendto/recvfrom/select. 
+    Reading/writing from/to a datagram is done in a FIFO (deque) fashion:
+    written data is appended to the tail (push) while read data is
+    taken from the "head" of the buffer. */
+class Datagram {
 
     Address addr;
     SOCKET sock;
     int offset, length;
     uint8_t    buf[MAXDGRAMSZ*2];
 
+public:
+
+    /** bind to the address */
     static SOCKET Bind(Address address);
+    /** close the port */
     static void Close(int port);
+    /** the current time */
     static tint Time();
+    /** wait till one of the sockets has some io to do; usec is the timeout */
     static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
     static tint now, epoch, start;
     static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;
 
+    /** This constructor is normally used to SEND something to the address. */
     Datagram (SOCKET socket, const Address addr_) : addr(addr_), offset(0),
         length(0), sock(socket) {}
+    /** This constructor is normally used to RECEIVE something at the socket. */
     Datagram (SOCKET socket) : offset(0), length(0), sock(socket) {
     }
 
+    /** space remaining */
     int space () const { return MAXDGRAMSZ-length; }
+    /** size of the data (not counting UDP etc headers) */
     int size() const { return length-offset; }
     std::string str() const { return std::string((char*)buf+offset,size()); }
     const uint8_t* operator * () const { return buf+offset; }
-
+    const Address& address () const { return addr; }
+    /** Append some data at the back */
     int Push (const uint8_t* data, int l) { // scatter-gather one day
         int toc = l<space() ? l : space();
         memcpy(buf+length,data,toc);
         length += toc;
         return toc;
     }
+    /** Read something from the front of the datagram */
     int Pull (uint8_t** data, int l) {
         int toc = l<size() ? l : size();
         //memcpy(data,buf+offset,toc);
@@ -145,7 +162,7 @@ struct Datagram {
 
     int Send ();
     int Recv ();
-    const Address& address() const { return addr; }
+
     void Clear() { offset=length=0; }
 
     void    PushString (std::string str) {

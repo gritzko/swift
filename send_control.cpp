@@ -1,6 +1,6 @@
 /*
  *  send_control.cpp
- *  p2tp
+ *  congestion control logic for the swift protocol
  *
  *  Created by Victor Grishchenko on 12/10/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.

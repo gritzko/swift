@@ -1,6 +1,6 @@
 /*
  *  p2tp.h
- *  serp++
+ *  the main header file for libswift, normally you should only read this one
  *
  *  Created by Victor Grishchenko on 3/6/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -66,6 +66,10 @@ Messages
 namespace p2tp {
 
     #define NOW Datagram::now
+    
+    /** tintbin is basically a pair<tint,bin64_t> plus some nice operators.
+        Most frequently used in different queues (acknowledgements, requests, 
+        etc). */
     struct tintbin {
         tint    time;
         bin64_t bin;
@@ -85,6 +89,7 @@ namespace p2tp {
     typedef std::deque<bin64_t> binqueue;
     typedef Address   Address;
 
+    /** A heap (priority queue) for timestamped bin numbers (tintbins). */
     class tbheap {
         tbqueue data_;
     public:
@@ -105,6 +110,7 @@ namespace p2tp {
         }
     };
 
+    /** swift protocol message types; these are used on the wire. */
     typedef enum {
         P2TP_HANDSHAKE = 0,
         P2TP_DATA = 1,
@@ -122,6 +128,7 @@ namespace p2tp {
     class PeerSelector;
 
 
+    /** A class representing single file transfer. */
     class    FileTransfer {
 
     public:

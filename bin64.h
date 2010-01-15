@@ -1,3 +1,11 @@
+/*
+ *  bin64.h
+ *  bin numbers (binaty tree enumeration/navigation)
+ *
+ *  Created by Victor Grishchenko on ??/09/09 in Karlovy Vary
+ *  Copyright 2009 Delft University of Technology. All rights reserved.
+ *
+ */
 #ifndef BIN64_H
 #define BIN64_H
 #include <assert.h>
@@ -15,7 +23,11 @@
     Bin numbers in the tail111 encoding: meaningless
     bits in the tail are set to 0111...11, while the
     head denotes the offset. Thus, 1101 is the bin
-    at layer 1, offset 3 (i.e. fourth). */
+    at layer 1, offset 3 (i.e. fourth). 
+    Obviously, bins form a binary tree. All navigation
+    is made in terms of binary trees: left, right,
+    sibling, parent, etc.
+ */
 struct bin64_t {
     uint64_t v;
     static const uint64_t NONE;
@@ -44,6 +56,7 @@ struct bin64_t {
         return (tail_bits()+1)>>1;
     }
 
+    /** Get the sibling interval in the binary tree. */
     bin64_t sibling () const {
         // if (v==ALL) return NONE;
         return bin64_t(v^(tail_bit()<<1));
@@ -66,14 +79,17 @@ struct bin64_t {
         return r;
     }
 
+    /** Get the bin's offset in base units, i.e. 4 for (1,2). */
     uint64_t base_offset () const {
         return (v&~(tail_bits()))>>1;
     }
 
+    /** Get the bin's offset at its own layer, e.g. 2 for (1,2). */
     uint64_t offset () const {
         return v >> (layer()+1);
     }
 
+    /** Get a child bin; either right(true) or left(false). */
     bin64_t to (bool right) const {
         if (!(v&1))
             return NONE;
@@ -83,14 +99,17 @@ struct bin64_t {
         return bin64_t(v^tb);
     }
 
+    /** Get the left child bin. */
     bin64_t left () const {
         return to(false);
     }
 
+    /** Get the right child bin. */
     bin64_t right () const {
         return to(true);
     }
 
+    /** Check whether this bin is within the specified bin. */
     bool    within (bin64_t maybe_asc) {
         if (maybe_asc==bin64_t::NONE)
             return false;
@@ -110,21 +129,27 @@ struct bin64_t {
             return right();
     }
 
+    /** Twist/untwist a bin number according to the mask. */
     bin64_t twisted (uint64_t mask) const {
         return bin64_t( v ^ ((mask<<1)&~tail_bits()) );
     }
 
+    /** Get the paretn bin. */
     bin64_t parent () const {
         uint64_t tbs = tail_bits(), ntbs = (tbs+1)|tbs;
         return bin64_t( (v&~ntbs) | tbs );
     }
 
+    /** Check whether this bin is the left sibling. */
     bool is_left () const {
         uint64_t tb = tail_bit();
         return !(v&(tb<<1));
     }
+    
+    /** Check whether this bin is the right sibling. */
     bool is_right() const { return !is_left(); }
 
+    /** Get the leftmost basic bin within this bin. */
     bin64_t left_foot () const {
         if (v==NONE)
             return NONE;
@@ -139,10 +164,15 @@ struct bin64_t {
     /** Depth-first in-order binary tree traversal. */
     bin64_t next_dfsio (uint8_t floor);
 
+    /** Return the number of basci bins within this bin. */
     bin64_t width () const {
         return (tail_bits()+1)>>1;
     }
     
+    /** Get the standard-form null-terminated string
+        representation of this bin, e.g. "(2,1)".
+        The string is statically allocated, must
+        not be reused or released. */
     const char* str () const;
 
     /** The array must have 64 cells, as it is the max

@@ -1,3 +1,4 @@
+// licensed under the GPL v2 as part of the git project http://git-scm.com/
 /*
  * SHA1 routine optimized to do word accesses rather than byte accesses,
  * and to avoid unnecessary copies into the context array.

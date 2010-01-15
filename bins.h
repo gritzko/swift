@@ -1,6 +1,6 @@
 /*
  *  sbit.cpp
- *  serp++
+ *  binmap, a hybrid of bitmap and binary tree
  *
  *  Created by Victor Grishchenko on 3/28/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -10,51 +10,87 @@
 #define BINS_H
 #include "bin64.h"
 
-/**  A binmap covering 2^64 range. Complexity limit: 100+200LoC  */
+/** A binmap covering 2^64 range. Binmap is a hybrid of a bitmap (aka
+    bit vector) and a binary tree. The key ability of a binmap is
+    the aggregation of solid (all-0 or all-1) ranges. */
 class bins {
     
 public:
+    /** Need a 3-valued logic as a range might be either all-0 or all-1
+        or some mix. In fact, any value different from 0x0 or 0xffff
+        must be interpreted as MIXED. 
+        All read/write operations on a binmap are made in terms of
+        aligned binary intervals (bins).
+     */
     typedef enum { FILLED=0xffff, EMPTY=0x0000, MIXED=0x5555 } fill_t;
     static const int NOJOIN;
     
     bins();
     
+    /** Copying constructor. */
     bins(const bins& b);
     
+    /** Get value for the bin. */
     uint16_t    get (bin64_t bin); 
     
+    /** Set value for the bin. */
     void        set (bin64_t bin, fill_t val=FILLED); 
     
+    /** Copy a range from another binmap. */
     void        copy_range (bins& origin, bin64_t range);
     
+    /** Find the leftmost bin within the specified range which is
+        either filled or empty. */
     bin64_t     find (const bin64_t range, fill_t seek=EMPTY) ;
     
+    /** Find the leftmost bin within the specified range which is
+        either filled or empty. Bins set to 1 in the filter binmap cannot
+        be returned. In fact, this is an incremental bitwise op. */
     bin64_t     find_filtered
         (bins& filter, bin64_t range, fill_t seek=EMPTY) ;
     
-    void        remove (bins& b);
+    /** Bitwise SUB; any bins set to one in the filter binmap should
+        be set to 0 in this binmap. */
+    void        remove (bins& filter);
     
     void        dump(const char* note);
 
+    /** Represent the binmap as a sequence of 0 and 1 stripes; for each
+        new stripe only the starting offset is given. The first stripe
+        is supposed to be empty (if the (0,0) bin is actually filled,
+        the next stripe will also start at 0). */
     uint64_t*   get_stripes (int& count);
 
+    /** Return the number of cells allocated in the binmap. */
     uint32_t    size() { return cells_allocated; }
     
     uint64_t    seq_length ();
     
+    /** Return the topmost solid bin which covers the specified bin. */
     bin64_t     cover(bin64_t val);
 
     uint64_t    mass ();
     
+    /** Return true if the range is solid (either all-0 or 1). If val is
+        specified, the interval must be both solid and filled/empty,
+        depending on the value. */
     bool        is_solid (bin64_t range=bin64_t::ALL, fill_t val=MIXED) ;
+    /** Whether range/bin is empty. */
     bool        is_empty (bin64_t range=bin64_t::ALL) { return is_solid(range,EMPTY); }
+    /** Whether range/bin is filled. */
     bool        is_filled (bin64_t range=bin64_t::ALL) { return is_solid(range,FILLED); }
 
+    /** Clear everything, empty all bins. */
     void        clear ();
     
+    /** Returns whether the int is mixed (not all-1 or all-0). */
     static bool is_mixed (uint16_t val) { return val!=EMPTY && val!=FILLED; }
+    /** Returns whether the int is solid (0x0 or 0xffff). */
     static bool is_solid (uint16_t val) { return val==EMPTY || val==FILLED; }
 
+    /** Twisting is some generalization of XOR. For every 1-bit in the mask,
+        the respective layer of the binary tree is flipped, i.e. left and
+        right change places. Twisting is mostly needed for randomization.  */
     void        twist (uint64_t mask);
     
 private:
