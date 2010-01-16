@@ -34,7 +34,7 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
 void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
     while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
-            ack_in_.get(pos.parent())==bins::EMPTY  ) {
+            ack_in_.get(pos.parent())==binmap_t::EMPTY  ) {
         bin64_t uncle = pos.sibling();
         dgram.Push8(P2TP_HASH);
         dgram.Push32((uint32_t)uncle);
@@ -53,7 +53,7 @@ bin64_t        Channel::DequeueHint () {
         file().ack_out().twist(twist);
         ack_in_.twist(twist);
         bin64_t my_pick = 
-            file().ack_out().find_filtered(ack_in_,bin64_t::ALL,bins::FILLED);
+            file().ack_out().find_filtered(ack_in_,bin64_t::ALL,binmap_t::FILLED);
         while (my_pick.width()>max(1,(int)cwnd_))
             my_pick = my_pick.left();
         file().ack_out().twist(0);
@@ -75,7 +75,7 @@ bin64_t        Channel::DequeueHint () {
         }
         //if (time < NOW-TINT_SEC*3/2 )
         //    continue;  bad idea
-        if (ack_in_.get(hint)!=bins::FILLED) 
+        if (ack_in_.get(hint)!=binmap_t::FILLED) 
             send = hint;
     }
     uint64_t mass = 0;
@@ -254,7 +254,7 @@ void    Channel::AddAck (Datagram& dgram) {
             data_in_dbl_ = pos;
     }
     for(int count=0; count<4; count++) {
-        bin64_t ack = file().ack_out().find_filtered(ack_out_, bin64_t::ALL, bins::FILLED);
+        bin64_t ack = file().ack_out().find_filtered(ack_out_, bin64_t::ALL, binmap_t::FILLED);
         if (ack==bin64_t::NONE)
             break;
         ack = file().ack_out().cover(ack);
@@ -439,7 +439,7 @@ void Channel::OnTs (Datagram& dgram) {
 void    Channel::OnHint (Datagram& dgram) {
     bin64_t hint = dgram.Pull32();
     hint_in_.push_back(hint);
-    //ack_in_.set(hint,bins::EMPTY);
+    //ack_in_.set(hint,binmap_t::EMPTY);
     //RequeueSend(cc_->OnHintRecvd(hint));
     dprintf("%s #%u -hint %s\n",tintstr(),id,hint.str());
 }

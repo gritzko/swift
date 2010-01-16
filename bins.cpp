@@ -13,14 +13,14 @@
 
 // make it work piece by piece
 
-const uint8_t    bins::SPLIT[16] = 
+const uint8_t    binmap_t::SPLIT[16] = 
 {0, 3, 12, 15, 48, 51, 60, 63, 192, 195, 204, 207, 240, 243, 252, 255};
-const uint8_t    bins::JOIN[16] =
+const uint8_t    binmap_t::JOIN[16] =
 {0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15};
-const int bins::NOJOIN = 0x10000;
+const int binmap_t::NOJOIN = 0x10000;
 
 
-void bins::extend () {
+void binmap_t::extend () {
     uint16_t nblocks = blocks_allocated ? (blocks_allocated<<1) : 1;
     size_t had_bytes = blocks_allocated<<6;
     size_t need_bytes = nblocks<<6;
@@ -31,26 +31,26 @@ void bins::extend () {
     blocks_allocated = nblocks;
 }
 
-bins::bins() :  height(4), blocks_allocated(0), cells(NULL), 
+binmap_t::binmap_t() :  height(4), blocks_allocated(0), cells(NULL), 
                 ap(0), cells_allocated(0), twist_mask(0) {
     extend();
     assert(!alloc_cell());
 }
 
-void bins::twist (uint64_t mask) {
+void binmap_t::twist (uint64_t mask) {
     while ( (1<<height) <= mask )
         extend_range();
     twist_mask = mask;
 }
 
-bins::bins (const bins& b) : height(b.height), ap(b.ap),
+binmap_t::binmap_t (const binmap_t& b) : height(b.height), ap(b.ap),
 blocks_allocated(b.blocks_allocated), cells_allocated(b.cells_allocated) {
     size_t memsz = blocks_allocated*16*32;
     cells = (uint32_t*) malloc(memsz);
     memcpy(cells,b.cells,memsz);
 }
 
-void bins::dump (const char* note) {
+void binmap_t::dump (const char* note) {
     printf("%s\t",note);
     for(int i=0; i<(blocks_allocated<<5); i++) {
         if ( (i&0x1f)>29 )
@@ -65,7 +65,7 @@ void bins::dump (const char* note) {
     printf("\n");
 }
 
-uint32_t bins::split16to32(uint16_t halfval) {
+uint32_t binmap_t::split16to32(uint16_t halfval) {
     uint32_t nval = 0;
     for(int i=0; i<4; i++) {
         nval >>= 8;
@@ -76,7 +76,7 @@ uint32_t bins::split16to32(uint16_t halfval) {
 }
 
 
-int bins::join32to16(uint32_t cval) {
+int binmap_t::join32to16(uint32_t cval) {
     union { uint32_t i; uint8_t a[4]; } uvar;
     uvar.i = cval & (cval>>1) & 0x55555555;
     if ( (uvar.i|(uvar.i<<1)) != cval )
@@ -91,7 +91,7 @@ int bins::join32to16(uint32_t cval) {
 }
 
 
-void        bins::split (uint32_t half) {
+void        binmap_t::split (uint32_t half) {
     if (deep(half))
         return;
     uint32_t cell = alloc_cell(), left=cell<<1, right=left+1;
@@ -104,7 +104,7 @@ void        bins::split (uint32_t half) {
 }
 
 
-bool        bins::join (uint32_t half) {
+bool        binmap_t::join (uint32_t half) {
     uint32_t cellno = halves[half];
     int left = cellno<<1, right=left+1;
     if (deep(left) || deep(right))
@@ -120,7 +120,7 @@ bool        bins::join (uint32_t half) {
     return true;
 }
 
-void    bins::free_cell (uint16_t cell) {
+void    binmap_t::free_cell (uint16_t cell) {
     cells[cell] = 0;
     int left = cell<<1, right=left+1;
     mark(left);
@@ -131,7 +131,7 @@ void    bins::free_cell (uint16_t cell) {
 }
 
 /** Get a free cell. */
-uint16_t    bins::alloc_cell () {
+uint16_t    binmap_t::alloc_cell () {
     uint16_t ap1 = ap;
     cells_allocated++;
     for(; ap<(blocks_allocated<<4); ap++) {
@@ -165,7 +165,7 @@ bin64_t iterator::next (bool need_solid) {
 }
 
 
-iterator::iterator(bins* host_, bin64_t start, bool split) { 
+iterator::iterator(binmap_t* host_, bin64_t start, bool split) { 
     host = host_;
     half = 0;
     for(int i=0; i<64; i++)
@@ -200,7 +200,7 @@ void iterator::to (bool right) {
 }
 
 
-void bins::extend_range () {
+void binmap_t::extend_range () {
     assert(height<62);
     height++;
     uint16_t newroot = alloc_cell();
@@ -231,7 +231,7 @@ void iterator::parent () {
 }
 
 
-bin64_t bins::find (const bin64_t range, fill_t seek) {
+bin64_t binmap_t::find (const bin64_t range, fill_t seek) {
     iterator i(this,range,true);
     fill_t stop = seek==EMPTY ? FILLED : EMPTY;
     while (true) {
@@ -250,7 +250,7 @@ bin64_t bins::find (const bin64_t range, fill_t seek) {
 }
 
 
-uint16_t bins::get (bin64_t bin) {
+uint16_t binmap_t::get (bin64_t bin) {
     if (bin==bin64_t::NONE)
         return EMPTY;
     iterator i(this,bin,true);
@@ -263,18 +263,18 @@ uint16_t bins::get (bin64_t bin) {
 }
 
 
-void bins::clear () {
+void binmap_t::clear () {
     set(bin64_t(height,0),EMPTY);
 }
 
 
-uint64_t bins::mass () {
+uint64_t binmap_t::mass () {
     iterator i(this,bin64_t(0,0),false);
     uint64_t ret = 0;
     while (!i.solid())
         i.left();
     while (!i.end()) {
-        if (*i==bins::FILLED)
+        if (*i==binmap_t::FILLED)
             ret += i.pos.width();
         i.next(true);
     }
@@ -282,7 +282,7 @@ uint64_t bins::mass () {
 }
 
 
-void bins::set (bin64_t bin, fill_t val) {
+void binmap_t::set (bin64_t bin, fill_t val) {
     if (bin==bin64_t::NONE)
         return;
     assert(val==FILLED || val==EMPTY);
@@ -301,11 +301,11 @@ void bins::set (bin64_t bin, fill_t val) {
 }
 
 
-uint64_t*   bins::get_stripes (int& count) {
+uint64_t*   binmap_t::get_stripes (int& count) {
     int size = 32;
     uint64_t *stripes = (uint64_t*) malloc(32*8);
     count = 0;
-    uint16_t cur = bins::EMPTY;
+    uint16_t cur = binmap_t::EMPTY;
     stripes[count++] = 0;
     iterator i(this,bin64_t(0,0),false);
     while (!i.solid())
@@ -333,7 +333,7 @@ uint64_t*   bins::get_stripes (int& count) {
 }
 
 
-void    bins::remove (bins& b) {
+void    binmap_t::remove (binmap_t& b) {
     uint8_t start_lr = b.height>height ? b.height : height;
     bin64_t top(start_lr,0);
     iterator zis(this,top), zat(&b,top);
@@ -352,7 +352,7 @@ void    bins::remove (bins& b) {
 }
 
 
-bin64_t     bins::cover(bin64_t val) {
+bin64_t     binmap_t::cover(bin64_t val) {
     if (val==bin64_t::NONE)
         return val;
     iterator i(this,val,false);
@@ -364,8 +364,8 @@ bin64_t     bins::cover(bin64_t val) {
 }
 
 
-bin64_t     bins::find_filtered 
-    (bins& filter, bin64_t range, fill_t seek)  
+bin64_t     binmap_t::find_filtered 
+    (binmap_t& filter, bin64_t range, fill_t seek)  
 {
     if (range==bin64_t::ALL)
         range = bin64_t ( height>filter.height ? height : filter.height, 0 );
@@ -392,7 +392,7 @@ bin64_t     bins::find_filtered
 }
 
 // FIXME unite with remove(); do bitwise()
-void        bins::copy_range (bins& origin, bin64_t range) { 
+void        binmap_t::copy_range (binmap_t& origin, bin64_t range) { 
     if (range==bin64_t::ALL)
         range = bin64_t ( height>origin.height ? height : origin.height, 0 );
     iterator zis(this,range,true), zat(&origin,range,true);
@@ -410,7 +410,7 @@ void        bins::copy_range (bins& origin, bin64_t range) {
     }
 }
 
-uint64_t    bins::seq_length () {
+uint64_t    binmap_t::seq_length () {
     iterator i(this);
     if (!i.deep() && *i==FILLED)
         return i.pos.width();
@@ -424,7 +424,7 @@ uint64_t    bins::seq_length () {
 }
 
 
-bool        bins::is_solid (bin64_t range, fill_t val)  {
+bool        binmap_t::is_solid (bin64_t range, fill_t val)  {
     if (range==bin64_t::ALL) 
         return !deep(0) && (is_mixed(val) || halves[0]==val);
     iterator i(this,range,false);

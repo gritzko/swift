@@ -152,7 +152,7 @@ namespace p2tp {
             return fd<files.size() ? files[fd] : NULL;
         }
 
-        bins&           ack_out ()  { return file_.ack_out(); }
+        binmap_t&           ack_out ()  { return file_.ack_out(); }
         PiecePicker&    picker () { return *picker_; }
         int             channel_count () const { return hs_in_.size(); }
         HashTree&       file() { return file_; }
@@ -196,7 +196,7 @@ namespace p2tp {
     class PiecePicker {
     public:
         virtual void Randomize (uint64_t twist) = 0;
-        virtual bin64_t Pick (bins& offered, uint64_t max_width, tint expires) = 0;
+        virtual bin64_t Pick (binmap_t& offered, uint64_t max_width, tint expires) = 0;
     };
 
 
@@ -307,7 +307,7 @@ namespace p2tp {
         uint32_t    peer_channel_id_;
         bool        own_id_mentioned_;
         /**    Peer's progress, based on acknowledgements. */
-        bins        ack_in_;
+        binmap_t        ack_in_;
         /**    Last data received; needs to be acked immediately. */
         tintbin     data_in_;
         bin64_t     data_in_dbl_;
@@ -315,7 +315,7 @@ namespace p2tp {
         tbqueue     data_out_;
         bin64_t     data_out_cap_;
         /** Index in the history array. */
-        bins        ack_out_;
+        binmap_t        ack_out_;
         /**    Transmit schedule: in most cases filled with the peer's hints */
         tbqueue     hint_in_;
         /** Hints sent (to detect and reschedule ignored hints). */

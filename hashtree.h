@@ -70,7 +70,7 @@ class HashTree {
     /**    Part of the tree currently checked. */
     size_t          complete_;
     size_t          completek_;
-    bins            ack_out_;
+    binmap_t            ack_out_;
     
 protected:
     
@@ -122,7 +122,7 @@ public:
     bool            is_complete () 
         { return size_ && complete_==size_; }
     /** The binmap of complete packets. */
-    bins&           ack_out () { return ack_out_; }
+    binmap_t&           ack_out () { return ack_out_; }
     
     ~HashTree ();
 

@@ -286,14 +286,14 @@ bool            HashTree::OfferHash (bin64_t pos, const Sha1Hash& hash) {
         return false;
     if (peak==pos)
         return hash == hashes_[pos];
-    if (ack_out_.get(pos.parent())!=bins::EMPTY)
+    if (ack_out_.get(pos.parent())!=binmap_t::EMPTY)
         return hash==hashes_[pos]; // have this hash already, even accptd data
     hashes_[pos] = hash;
     if (!pos.is_base())
         return false; // who cares?
     bin64_t p = pos;
     Sha1Hash uphash = hash;
-    while ( p!=peak && ack_out_.get(p)==bins::EMPTY ) {
+    while ( p!=peak && ack_out_.get(p)==binmap_t::EMPTY ) {
         hashes_[p] = uphash;
         p = p.parent();
         uphash = Sha1Hash(hashes_[p.left()],hashes_[p.right()]) ;
@@ -309,7 +309,7 @@ bool            HashTree::OfferData (bin64_t pos, const char* data, size_t lengt
         return false;
     if (length<1024 && pos!=bin64_t(0,sizek_-1))
         return false;
-    if (ack_out_.get(pos)==bins::FILLED)
+    if (ack_out_.get(pos)==binmap_t::FILLED)
         return true; // to set data_in_
     bin64_t peak = peak_for(pos);
     if (peak==bin64_t::NONE)
@@ -322,7 +322,7 @@ bool            HashTree::OfferData (bin64_t pos, const char* data, size_t lengt
     }
 
     //printf("g %lli %s\n",(uint64_t)pos,hash.hex().c_str());
-    ack_out_.set(pos,bins::FILLED);
+    ack_out_.set(pos,binmap_t::FILLED);
     pwrite(fd_,data,length,pos.base_offset()<<10);
     complete_ += length;
     completek_++;

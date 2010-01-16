@@ -17,7 +17,7 @@
 	#define RANDOM	random
 #endif
 
-int bins_stripe_count (bins& b) {
+int bins_stripe_count (binmap_t& b) {
     int stripe_count;
     uint64_t * stripes = b.get_stripes(stripe_count);
     free(stripes);
@@ -35,9 +35,9 @@ uint8_t rand_norm (uint8_t lim) {
 }
 
 TEST(FreemapTest,Freemap) {
-    bins space;
+    binmap_t space;
     const bin64_t top(30,0);
-    space.set(top,bins::EMPTY);
+    space.set(top,binmap_t::EMPTY);
     typedef std::pair<int,bin64_t> timebin_t;
     typedef std::set<timebin_t> ts_t;
     ts_t to_free;
@@ -48,8 +48,8 @@ TEST(FreemapTest,Freemap) {
             while (alloc.layer()>lr)
                 alloc = alloc.left();
             ASSERT_NE(0ULL,~alloc);
-            EXPECT_EQ(bins::EMPTY, space.get(alloc));
-            space.set(alloc,bins::FILLED);
+            EXPECT_EQ(binmap_t::EMPTY, space.get(alloc));
+            space.set(alloc,binmap_t::FILLED);
             long dealloc_time = 1<<rand_norm(22);
             printf("alloc 2**%i starting at %lli for %li ticks\n",
                 (int)lr,(uint64_t)alloc,dealloc_time);
@@ -60,7 +60,7 @@ TEST(FreemapTest,Freemap) {
         while (to_free.begin()->first<=t) {
             bin64_t freebin = to_free.begin()->second;
             to_free.erase(to_free.begin());
-            space.set(freebin,bins::EMPTY);
+            space.set(freebin,binmap_t::EMPTY);
             printf("freed at %lli\n",
                 (uint64_t)freebin);
        }
@@ -72,8 +72,8 @@ TEST(FreemapTest,Freemap) {
         //space.dump("space");
     }
     for(ts_t::iterator i=to_free.begin(); i!=to_free.end(); i++)
-        space.set(i->second,bins::EMPTY);
-    EXPECT_EQ(bins::EMPTY,space.get(top));
+        space.set(i->second,binmap_t::EMPTY);
+    EXPECT_EQ(binmap_t::EMPTY,space.get(top));
 }
 
 int main (int argc, char** argv) {

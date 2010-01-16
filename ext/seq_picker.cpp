@@ -13,7 +13,7 @@ using namespace p2tp;
 
 class SeqPiecePicker : public PiecePicker {
     
-    bins            ack_hint_out_;
+    binmap_t            ack_hint_out_;
     tbqueue         hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
@@ -33,7 +33,7 @@ public:
         twist_ = twist;
     }
     
-    virtual bin64_t Pick (bins& offer, uint64_t max_width, tint expires) {
+    virtual bin64_t Pick (binmap_t& offer, uint64_t max_width, tint expires) {
         while (hint_out_.size() && hint_out_.front().time<NOW-TINT_SEC*3/2) { // FIXME sec
             ack_hint_out_.copy_range(file().ack_out(), hint_out_.front().bin);
             hint_out_.pop_front();
@@ -47,7 +47,7 @@ public:
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
         }
-        bin64_t hint = offer.find_filtered (ack_hint_out_,bin64_t::ALL,bins::FILLED);
+        bin64_t hint = offer.find_filtered (ack_hint_out_,bin64_t::ALL,binmap_t::FILLED);
         if (twist_) {
             hint = hint.twisted(twist_);
             offer.twist(0);
@@ -62,7 +62,7 @@ public:
         }
         while (hint.width()>max_width)
             hint = hint.left();
-        assert(ack_hint_out_.get(hint)==bins::EMPTY);
+        assert(ack_hint_out_.get(hint)==binmap_t::EMPTY);
         ack_hint_out_.set(hint);
         hint_out_.push_back(tintbin(NOW,hint));
         return hint;

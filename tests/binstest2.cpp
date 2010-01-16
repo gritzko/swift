@@ -16,40 +16,40 @@ TEST(BinsTest,Routines) {
 
     uint32_t cell = (3<<10) | (3<<14) | (3<<0);
     uint16_t correct = (1<<5) | (1<<7) | (1<<0);
-    uint16_t joined  = bins::join32to16(cell);
+    uint16_t joined  = binmap_t::join32to16(cell);
     EXPECT_EQ(correct,joined);
     
-    uint32_t split = bins::split16to32(correct);
+    uint32_t split = binmap_t::split16to32(correct);
     EXPECT_EQ(cell,split);
     
-    EXPECT_EQ(bins::NOJOIN,bins::join32to16(cell|4));
+    EXPECT_EQ(binmap_t::NOJOIN,binmap_t::join32to16(cell|4));
 
 }
 
 TEST(BinsTest,SetGet) {
 
-    bins bs;
+    binmap_t bs;
     bin64_t b3(1,0), b2(0,1), b4(0,2), b6(1,1), b7(2,0);
     bs.set(b3);
     //bs.dump("set done");
-    EXPECT_EQ(bins::FILLED,bs.get(b3));
+    EXPECT_EQ(binmap_t::FILLED,bs.get(b3));
     //bs.dump("set checkd");
-    EXPECT_EQ(bins::FILLED,bs.get(b2));
+    EXPECT_EQ(binmap_t::FILLED,bs.get(b2));
     //bs.dump("get b2 done");
-    EXPECT_EQ(bins::FILLED,bs.get(b3));
+    EXPECT_EQ(binmap_t::FILLED,bs.get(b3));
     //bs.dump("get b3 done");
-    EXPECT_EQ(bins::EMPTY,bs.get(b4));
-    EXPECT_EQ(bins::EMPTY,bs.get(b6));
-    EXPECT_NE(bins::FILLED,bs.get(b7));
-    EXPECT_NE(bins::EMPTY,bs.get(b7));
-    EXPECT_EQ(bins::FILLED,bs.get(b3));
+    EXPECT_EQ(binmap_t::EMPTY,bs.get(b4));
+    EXPECT_EQ(binmap_t::EMPTY,bs.get(b6));
+    EXPECT_NE(binmap_t::FILLED,bs.get(b7));
+    EXPECT_NE(binmap_t::EMPTY,bs.get(b7));
+    EXPECT_EQ(binmap_t::FILLED,bs.get(b3));
     bs.set(bin64_t(1,1));
-    EXPECT_EQ(bins::FILLED,bs.get(bin64_t(2,0)));
+    EXPECT_EQ(binmap_t::FILLED,bs.get(bin64_t(2,0)));
 
 }
 
 TEST(BinsTest,Iterator) {
-    bins b;
+    binmap_t b;
     b.set(bin64_t(3,1));
     iterator i(&b,bin64_t(0,0),false);
     while (!i.solid())
@@ -57,69 +57,69 @@ TEST(BinsTest,Iterator) {
     EXPECT_EQ(bin64_t(3,0),i.bin());
     EXPECT_EQ(false,i.deep());
     EXPECT_EQ(true,i.solid());
-    EXPECT_EQ(bins::EMPTY,*i);
+    EXPECT_EQ(binmap_t::EMPTY,*i);
     i.next();
     EXPECT_EQ(bin64_t(3,1),i.bin());
     EXPECT_EQ(false,i.deep());
     EXPECT_EQ(true,i.solid());
-    EXPECT_EQ(bins::FILLED,*i);
+    EXPECT_EQ(binmap_t::FILLED,*i);
     i.next();
     EXPECT_TRUE(i.end());
 }
 
 TEST(BinsTest,Chess) {
-    bins chess16;
+    binmap_t chess16;
     for(int i=0; i<15; i++)
-        chess16.set(bin64_t(0,i), (i&1)?bins::FILLED:bins::EMPTY);
-    chess16.set(bin64_t(0,15), bins::FILLED);
+        chess16.set(bin64_t(0,i), (i&1)?binmap_t::FILLED:binmap_t::EMPTY);
+    chess16.set(bin64_t(0,15), binmap_t::FILLED);
     for(int i=0; i<16; i++)
-        EXPECT_EQ((i&1)?bins::FILLED:bins::EMPTY, chess16.get(bin64_t(0,i)));
-    EXPECT_NE(bins::FILLED,chess16.get(bin64_t(4,0)));
-    EXPECT_NE(bins::EMPTY,chess16.get(bin64_t(4,0)));
+        EXPECT_EQ((i&1)?binmap_t::FILLED:binmap_t::EMPTY, chess16.get(bin64_t(0,i)));
+    EXPECT_NE(binmap_t::FILLED,chess16.get(bin64_t(4,0)));
+    EXPECT_NE(binmap_t::EMPTY,chess16.get(bin64_t(4,0)));
     for(int i=0; i<16; i+=2)
-        chess16.set(bin64_t(0,i), bins::FILLED);
-    EXPECT_EQ(bins::FILLED,chess16.get(bin64_t(4,0)));
-    EXPECT_EQ(bins::FILLED,chess16.get(bin64_t(2,3)));
+        chess16.set(bin64_t(0,i), binmap_t::FILLED);
+    EXPECT_EQ(binmap_t::FILLED,chess16.get(bin64_t(4,0)));
+    EXPECT_EQ(binmap_t::FILLED,chess16.get(bin64_t(2,3)));
     
-    chess16.set(bin64_t(4,1),bins::FILLED);
-    EXPECT_EQ(bins::FILLED,chess16.get(bin64_t(5,0)));
+    chess16.set(bin64_t(4,1),binmap_t::FILLED);
+    EXPECT_EQ(binmap_t::FILLED,chess16.get(bin64_t(5,0)));
 }
 
 TEST(BinsTest,Staircase) {
     
     const int TOPLAYR = 44;
-    bins staircase;
+    binmap_t staircase;
     for(int i=0;i<TOPLAYR;i++)
-        staircase.set(bin64_t(i,1),bins::FILLED);
+        staircase.set(bin64_t(i,1),binmap_t::FILLED);
     
-    EXPECT_NE(bins::FILLED,staircase.get(bin64_t(TOPLAYR,0)));
-    EXPECT_NE(bins::EMPTY,staircase.get(bin64_t(TOPLAYR,0)));
+    EXPECT_NE(binmap_t::FILLED,staircase.get(bin64_t(TOPLAYR,0)));
+    EXPECT_NE(binmap_t::EMPTY,staircase.get(bin64_t(TOPLAYR,0)));
 
-    staircase.set(bin64_t(0,0),bins::FILLED);
-    EXPECT_EQ(bins::FILLED,staircase.get(bin64_t(TOPLAYR,0)));
+    staircase.set(bin64_t(0,0),binmap_t::FILLED);
+    EXPECT_EQ(binmap_t::FILLED,staircase.get(bin64_t(TOPLAYR,0)));
 
 }
 
 TEST(BinsTest,Hole) {
     
-    bins hole;
-    hole.set(bin64_t(8,0),bins::FILLED);
-    hole.set(bin64_t(6,1),bins::EMPTY);
-    hole.set(bin64_t(6,2),bins::EMPTY);
-    EXPECT_EQ(bins::FILLED,hole.get(bin64_t(6,0)));
-    EXPECT_EQ(bins::FILLED,hole.get(bin64_t(6,3)));
-    EXPECT_NE(bins::FILLED,hole.get(bin64_t(8,0)));
-    EXPECT_NE(bins::EMPTY,hole.get(bin64_t(8,0)));
-    EXPECT_EQ(bins::EMPTY,hole.get(bin64_t(6,1)));
+    binmap_t hole;
+    hole.set(bin64_t(8,0),binmap_t::FILLED);
+    hole.set(bin64_t(6,1),binmap_t::EMPTY);
+    hole.set(bin64_t(6,2),binmap_t::EMPTY);
+    EXPECT_EQ(binmap_t::FILLED,hole.get(bin64_t(6,0)));
+    EXPECT_EQ(binmap_t::FILLED,hole.get(bin64_t(6,3)));
+    EXPECT_NE(binmap_t::FILLED,hole.get(bin64_t(8,0)));
+    EXPECT_NE(binmap_t::EMPTY,hole.get(bin64_t(8,0)));
+    EXPECT_EQ(binmap_t::EMPTY,hole.get(bin64_t(6,1)));
     
 }
 
 TEST(BinsTest,Find){
     
-    bins hole;
-    hole.set(bin64_t(4,0),bins::FILLED);
-    hole.set(bin64_t(1,1),bins::EMPTY);
-    hole.set(bin64_t(0,7),bins::EMPTY);
+    binmap_t hole;
+    hole.set(bin64_t(4,0),binmap_t::FILLED);
+    hole.set(bin64_t(1,1),binmap_t::EMPTY);
+    hole.set(bin64_t(0,7),binmap_t::EMPTY);
     bin64_t f = hole.find(bin64_t(4,0)).left_foot();
     EXPECT_EQ(bin64_t(0,2),f);
     
@@ -127,11 +127,11 @@ TEST(BinsTest,Find){
 
 TEST(BinsTest,Stripes) {
     
-    bins zebra;
+    binmap_t zebra;
     zebra.set(bin64_t(5,0));
-    zebra.set(bin64_t(3,1),bins::EMPTY);
-    zebra.set(bin64_t(1,12),bins::EMPTY);
-    zebra.set(bin64_t(1,14),bins::EMPTY);
+    zebra.set(bin64_t(3,1),binmap_t::EMPTY);
+    zebra.set(bin64_t(1,12),binmap_t::EMPTY);
+    zebra.set(bin64_t(1,14),binmap_t::EMPTY);
     int count;
     uint64_t *stripes = zebra.get_stripes(count);
     EXPECT_EQ(9,count);
@@ -150,7 +150,7 @@ TEST(BinsTest,Stripes) {
 
 TEST(BinsTest,StripesAgg) {
     
-    bins zebra;
+    binmap_t zebra;
     zebra.set(bin64_t(0,1));
     zebra.set(bin64_t(0,2));
     int count;
@@ -165,30 +165,30 @@ TEST(BinsTest,StripesAgg) {
 
 TEST(BinsTest,Alloc) {
 
-    bins b;
+    binmap_t b;
     b.set(bin64_t(1,0));
     b.set(bin64_t(1,1));
-    b.set(bin64_t(1,0),bins::EMPTY);
-    b.set(bin64_t(1,1),bins::EMPTY);
+    b.set(bin64_t(1,0),binmap_t::EMPTY);
+    b.set(bin64_t(1,1),binmap_t::EMPTY);
     EXPECT_EQ(1,b.size());
 
 }
 
 TEST(BinsTest,Remove) {
     
-    bins b;
+    binmap_t b;
     b.set(bin64_t(5,0));
-    bins c;
+    binmap_t c;
     c.set(bin64_t(2,0));
     c.set(bin64_t(2,2));
     b.remove(c);
-    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(2,0)));
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(2,1)));
-    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(2,2)));
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(2,3)));
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(4,1)));
+    EXPECT_EQ(binmap_t::EMPTY,b.get(bin64_t(2,0)));
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(2,1)));
+    EXPECT_EQ(binmap_t::EMPTY,b.get(bin64_t(2,2)));
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(2,3)));
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(4,1)));
     
-    bins b16, b1024, b8192;
+    binmap_t b16, b1024, b8192;
     b16.set(bin64_t(3,1));
     b1024.set(bin64_t(3,1));
     b1024.set(bin64_t(4,2));
@@ -199,22 +199,22 @@ TEST(BinsTest,Remove) {
     b1024.remove(b16);
     b1024.remove(b8192);
     
-    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(3,1)));
-    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(5,0)));
-    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(9,1)));
-    EXPECT_EQ(bins::EMPTY,b1024.get(bin64_t(12,1)));
-    EXPECT_EQ(bins::FILLED,b1024.get(bin64_t(4,2)));
+    EXPECT_EQ(binmap_t::EMPTY,b1024.get(bin64_t(3,1)));
+    EXPECT_EQ(binmap_t::EMPTY,b1024.get(bin64_t(5,0)));
+    EXPECT_EQ(binmap_t::EMPTY,b1024.get(bin64_t(9,1)));
+    EXPECT_EQ(binmap_t::EMPTY,b1024.get(bin64_t(12,1)));
+    EXPECT_EQ(binmap_t::FILLED,b1024.get(bin64_t(4,2)));
     
     b8192.set(bin64_t(2,3));
     b16.remove(b8192);
-    EXPECT_EQ(bins::EMPTY,b16.get(bin64_t(2,3)));
-    EXPECT_EQ(bins::FILLED,b16.get(bin64_t(2,2)));
+    EXPECT_EQ(binmap_t::EMPTY,b16.get(bin64_t(2,3)));
+    EXPECT_EQ(binmap_t::FILLED,b16.get(bin64_t(2,2)));
     
 }
 
 TEST(BinsTest,FindFiltered) {
     
-    bins data, filter;
+    binmap_t data, filter;
     data.set(bin64_t(2,0));
     data.set(bin64_t(2,2));
     data.set(bin64_t(1,7));
@@ -230,13 +230,13 @@ TEST(BinsTest,FindFiltered) {
 
 TEST(BinsTest, Cover) {
     
-    bins b;
+    binmap_t b;
     b.set(bin64_t(2,0));
     b.set(bin64_t(4,1));
     EXPECT_EQ(bin64_t(4,1),b.cover(bin64_t(0,30)));
     EXPECT_EQ(bin64_t(2,0),b.cover(bin64_t(0,3)));
     EXPECT_EQ(bin64_t(2,0),b.cover(bin64_t(2,0)));
-    //bins c;
+    //binmap_t c;
     //EXPECT_EQ(bin64_t::ALL,b.cover(bin64_t(0,30)));
     
 }
@@ -244,12 +244,12 @@ TEST(BinsTest, Cover) {
 
 TEST(BinsTest,FindFiltered2) {
     
-    bins data, filter;
+    binmap_t data, filter;
     for(int i=0; i<1024; i+=2)
         data.set(bin64_t(0,i));
     for(int j=1; j<1024; j+=2)
         filter.set(bin64_t(0,j));
-    filter.set(bin64_t(0,501),bins::EMPTY);
+    filter.set(bin64_t(0,501),binmap_t::EMPTY);
     EXPECT_EQ(bin64_t(0,501),data.find_filtered(filter,bin64_t(10,0)).left_foot());
     data.set(bin64_t(0,501));
     EXPECT_EQ(bin64_t::NONE,data.find_filtered(filter,bin64_t(10,0)).left_foot());
@@ -257,7 +257,7 @@ TEST(BinsTest,FindFiltered2) {
 }
     
 TEST(BinsTest,CopyRange) {
-    bins data, add;
+    binmap_t data, add;
     data.set(bin64_t(2,0));
     data.set(bin64_t(2,2));
     data.set(bin64_t(1,7));
@@ -266,49 +266,49 @@ TEST(BinsTest,CopyRange) {
     add.set(bin64_t(0,13));
     add.set(bin64_t(5,118));
     data.copy_range(add, bin64_t(3,0));
-    EXPECT_TRUE(bins::is_mixed(data.get(bin64_t(3,0))));
-    EXPECT_EQ(bins::EMPTY,data.get(bin64_t(2,0)));
-    EXPECT_EQ(bins::FILLED,data.get(bin64_t(2,1)));
-    EXPECT_EQ(bins::EMPTY,data.get(bin64_t(1,6)));
-    EXPECT_EQ(bins::FILLED,data.get(bin64_t(1,7)));
+    EXPECT_TRUE(binmap_t::is_mixed(data.get(bin64_t(3,0))));
+    EXPECT_EQ(binmap_t::EMPTY,data.get(bin64_t(2,0)));
+    EXPECT_EQ(binmap_t::FILLED,data.get(bin64_t(2,1)));
+    EXPECT_EQ(binmap_t::EMPTY,data.get(bin64_t(1,6)));
+    EXPECT_EQ(binmap_t::FILLED,data.get(bin64_t(1,7)));
 }
 
 TEST(BinsTest, Mass) {
-    bins b;
-    b.set(bin64_t(6,0),bins::FILLED);
-    b.set(bin64_t(0,0),bins::EMPTY);
+    binmap_t b;
+    b.set(bin64_t(6,0),binmap_t::FILLED);
+    b.set(bin64_t(0,0),binmap_t::EMPTY);
     EXPECT_EQ(63,b.mass());
     EXPECT_FALSE(b.is_empty());
     b.clear();
     EXPECT_TRUE(b.is_empty());
     EXPECT_EQ(0,b.mass());
 
-    bins b50;
+    binmap_t b50;
     for(int i=0; i<50; i++)
         b50.set(bin64_t(4,i*2));
     EXPECT_EQ(50<<4,b50.mass());
 }
 
 TEST(BinsTest,Twist) {
-    bins b;
+    binmap_t b;
     b.set(bin64_t(3,2));
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,2)));
-    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(3,2)));
+    EXPECT_EQ(binmap_t::EMPTY,b.get(bin64_t(3,3)));
     b.twist(1<<3);
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,3)));
-    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,2)));
-    bin64_t tw = b.find(bin64_t(5,0),bins::FILLED);
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(3,3)));
+    EXPECT_EQ(binmap_t::EMPTY,b.get(bin64_t(3,2)));
+    bin64_t tw = b.find(bin64_t(5,0),binmap_t::FILLED);
     while (tw.width()>(1<<3))
         tw = tw.left();
     tw = tw.twisted(1<<3);
     EXPECT_EQ(bin64_t(3,2),tw);
     b.twist(0);
-    EXPECT_EQ(bins::FILLED,b.get(bin64_t(3,2)));
-    EXPECT_EQ(bins::EMPTY,b.get(bin64_t(3,3)));
+    EXPECT_EQ(binmap_t::FILLED,b.get(bin64_t(3,2)));
+    EXPECT_EQ(binmap_t::EMPTY,b.get(bin64_t(3,3)));
 }
 
 TEST(BinsTest,SeqLength) {
-    bins b;
+    binmap_t b;
     b.set(bin64_t(3,0));
     b.set(bin64_t(1,4));
     b.set(bin64_t(0,10));
@@ -318,7 +318,7 @@ TEST(BinsTest,SeqLength) {
 
 TEST(BinsTest,EmptyFilled) {
     // 1112 3312  2111 ....
-    bins b;
+    binmap_t b;
     
     EXPECT_TRUE(b.is_empty(bin64_t::ALL));
     
@@ -332,7 +332,7 @@ TEST(BinsTest,EmptyFilled) {
     
     EXPECT_TRUE(b.is_empty(bin64_t(2,3)));
     EXPECT_FALSE(b.is_filled(bin64_t(2,3)));
-    EXPECT_TRUE(b.is_solid(bin64_t(2,3),bins::MIXED));
+    EXPECT_TRUE(b.is_solid(bin64_t(2,3),binmap_t::MIXED));
     EXPECT_TRUE(b.is_filled(bin64_t(1,0)));
     EXPECT_TRUE(b.is_filled(bin64_t(1,5)));
     EXPECT_FALSE(b.is_filled(bin64_t(1,3)));
@@ -372,7 +372,7 @@ TEST(BinheapTest,Eat) {
 }
 
 /*TEST(BinsTest,AddSub) {
-	bins b;
+	binmap_t b;
 	b|=15;
 	b-=1;
 	ASSERT_TRUE(b.contains(2));
@@ -397,7 +397,7 @@ TEST(BinsTest,Peaks) {
 }
 
 TEST(BinsTest,Performance) {
-	bins b;
+	binmap_t b;
 	std::set<int> s;
 	clock_t start, end;
 	double b_time, s_time;

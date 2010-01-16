@@ -13,7 +13,7 @@
 /** A binmap covering 2^64 range. Binmap is a hybrid of a bitmap (aka
     bit vector) and a binary tree. The key ability of a binmap is
     the aggregation of solid (all-0 or all-1) ranges. */
-class bins {
+class binmap_t {
     
 public:
     /** Need a 3-valued logic as a range might be either all-0 or all-1
@@ -25,10 +25,10 @@ public:
     typedef enum { FILLED=0xffff, EMPTY=0x0000, MIXED=0x5555 } fill_t;
     static const int NOJOIN;
     
-    bins();
+    binmap_t();
     
     /** Copying constructor. */
-    bins(const bins& b);
+    binmap_t(const binmap_t& b);
     
     /** Get value for the bin. */
     uint16_t    get (bin64_t bin); 
@@ -37,7 +37,7 @@ public:
     void        set (bin64_t bin, fill_t val=FILLED); 
     
     /** Copy a range from another binmap. */
-    void        copy_range (bins& origin, bin64_t range);
+    void        copy_range (binmap_t& origin, bin64_t range);
     
     /** Find the leftmost bin within the specified range which is
         either filled or empty. */
@@ -47,11 +47,11 @@ public:
         either filled or empty. Bins set to 1 in the filter binmap cannot
         be returned. In fact, this is an incremental bitwise op. */
     bin64_t     find_filtered
-        (bins& filter, bin64_t range, fill_t seek=EMPTY) ;
+        (binmap_t& filter, bin64_t range, fill_t seek=EMPTY) ;
     
     /** Bitwise SUB; any bins set to one in the filter binmap should
         be set to 0 in this binmap. */
-    void        remove (bins& filter);
+    void        remove (binmap_t& filter);
     
     void        dump(const char* note);
 
@@ -155,17 +155,17 @@ private:
  or FILLED/EMPTY. */
 class iterator {
 public: // rm this
-    bins        *host;
+    binmap_t        *host;
     uint32_t    history[64];
     uint32_t    half;
     uint8_t     layer_;
     bin64_t     pos;  // TODO: half[] layer bin
 public:
-    iterator(bins* host, bin64_t start=bin64_t(0,0), bool split=false);
+    iterator(binmap_t* host, bin64_t start=bin64_t(0,0), bool split=false);
     ~iterator();
     bool deep () { return host->deep(half); }
     bool solid () { 
-        return !deep() && bins::is_solid(host->halves[half]); 
+        return !deep() && binmap_t::is_solid(host->halves[half]); 
     }
     void sibling () { half^=1; pos=pos.sibling(); }
     bool end () { return half==1; }
