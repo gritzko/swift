@@ -44,8 +44,8 @@ TEST(Datagram, BinaryTest) {
 	d.Push64(num64);
 	char buf[1024];
 	int i;
-	for(i=0; i<d.length; i++)
-		sprintf(buf+i*2,"%02x",*(unsigned char*)(d.buf+i));
+	for(i=0; i<d.size(); i++)
+		sprintf(buf+i*2,"%02x",*(unsigned char*)(*d+i));
 	buf[i*2] = 0;
 	EXPECT_STREQ("74657874ababcdabcdef01000abcdefabcdeff",buf);
 	int datalen = strlen(text)+1+2+4+8;
