@@ -52,7 +52,7 @@ int main (int argn, char** args) {
 
     tint start = NOW;
 
-    while (!p2tp::IsComplete(file) && NOW-start<TINT_SEC*60) {
+    while (!p2tp::IsComplete(file)){// && NOW-start<TINT_SEC*60) {
 	    p2tp::Loop(TINT_SEC);
         eprintf("done %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
                p2tp::Complete(file), p2tp::Size(file), p2tp::SeqComplete(file),
