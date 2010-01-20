@@ -5,10 +5,6 @@
 #  - scons: Cross-platform build system    http://www.scons.org/
 #  - googletest: Google C++ Test Framework http://code.google.com/p/googletest/
 #       * Install in ..\gtest-1.4.0
-#  - OpenSSL: http://www.slproweb.com/products/Win32OpenSSL.html
-#       * Install non-light Win32 binary in \openssl
-#       * Using a openssl-0.9.8k tar-ball doesn't work as the includes there
-#         are symbolic links which get turned into 0 length files by 7Zip. 
 #
 
 import os

@@ -50,7 +50,9 @@ int main (int argn, char** args) {
 	int file = p2tp::Open(filename,root_hash);
     printf("Downloading %s\n",root_hash.hex().c_str());
 
-    while (true) {//!p2tp::IsComplete(file)) {
+    tint start = NOW;
+
+    while (!p2tp::IsComplete(file) && NOW-start<TINT_SEC*60) {
 	    p2tp::Loop(TINT_SEC);
         eprintf("done %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
                p2tp::Complete(file), p2tp::Size(file), p2tp::SeqComplete(file),
@@ -58,8 +60,11 @@ int main (int argn, char** args) {
                Datagram::dgrams_down, Datagram::bytes_down );
     }
 
+    bool complete = p2tp::IsComplete(file);
+
 	p2tp::Close(file);
 
 	p2tp::Shutdown();
 
+    return !complete;
 }
