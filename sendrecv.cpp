@@ -157,7 +157,7 @@ void    Channel::AddHint (Datagram& dgram) {
     /*int peer_cwnd = (int)(rtt_avg_ / dip_avg_);
     if (!peer_cwnd)
         peer_cwnd = 1;*/
-    int plan_pck = std::max ( 1LL, plan_for / dip_avg_ );
+    int plan_pck = std::max ( (tint)1, plan_for / dip_avg_ );
     
     if ( hint_out_size_ < plan_pck ) {
             
