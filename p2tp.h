@@ -133,8 +133,11 @@ namespace p2tp {
 
     public:
 
-        /**    Open/submit/retrieve a file.    */
-        FileTransfer(const char *file_name, const Sha1Hash& _root_hash=Sha1Hash::ZERO);
+        /** A constructor. Open/submit/retrieve a file. 
+         *  @param file_name    the name of the file 
+         *  @param root_hash    the root hash of the file; zero hash if the file
+                                is newly submitted */
+        FileTransfer(const char *file_name, const Sha1Hash& root_hash=Sha1Hash::ZERO);
 
         /**    Close everything. */
         ~FileTransfer();
@@ -147,16 +150,24 @@ namespace p2tp {
         /** Rotating queue read for channels of this transmission. */
         int             RevealChannel (int& i);
 
+        /** Find transfer by the root hash. */
         static FileTransfer* Find (const Sha1Hash& hash);
+        /** Find transfer by the file descriptor. */
         static FileTransfer* file (int fd) {
             return fd<files.size() ? files[fd] : NULL;
         }
 
+        /** The binmap for data already retrieved and checked. */
         binmap_t&           ack_out ()  { return file_.ack_out(); }
+        /** Piece picking strategy used by this transfer. */
         PiecePicker&    picker () { return *picker_; }
+        /** The number of channels working for this transfer. */
         int             channel_count () const { return hs_in_.size(); }
+        /** Hash tree checked file; all the hashes and data are kept here. */
         HashTree&       file() { return file_; }
+        /** File descriptor for the data file. */
         int             fd () const { return file_.file_descriptor(); }
+        /** Root SHA1 hash of the transfer (and the data file). */
         const Sha1Hash& root_hash () const { return file_.root_hash(); }
 
     private:
@@ -192,10 +203,18 @@ namespace p2tp {
     };
 
 
-    
+    /** PiecePicker implements some strategy of choosing (picking) what
+        to request next, given the possible range of choices:
+        data acknowledged by the peer minus data already retrieved.
+        May pick sequentially, do rarest first or in some other way. */
     class PiecePicker {
     public:
         virtual void Randomize (uint64_t twist) = 0;
+        /** The piece picking method itself.
+         *  @param  offered     the daata acknowledged by the peer 
+         *  @param  max_width   maximum number of packets to ask for
+         *  @param  expires     (not used currently) when to consider request expired
+         *  @return             the bin number to request */
         virtual bin64_t Pick (binmap_t& offered, uint64_t max_width, tint expires) = 0;
     };
 
@@ -219,9 +238,8 @@ namespace p2tp {
         connections or FTP sessions; one channel is created for one file
         being transferred between two peers. As we don't need buffers and
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
-        (There was a seductive idea to remove channels, just put the root
-        hash or a fragment of it into every datagram.) */
-    class Channel {  // normally, API users do not deal with the structure
+        Normally, API users do not deal with this class. */
+    class Channel {  
     public:
         Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
         ~Channel();
