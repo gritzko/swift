@@ -39,14 +39,17 @@ FileTransfer::FileTransfer (const char* filename, const Sha1Hash& _root_hash) :
 }
 
 
+void    Channel::CloseTransfer (FileTransfer* trans) {
+    for(int i=0; i<Channel::channels.size(); i++) 
+        if (Channel::channels[i] && Channel::channels[i]->transfer_==trans) 
+            delete Channel::channels[i];
+}
+
 
 FileTransfer::~FileTransfer ()
 {
-
+    Channel::CloseTransfer(this);
     files[fd()] = NULL;
-    for(int i=0; i<Channel::channels.size(); i++) 
-        if (Channel::channels[i] && Channel::channels[i]->transfer_==this) 
-            delete Channel::channels[i];
 }
 
 
@@ -60,12 +63,12 @@ FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
 
 void            FileTransfer::OnPexIn (const Address& addr) {
     for(int i=0; i<hs_in_.size(); i++) {
-        Channel* c = Channel::channels[hs_in_[i]];
-        if (c && c->transfer().fd()==this->fd() && c->peer_==addr)
+        Channel* c = Channel::channel(hs_in_[i]);
+        if (c && c->transfer().fd()==this->fd() && c->peer()==addr)
             return; // already connected
     }
     if (hs_in_.size()<20) {
-        new Channel(this,Channel::sockets[0],addr);
+        new Channel(this,Channel::default_socket(),addr);
     } else {
         pex_in_.push_back(addr);
         if (pex_in_.size()>1000)
@@ -79,11 +82,11 @@ int        FileTransfer::RevealChannel (int& pex_out_) { // FIXME brainfuck
     if (pex_out_<0)
         pex_out_ = 0;
     while (pex_out_<hs_in_.size()) {
-        Channel* c = Channel::channels[hs_in_[pex_out_]];
+        Channel* c = Channel::channel(hs_in_[pex_out_]);
         if (c && c->transfer().fd()==this->fd()) {
-            if (c->own_id_mentioned_) {
+            if (c->is_established()) {
                 pex_out_ += hs_in_offset_ + 1;
-                return c->id;
+                return c->id();
             } else
                 pex_out_++;
         } else {

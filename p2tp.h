@@ -221,8 +221,8 @@ namespace p2tp {
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
         (There was a seductive idea to remove channels, just put the root
         hash or a fragment of it into every datagram.) */
-    struct Channel {  // normally, API users do not deal with the structure
-
+    class Channel {  // normally, API users do not deal with the structure
+    public:
         Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
         ~Channel();
         
@@ -287,20 +287,23 @@ namespace p2tp {
         tint ack_timeout () {
             return rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4;
         }
+        uint32_t    id () const { return id_; }
         
-        static int DecodeID(int scrambled);
-        static int EncodeID(int unscrambled);
+        static int  DecodeID(int scrambled);
+        static int  EncodeID(int unscrambled);
         static Channel* channel(int i) {
             return i<channels.size()?channels[i]:NULL;
         }
+        static void CloseTransfer (FileTransfer* trans);
+        static SOCKET default_socket() { return sockets[0]; }
 
-
+    protected:
         /** Channel id: index in the channel array. */
-        uint32_t    id;
+        uint32_t    id_;
         /**    Socket address of the peer. */
         Address     peer_;
         /**    The UDP socket fd. */
-        int         socket_;
+        SOCKET      socket_;
         /**    Descriptor of the file in question. */
         FileTransfer*    transfer_;
         /**    Peer channel id; zero if we are trying to open a channel. */
@@ -384,8 +387,6 @@ namespace p2tp {
         friend void     SetTracker(const Address& tracker);
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
 
-        friend class FileTransfer; // FIXME!!!
-        friend class SendController; // FIXME!!!
     };
 
 

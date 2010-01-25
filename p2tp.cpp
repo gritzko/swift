@@ -53,20 +53,20 @@ Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
 {
     if (peer_==Address())
         peer_ = tracker;
-    this->id = channels.size();
+    this->id_ = channels.size();
     channels.push_back(this);
-    transfer_->hs_in_.push_back(id);
+    transfer_->hs_in_.push_back(id_);
     for(int i=0; i<4; i++) {
         owd_min_bins_[i] = TINT_NEVER;
         owd_current_[i] = TINT_NEVER;
     }
     Reschedule();
-    dprintf("%s #%u init %s\n",tintstr(),id,peer_.str());
+    dprintf("%s #%u init %s\n",tintstr(),id_,peer_.str());
 }
 
 
 Channel::~Channel () {
-    channels[id] = NULL;
+    channels[id_] = NULL;
 }
 
 

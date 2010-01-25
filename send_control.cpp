@@ -33,7 +33,7 @@ tint    Channel::NextSendTime () {
 }
 
 tint    Channel::SwitchSendControl (int control_mode) {
-    dprintf("%s #%u sendctrl switch %s->%s\n",tintstr(),id,
+    dprintf("%s #%u sendctrl switch %s->%s\n",tintstr(),id(),
             SEND_CONTROL_MODES[send_control_],SEND_CONTROL_MODES[control_mode]);
     switch (control_mode) {
         case KEEP_ALIVE_CONTROL:
@@ -97,7 +97,7 @@ tint    Channel::CwndRateNextSendTime () {
     if (send_interval_>std::max(rtt_avg_,TINT_SEC)*4)
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (data_out_.size()<cwnd_) {
-        dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id,send_interval_);
+        dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id_,send_interval_);
         return last_data_out_time_ + send_interval_;
     } else {
         assert(data_out_.front().time!=TINT_NEVER);
@@ -111,7 +111,7 @@ void    Channel::BackOffOnLosses (float ratio) {
     if (last_loss_time_<NOW-rtt_avg_) {
         cwnd_ *= ratio;
         last_loss_time_ = NOW;
-        dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id,cwnd_);
+        dprintf("%s #%u sendctrl backoff %3.2f\n",tintstr(),id_,cwnd_);
     }
 }
 
@@ -155,7 +155,7 @@ tint Channel::LedbatNextSendTime () {
     tint off_target = LEDBAT_TARGET - queueing_delay;
     cwnd_ += LEDBAT_GAIN * off_target / cwnd_;
     dprintf("%s #%u sendctrl ledbat %lli-%lli => %3.2f\n",
-            tintstr(),id,owd_cur,owd_min,cwnd_);
+            tintstr(),id_,owd_cur,owd_min,cwnd_);
     return CwndRateNextSendTime();
 }
 

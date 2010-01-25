@@ -26,7 +26,7 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
         dgram.Push32((uint32_t)peak);
         dgram.PushHash(file().peak_hash(i));
         //DLOG(INFO)<<"#"<<id<<" +pHASH"<<file().peak(i);
-        dprintf("%s #%u +phash %s\n",tintstr(),id,peak.str());
+        dprintf("%s #%u +phash %s\n",tintstr(),id_,peak.str());
     }
 }
 
@@ -40,7 +40,7 @@ void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
         dgram.Push32((uint32_t)uncle);
         dgram.PushHash( file().hash(uncle) );
         //DLOG(INFO)<<"#"<<id<<" +uHASH"<<uncle;
-        dprintf("%s #%u +hash %s\n",tintstr(),id,uncle.str());
+        dprintf("%s #%u +hash %s\n",tintstr(),id_,uncle.str());
         pos = pos.parent();
     }
 }
@@ -61,7 +61,7 @@ bin64_t        Channel::DequeueHint () {
         if (my_pick!=bin64_t::NONE) {
             my_pick = my_pick.twisted(twist);
             hint_in_.push_back(my_pick);
-            dprintf("%s #%u *hint %s\n",tintstr(),id,my_pick.str());
+            dprintf("%s #%u *hint %s\n",tintstr(),id_,my_pick.str());
         }
     }
     bin64_t send = bin64_t::NONE;
@@ -81,7 +81,7 @@ bin64_t        Channel::DequeueHint () {
     uint64_t mass = 0;
     for(int i=0; i<hint_in_.size(); i++)
         mass += hint_in_[i].bin.width();
-    dprintf("%s #%u dequeued %s [%lli]\n",tintstr(),id,send.str(),mass);
+    dprintf("%s #%u dequeued %s [%lli]\n",tintstr(),id_,send.str(),mass);
     return send;
 }
 
@@ -92,12 +92,12 @@ void    Channel::AddHandshake (Datagram& dgram) {
         dgram.Push32(bin64_t::ALL32);
         dgram.PushHash(file().root_hash());
         dprintf("%s #%u +hash ALL %s\n",
-                tintstr(),id,file().root_hash().hex().c_str());
+                tintstr(),id_,file().root_hash().hex().c_str());
     }
     dgram.Push8(P2TP_HANDSHAKE);
-    int encoded = EncodeID(id);
+    int encoded = EncodeID(id_);
     dgram.Push32(encoded);
-    dprintf("%s #%u +hs %x\n",tintstr(),id,encoded);
+    dprintf("%s #%u +hs %x\n",tintstr(),id_,encoded);
     ack_out_.clear();
     AddAck(dgram);
 }
@@ -120,11 +120,11 @@ void    Channel::Send () {
         AddAck(dgram);
     }
     dprintf("%s #%u sent %ib %s:%x\n",
-            tintstr(),id,dgram.size(),peer().str(),peer_channel_id_);
+            tintstr(),id_,dgram.size(),peer().str(),peer_channel_id_);
     if (dgram.size()==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
         //dprintf("%s #%u considering keepalive %i %f %s\n",
-        //        tintstr(),id,(int)data_out_.size(),cwnd_,SEND_CONTROL_MODES[send_control_]);
+        //        tintstr(),id_,(int)data_out_.size(),cwnd_,SEND_CONTROL_MODES[send_control_]);
         //if (data_out_.size()<cwnd_ && send_control_!=KEEP_ALIVE_CONTROL) {
             //if ( cwnd_ < 1 )
             //    SwitchSendControl(KEEP_ALIVE_CONTROL);
@@ -167,11 +167,11 @@ void    Channel::AddHint (Datagram& dgram) {
         if (hint!=bin64_t::NONE) {
             dgram.Push8(P2TP_HINT);
             dgram.Push32(hint);
-            dprintf("%s #%u +hint %s [%lli]\n",tintstr(),id,hint.str(),hint_out_size_);
+            dprintf("%s #%u +hint %s [%lli]\n",tintstr(),id_,hint.str(),hint_out_size_);
             hint_out_.push_back(hint);
             hint_out_size_ += hint.width();
         } else
-            dprintf("%s #%u Xhint\n",tintstr(),id);
+            dprintf("%s #%u Xhint\n",tintstr(),id_);
         
     }
 }
@@ -186,12 +186,12 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     if (data_out_.size()<cwnd_ && last_data_out_time_<=NOW-send_interval_) {
         tosend = DequeueHint();
         if (tosend==bin64_t::NONE) {
-            dprintf("%s #%u no idea what to send #sendctrl\n",tintstr(),id);
+            dprintf("%s #%u no idea what to send #sendctrl\n",tintstr(),id_);
             if (send_control_!=KEEP_ALIVE_CONTROL)
                 SwitchSendControl(KEEP_ALIVE_CONTROL);
         }
     } else
-        dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id);
+        dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id_);
     
     if (tosend==bin64_t::NONE)// && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty())) 
         return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
@@ -222,7 +222,7 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     
     last_data_out_time_ = NOW;
     data_out_.push_back(tosend);
-    dprintf("%s #%u +data %s\n",tintstr(),id,tosend.str());
+    dprintf("%s #%u +data %s\n",tintstr(),id_,tosend.str());
     
     return tosend;
 }
@@ -231,7 +231,7 @@ bin64_t        Channel::AddData (Datagram& dgram) {
 void    Channel::AddTs (Datagram& dgram) {
     dgram.Push8(P2TP_TS);
     dgram.Push64(data_in_.time);
-    dprintf("%s #%u +ts %s\n",tintstr(),id,tintstr(data_in_.time));
+    dprintf("%s #%u +ts %s\n",tintstr(),id_,tintstr(data_in_.time));
 }
 
 
@@ -248,7 +248,7 @@ void    Channel::AddAck (Datagram& dgram) {
         dgram.Push32(pos.to32());
         //dgram.Push64(data_in_.time);
         ack_out_.set(pos);
-        dprintf("%s #%u +ack %s %s\n",tintstr(),id,pos.str(),tintstr(data_in_.time));
+        dprintf("%s #%u +ack %s %s\n",tintstr(),id_,pos.str(),tintstr(data_in_.time));
         data_in_ = tintbin(TINT_NEVER,bin64_t::NONE);
         if (pos.layer()>2)
             data_in_dbl_ = pos;
@@ -261,20 +261,20 @@ void    Channel::AddAck (Datagram& dgram) {
         ack_out_.set(ack);
         dgram.Push8(P2TP_ACK);
         dgram.Push32(ack.to32());
-        dprintf("%s #%u +ack %s\n",tintstr(),id,ack.str());
+        dprintf("%s #%u +ack %s\n",tintstr(),id_,ack.str());
     }
 }
 
 
 void    Channel::Recv (Datagram& dgram) {
-    dprintf("%s #%u recvd %i\n",tintstr(),id,dgram.size()+4);
+    dprintf("%s #%u recvd %i\n",tintstr(),id_,dgram.size()+4);
     peer_send_time_ = 0; // has scope of 1 datagram
     dgrams_rcvd_++;
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
         dip_avg_ = rtt_avg_;
-        dprintf("%s #%u rtt init %lli\n",tintstr(),id,rtt_avg_);
+        dprintf("%s #%u rtt init %lli\n",tintstr(),id_,rtt_avg_);
     }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
     while (dgram.size()) {
@@ -288,7 +288,7 @@ void    Channel::Recv (Datagram& dgram) {
             case P2TP_HINT:      OnHint(dgram); break;
             case P2TP_PEX_ADD:   OnPex(dgram); break;
             default:
-                eprintf("%s #%u ?msg id unknown %i\n",tintstr(),id,(int)type);
+                eprintf("%s #%u ?msg id unknown %i\n",tintstr(),id_,(int)type);
                 return;
         }
     }
@@ -302,7 +302,7 @@ void    Channel::OnHash (Datagram& dgram) {
     Sha1Hash hash = dgram.PullHash();
     file().OfferHash(pos,hash);
     //DLOG(INFO)<<"#"<<id<<" .HASH"<<(int)pos;
-    dprintf("%s #%u -hash %s\n",tintstr(),id,pos.str());
+    dprintf("%s #%u -hash %s\n",tintstr(),id_,pos.str());
 }
 
 
@@ -332,7 +332,7 @@ bin64_t Channel::OnData (Datagram& dgram) {
     uint8_t *data;
     int length = dgram.Pull(&data,1024);
     bool ok = (pos==bin64_t::NONE) || file().OfferData(pos, (char*)data, length) ;
-    dprintf("%s #%u %cdata %s\n",tintstr(),id,ok?'-':'!',pos.str());
+    dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
     data_in_ = tintbin(NOW,bin64_t::NONE);
     if (!ok) 
         return bin64_t::NONE;
@@ -372,7 +372,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                     if (owd_min_bins_[owd_min_bin_]>owd)
                         owd_min_bins_[owd_min_bin_] = owd;
                 }
-                dprintf("%s #%u rtt %lli dev %lli\n",tintstr(),id,rtt_avg_,dev_avg_);
+                dprintf("%s #%u rtt %lli dev %lli\n",tintstr(),id_,rtt_avg_,dev_avg_);
                 bin64_t pos = data_out_[i].bin;
                 ack_rcvd_recent_++;
                 data_out_[i]=tintbin();
@@ -394,7 +394,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
             }
             while (max_ack_off>MAX_REORDERING) {
                 ack_not_rcvd_recent_++;
-                dprintf("%s #%u Rdata %s\n",tintstr(),id,data_out_.front().bin.str());
+                dprintf("%s #%u Rdata %s\n",tintstr(),id_,data_out_.front().bin.str());
                 data_out_.pop_front();
                 max_ack_off--;
                 data_out_cap_ = bin64_t::ALL;
@@ -406,7 +406,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
         if (data_out_.front().bin!=bin64_t::NONE && ack_in_.is_empty(data_out_.front().bin)) {
             ack_not_rcvd_recent_++;
             data_out_cap_ = bin64_t::ALL;
-            dprintf("%s #%u Tdata %s\n",tintstr(),id,data_out_.front().bin.str());
+            dprintf("%s #%u Tdata %s\n",tintstr(),id_,data_out_.front().bin.str());
         }
         data_out_.pop_front();
     }
@@ -424,7 +424,7 @@ void    Channel::OnAck (Datagram& dgram) {
         eprintf("invalid ack: %s\n",ackd_pos.str());
         return;
     }
-    dprintf("%s #%u -ack %s\n",tintstr(),id,ackd_pos.str());
+    dprintf("%s #%u -ack %s\n",tintstr(),id_,ackd_pos.str());
     ack_in_.set(ackd_pos);
     CleanDataOut(ackd_pos); // FIXME do AFTER all ACKs
 }
@@ -432,7 +432,7 @@ void    Channel::OnAck (Datagram& dgram) {
 
 void Channel::OnTs (Datagram& dgram) {
     peer_send_time_ = dgram.Pull64();
-    dprintf("%s #%u -ts %lli\n",tintstr(),id,peer_send_time_);
+    dprintf("%s #%u -ts %lli\n",tintstr(),id_,peer_send_time_);
 }
 
 
@@ -441,13 +441,13 @@ void    Channel::OnHint (Datagram& dgram) {
     hint_in_.push_back(hint);
     //ack_in_.set(hint,binmap_t::EMPTY);
     //RequeueSend(cc_->OnHintRecvd(hint));
-    dprintf("%s #%u -hint %s\n",tintstr(),id,hint.str());
+    dprintf("%s #%u -hint %s\n",tintstr(),id_,hint.str());
 }
 
 
 void Channel::OnHandshake (Datagram& dgram) {
     peer_channel_id_ = dgram.Pull32();
-    dprintf("%s #%u -hs %x\n",tintstr(),id,peer_channel_id_);
+    dprintf("%s #%u -hs %x\n",tintstr(),id_,peer_channel_id_);
     // self-connection check
     if (!SELF_CONN_OK) {
         uint32_t try_id = DecodeID(peer_channel_id_);
@@ -464,20 +464,20 @@ void Channel::OnPex (Datagram& dgram) {
     uint32_t ipv4 = dgram.Pull32();
     uint16_t port = dgram.Pull16();
     Address addr(ipv4,port);
-    dprintf("%s #%u -pex %s\n",tintstr(),id,addr.str());
+    dprintf("%s #%u -pex %s\n",tintstr(),id_,addr.str());
     transfer().OnPexIn(addr);
 }
 
 
 void    Channel::AddPex (Datagram& dgram) {
     int chid = transfer().RevealChannel(pex_out_);
-    if (chid==-1 || chid==id)
+    if (chid==-1 || chid==id_)
         return;
     Address a = channels[chid]->peer();
     dgram.Push8(P2TP_PEX_ADD);
     dgram.Push32(a.ipv4());
     dgram.Push16(a.port());
-    dprintf("%s #%u +pex %s\n",tintstr(),id,a.str());
+    dprintf("%s #%u +pex %s\n",tintstr(),id_,a.str());
 }
 
 
@@ -547,12 +547,12 @@ void    Channel::Loop (tint howlong) {
         if ( sender!=NULL && send_time<=NOW ) { // it's time
             
             if (sender->next_send_time_<NOW+TINT_MIN) {  // either send
-                dprintf("%s #%u sch_send %s\n",tintstr(),sender->id,
+                dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
                         tintstr(send_time));
                 sender->Send();
                 sender->Reschedule();
             } else { // or close the channel
-                dprintf("%s #%u closed sendctrl\n",tintstr(),sender->id);
+                dprintf("%s #%u closed sendctrl\n",tintstr(),sender->id());
                 delete sender;
             }
             
@@ -567,7 +567,7 @@ void    Channel::Loop (tint howlong) {
                     receiver->Reschedule();
             }
             if (sender)  // get back to that later
-                send_queue.push(tintbin(send_time,sender->id));
+                send_queue.push(tintbin(send_time,sender->id()));
             
         }
         
@@ -580,8 +580,8 @@ void Channel::Reschedule () {
     next_send_time_ = NextSendTime();
     if (next_send_time_!=TINT_NEVER) {
         assert(next_send_time_<NOW+TINT_MIN);
-        send_queue.push(tintbin(next_send_time_,id));
+        send_queue.push(tintbin(next_send_time_,id_));
     } else
-        send_queue.push(tintbin(NOW+TINT_MIN,id));
-    dprintf("%s requeue #%u for %s\n",tintstr(),id,tintstr(next_send_time_));
+        send_queue.push(tintbin(NOW+TINT_MIN,id_));
+    dprintf("%s requeue #%u for %s\n",tintstr(),id_,tintstr(next_send_time_));
 }
