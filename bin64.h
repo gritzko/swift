@@ -93,10 +93,10 @@ struct bin64_t {
     bin64_t to (bool right) const {
         if (!(v&1))
             return NONE;
-        uint64_t tb = tail_bit()>>1;
+        uint64_t tb = ((tail_bits() >> 1) + 1) >> 1;
         if (right)
-            tb |= (tb<<1);
-        return bin64_t(v^tb);
+            return bin64_t(v + tb);
+        return bin64_t(v ^ tb);
     }
 
     /** Get the left child bin. */

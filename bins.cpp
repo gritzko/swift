@@ -6,10 +6,17 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include "bins.h"
-#include <string.h>
-#include <stdio.h>
+
 #include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <limits>
+#include <numeric>
+#include <utility>
+
+#include "bins.h"
+
+#undef max
 
 // make it work piece by piece
 
@@ -21,20 +28,36 @@ const int binmap_t::NOJOIN = 0x10000;
 
 
 void binmap_t::extend () {
-    uint16_t nblocks = blocks_allocated ? (blocks_allocated<<1) : 1;
-    size_t had_bytes = blocks_allocated<<6;
-    size_t need_bytes = nblocks<<6;
-    cells = (uint32_t*) realloc(cells,need_bytes);
-    memset(((char*)cells)+had_bytes,0,need_bytes-had_bytes);
-    for(int b=blocks_allocated; b<nblocks; b++)
-        cells[(b<<4)|0xf] = 0x55555555; // cells are free
+    const size_t nblocks = (blocks_allocated != 0) ? (2 * blocks_allocated) : (1);
+
+    if( 16 * nblocks > 1 + std::numeric_limits<uint16_t>::max() )
+        return /* The limit of cells number reached */;
+
+    uint32_t * const ncells = (uint32_t *) realloc(cells, nblocks * 16 * sizeof(uint32_t));
+    if( ncells == NULL )
+        return /* Memory allocation error */;
+
+    size_t blk = nblocks;
+    while( blk-- != blocks_allocated ) {
+        uint16_t const blk_off =  16 * blk;
+        uint16_t * const blk_ptr = reinterpret_cast<uint16_t *>(ncells + blk_off);
+
+        blk_ptr[28] = free_top;
+
+        for(uint16_t i = 13; i != (uint16_t)-1; --i)
+            blk_ptr[2 * i] = blk_off + i + 1;
+
+        free_top = blk_off;
+    }
+
     blocks_allocated = nblocks;
+    cells = ncells;
 }
 
 binmap_t::binmap_t() :  height(4), blocks_allocated(0), cells(NULL), 
-                ap(0), cells_allocated(0), twist_mask(0) {
-    extend();
-    assert(!alloc_cell());
+                free_top(0), cells_allocated(0), twist_mask(0) {
+    alloc_cell();
+    assert( free_top == 1 );
 }
 
 void binmap_t::twist (uint64_t mask) {
@@ -43,7 +66,7 @@ void binmap_t::twist (uint64_t mask) {
     twist_mask = mask;
 }
 
-binmap_t::binmap_t (const binmap_t& b) : height(b.height), ap(b.ap),
+binmap_t::binmap_t (const binmap_t& b) : height(b.height), free_top(b.free_top),
 blocks_allocated(b.blocks_allocated), cells_allocated(b.cells_allocated) {
     size_t memsz = blocks_allocated*16*32;
     cells = (uint32_t*) malloc(memsz);
@@ -121,33 +144,32 @@ bool        binmap_t::join (uint32_t half) {
 }
 
 void    binmap_t::free_cell (uint16_t cell) {
-    cells[cell] = 0;
-    int left = cell<<1, right=left+1;
-    mark(left);
-    unmark(right);
-    if (ap==cell+1)
-        ap--;
-    cells_allocated--;
+    --cells_allocated;
+
+    halves[2 * cell] = free_top;
+    free_top = cell;
 }
 
 /** Get a free cell. */
 uint16_t    binmap_t::alloc_cell () {
-    uint16_t ap1 = ap;
-    cells_allocated++;
-    for(; ap<(blocks_allocated<<4); ap++) {
-        if ((ap&0xf)==0xf)
-            continue;
-        if (!cells[ap] && deep(ap<<1)) {
-            unmark(ap<<1);
-            return ap++;
-        }
-    }
-    if (ap1)
-        ap = 0;
-    else
+    if( cells_allocated == 15 * blocks_allocated )
         extend();
-    cells_allocated--;
-    return alloc_cell();
+    
+    if( cells_allocated == 15 * blocks_allocated ) {
+        assert( free_top != 0 );
+        return 0;
+    }
+    
+    ++cells_allocated;
+    
+    const uint16_t ref = free_top;
+    free_top = halves[2 * ref];
+    
+    cells[ref] = 0;
+    unmark(2 * ref);
+    unmark(2 * ref + 1);
+    
+    return ref;
 }
 
 

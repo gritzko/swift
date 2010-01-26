@@ -30,6 +30,9 @@ public:
     /** Copying constructor. */
     binmap_t(const binmap_t& b);
     
+    /** Destructor. */
+    ~binmap_t() { delete [] cells; }
+
     /** Get value for the bin. */
     uint16_t    get (bin64_t bin); 
     
@@ -108,8 +111,8 @@ private:
     uint32_t    blocks_allocated;
     uint32_t    cells_allocated;
     int         height;
-    uint32_t    ap;
     uint64_t    twist_mask;
+    uint16_t    free_top;
     
     void extend();
     
