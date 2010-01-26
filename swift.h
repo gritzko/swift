@@ -1,5 +1,5 @@
 /*
- *  p2tp.h
+ *  swift.h
  *  the main header file for libswift, normally you should only read this one
  *
  *  Created by Victor Grishchenko on 3/6/09.
@@ -63,7 +63,7 @@ Messages
 #include "datagram.h"
 #include "hashtree.h"
 
-namespace p2tp {
+namespace swift {
 
     #define NOW Datagram::now
     

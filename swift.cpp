@@ -1,5 +1,5 @@
 /*
- *  p2tp.cpp
+ *  swift.cpp
  *  serp++
  *
  *  Created by Victor Grishchenko on 3/6/09.
@@ -20,16 +20,16 @@
 #include <string.h>
 
 //#include <glog/logging.h>
-#include "p2tp.h"
+#include "swift.h"
 #include "datagram.h"
 
 using namespace std;
-using namespace p2tp;
+using namespace swift;
 
-p2tp::tint Channel::last_tick = 0;
+swift::tint Channel::last_tick = 0;
 int Channel::MAX_REORDERING = 4;
 bool Channel::SELF_CONN_OK = false;
-p2tp::tint Channel::TIMEOUT = TINT_SEC*60;
+swift::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
 SOCKET Channel::sockets[8] = {0,0,0,0,0,0,0,0};
 int Channel::socket_count = 0;
@@ -70,7 +70,7 @@ Channel::~Channel () {
 }
 
 
-void     p2tp::SetTracker(const Address& tracker) {
+void     swift::SetTracker(const Address& tracker) {
     Channel::tracker = tracker;
 }
 
@@ -83,7 +83,7 @@ int Channel::EncodeID(int unscrambled) {
 }
 
 
-int     p2tp::Listen (Address addr) {
+int     swift::Listen (Address addr) {
     int sock = Datagram::Bind(addr);
     if (sock!=INVALID_SOCKET)
         Channel::sockets[Channel::socket_count++] = sock;
@@ -91,7 +91,7 @@ int     p2tp::Listen (Address addr) {
 }
 
 
-void    p2tp::Shutdown (int sock_des) {
+void    swift::Shutdown (int sock_des) {
     for(int i=0; i<Channel::socket_count; i++)
         if (sock_des==-1 || Channel::sockets[i]==sock_des) {
             Datagram::Close(Channel::sockets[i]);
@@ -100,12 +100,12 @@ void    p2tp::Shutdown (int sock_des) {
 }
 
 
-void    p2tp::Loop (tint till) {
+void    swift::Loop (tint till) {
     Channel::Loop(till);
 }
 
 
-int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
+int      swift::Open (const char* filename, const Sha1Hash& hash) {
     FileTransfer* ft = new FileTransfer(filename, hash);
     int fdes = ft->file().file_descriptor();
     if (fdes>0) {
@@ -126,19 +126,19 @@ int      p2tp::Open (const char* filename, const Sha1Hash& hash) {
 }
 
 
-void    p2tp::Close (int fd) {
+void    swift::Close (int fd) {
     // FIXME delete all channels
     if (fd>FileTransfer::files.size() && FileTransfer::files[fd])
         delete FileTransfer::files[fd];
 }
 
 
-void    p2tp::AddPeer (Address address, const Sha1Hash& root) {
+void    swift::AddPeer (Address address, const Sha1Hash& root) {
     Channel::peer_selector->AddPeer(address,root);
 }
 
 
-uint64_t  p2tp::Size (int fdes) {
+uint64_t  swift::Size (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().size();
     else
@@ -146,7 +146,7 @@ uint64_t  p2tp::Size (int fdes) {
 }
 
 
-bool  p2tp::IsComplete (int fdes) {
+bool  swift::IsComplete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().is_complete();
     else
@@ -154,7 +154,7 @@ bool  p2tp::IsComplete (int fdes) {
 }
 
 
-uint64_t  p2tp::Complete (int fdes) {
+uint64_t  swift::Complete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().complete();
     else
@@ -162,7 +162,7 @@ uint64_t  p2tp::Complete (int fdes) {
 }
 
 
-uint64_t  p2tp::SeqComplete (int fdes) {
+uint64_t  swift::SeqComplete (int fdes) {
     if (FileTransfer::files.size()>fdes && FileTransfer::files[fdes])
         return FileTransfer::files[fdes]->file().seq_complete();
     else
@@ -170,7 +170,7 @@ uint64_t  p2tp::SeqComplete (int fdes) {
 }
 
 
-const Sha1Hash& p2tp::RootMerkleHash (int file) {
+const Sha1Hash& swift::RootMerkleHash (int file) {
     FileTransfer* trans = FileTransfer::file(file);
     if (!trans)
         return Sha1Hash::ZERO;

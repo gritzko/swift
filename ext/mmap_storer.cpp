@@ -1,12 +1,12 @@
 /*
  *  mmap_storer.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 10/7/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include "p2tp.h"
+#include "swift.h"
 
 class MMappedStorer : public DataStorer {
 public:

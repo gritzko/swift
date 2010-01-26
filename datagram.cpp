@@ -19,7 +19,7 @@
 #include "datagram.h"
 #include "compat.h"
 
-namespace p2tp {
+namespace swift {
 
 tint Datagram::now = Datagram::Time();
 tint Datagram::start = now;

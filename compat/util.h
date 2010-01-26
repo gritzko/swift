@@ -10,7 +10,7 @@
 
 #include <string>
 
-namespace p2tp
+namespace swift
 {
 	/**
 	 * Return path of temporary directory.

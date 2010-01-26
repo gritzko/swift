@@ -1,16 +1,19 @@
 /*
  *  seq_picker.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 10/6/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
 
-#include "p2tp.h"
+#include "swift.h"
 
-using namespace p2tp;
+using namespace swift;
 
+
+/** Picks pieces nearly sequentialy; some local randomization (twisting)
+    is introduced to prevent synchronization among multiple channels. */
 class SeqPiecePicker : public PiecePicker {
     
     binmap_t            ack_hint_out_;
@@ -41,7 +44,7 @@ public:
         if (!file().size()) {
             return bin64_t(0,0); // whoever sends it first
         }
-    retry:
+    retry:      // bite me
         twist_ &= (file().peak(0)) & ((1<<6)-1);
         if (twist_) {
             offer.twist(twist_);

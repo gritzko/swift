@@ -1,6 +1,6 @@
 /*
  *  bin64.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 10/10/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.

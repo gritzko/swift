@@ -9,9 +9,9 @@
 #include <gtest/gtest.h>
 //#include <glog/logging.h>
 #include "datagram.h"
-#include "p2tp.h" // Arno: for LibraryInit
+#include "swift.h" // Arno: for LibraryInit
 
-using namespace p2tp;
+using namespace swift;
 
 TEST(Datagram, AddressTest) {
     Address addr("127.0.0.1:1000");
@@ -103,7 +103,7 @@ TEST(Datagram,TwoPortTest) {
 
 int main (int argc, char** argv) {
 
-	p2tp::LibraryInit();
+	swift::LibraryInit();
 
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();

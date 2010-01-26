@@ -11,7 +11,7 @@
 #include <Tchar.h>
 #endif
 
-namespace p2tp
+namespace swift
 {
 
 std::string gettmpdir(void)

@@ -22,7 +22,7 @@
 #endif
 
 
-using namespace p2tp;
+using namespace swift;
 
 #define HASHSZ 20
 const size_t Sha1Hash::SIZE = HASHSZ;

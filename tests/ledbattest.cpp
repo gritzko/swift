@@ -3,10 +3,10 @@
 #include <vector>
 #include <deque>
 #include "datagram.h"
-#include "p2tp.h"
+#include "swift.h"
 #include <gtest/gtest.h>
 
-using namespace p2tp;
+using namespace swift;
 using namespace std;
 
 /**
@@ -169,7 +169,7 @@ TEST(Datagram,LedbatTest) {
 int main (int argc, char** argv) {
     printf("Warning: use the script to set up dummynet!\n");
 
-    p2tp::LibraryInit();
+    swift::LibraryInit();
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 

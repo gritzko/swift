@@ -1,6 +1,6 @@
 /*
  *  hasher.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 11/8/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -17,7 +17,7 @@ int main (int argn, char** args) {
         return 1;
     }
 
-    p2tp::HashTree* ht = new p2tp::HashTree(args[1]);
+    swift::HashTree* ht = new swift::HashTree(args[1]);
 
     printf("SHA1 Merkle tree root hash: %s\n",ht->root_hash().hex().c_str());
 

@@ -1,16 +1,16 @@
 /*
  *  leecher.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 11/3/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include "p2tp.h"
+#include "swift.h"
 #include <time.h>
 
 
-using namespace p2tp;
+using namespace swift;
 
 
 /** P2TP downloader. Params: root hash, filename, tracker ip/port, own ip/port */
@@ -28,7 +28,7 @@ int main (int argn, char** args) {
         return -2;
     }
 
-    p2tp::LibraryInit();
+    swift::LibraryInit();
 
     char* filename = args[2];
 
@@ -43,28 +43,28 @@ int main (int argn, char** args) {
     else
         bindaddr = Address((uint32_t)INADDR_ANY,rand()%10000+7000);
 
-    assert(0<p2tp::Listen(bindaddr));
+    assert(0<swift::Listen(bindaddr));
 
-	p2tp::SetTracker(tracker);
+	swift::SetTracker(tracker);
 
-	int file = p2tp::Open(filename,root_hash);
+	int file = swift::Open(filename,root_hash);
     printf("Downloading %s\n",root_hash.hex().c_str());
 
     tint start = NOW;
 
-    while (!p2tp::IsComplete(file)){// && NOW-start<TINT_SEC*60) {
-	    p2tp::Loop(TINT_SEC);
+    while (!swift::IsComplete(file)){// && NOW-start<TINT_SEC*60) {
+	    swift::Loop(TINT_SEC);
         eprintf("done %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
-               p2tp::Complete(file), p2tp::Size(file), p2tp::SeqComplete(file),
+               swift::Complete(file), swift::Size(file), swift::SeqComplete(file),
                Datagram::dgrams_up, Datagram::bytes_up,
                Datagram::dgrams_down, Datagram::bytes_down );
     }
 
-    bool complete = p2tp::IsComplete(file);
+    bool complete = swift::IsComplete(file);
 
-	p2tp::Close(file);
+	swift::Close(file);
 
-	p2tp::Shutdown();
+	swift::Shutdown();
 
     return !complete;
 }

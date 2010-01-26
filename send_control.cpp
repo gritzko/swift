@@ -7,9 +7,9 @@
  *
  */
 
-#include "p2tp.h"
+#include "swift.h"
 
-using namespace p2tp;
+using namespace swift;
 using namespace std;
 
 tint Channel::MIN_DEV = 50*TINT_MSEC;

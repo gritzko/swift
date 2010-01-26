@@ -33,7 +33,7 @@
 #define S_IROTH _S_IREAD
 #endif
 
-namespace p2tp {
+namespace swift {
 
 /** tint is the time integer type; microsecond-precise. */
 typedef int64_t tint;

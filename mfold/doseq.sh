@@ -5,7 +5,13 @@
 # docmd.sh); all failed executions are
 # put to the FAILURES file
 rm -f FAILURES
-for srv in `cat servers.txt`; do
+
+if [ -z "$SERVERS" ]; then
+    SERVERS="das2.txt"
+fi
+HOSTS=`cat $SERVERS | awk '{print $2}'`
+
+for srv in $HOSTS; do
     ( for cmd in $@; do
         if ! ./docmd.sh $srv $cmd; then
             echo $srv >> FAILURES

@@ -1,6 +1,6 @@
 /*
  *  compat.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Arno Bakker, Victor Grishchenko
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -21,7 +21,7 @@
 #include <sys/time.h>
 #endif
 
-namespace p2tp {
+namespace swift {
 
 #ifdef _WIN32
 static HANDLE map_handles[1024];

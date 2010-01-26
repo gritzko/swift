@@ -14,12 +14,12 @@
 #include <errno.h>
 #include <string>
 #include <sstream>
-#include "p2tp.h"
+#include "swift.h"
 #include "compat/util.h"
 
 #include "ext/seq_picker.cpp" // FIXME FIXME FIXME FIXME 
 
-using namespace p2tp;
+using namespace swift;
 
 std::vector<FileTransfer*> FileTransfer::files(20);
 

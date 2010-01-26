@@ -13,7 +13,7 @@
 #include <string.h>
 #include <string>
 
-namespace p2tp {
+namespace swift {
 
 
 /** SHA-1 hash, 20 bytes of data */

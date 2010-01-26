@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #endif
 
-namespace p2tp {
+namespace swift {
 
 HiResTimeOfDay* HiResTimeOfDay::_instance = 0;
 
@@ -112,7 +112,7 @@ tint HiResTimeOfDay::getTimeUSec(void)
   
   
   
-// ARNOTODO: move to p2tp.cpp
+// ARNOTODO: move to swift.cpp
 
 #ifdef _WIN32
 static WSADATA _WSAData;
@@ -138,7 +138,7 @@ void LibraryInit(void)
 #ifdef TEST
 #include <iostream>
 
-using namespace p2tp;
+using namespace swift;
 
 int main()
 {

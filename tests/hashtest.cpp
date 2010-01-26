@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 #include "hashtree.h"
 
-using namespace p2tp;
+using namespace swift;
 
 char hash123[] = "a8fdc205a9f19cc1c7507a60c4f01b13d11d7fd0";
 char rooth123[] = "d0bdb8ba28076d84d2b3a0e62521b998e42349a1";

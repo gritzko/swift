@@ -37,7 +37,7 @@
 #include "compat.h"
 
 
-namespace p2tp {
+namespace swift {
 
 #define MAXDGRAMSZ 2800
 #ifndef _WIN32

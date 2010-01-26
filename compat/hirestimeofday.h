@@ -17,7 +17,7 @@
 #include <windows.h>
 #endif
 
-namespace p2tp {
+namespace swift {
 
 typedef int64_t tint;
 #define TINT_SEC ((tint)1000000)

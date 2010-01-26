@@ -1,6 +1,6 @@
 /*
  *  simple_selector.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 10/6/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -8,9 +8,9 @@
  */
 
 #include <queue>
-#include "p2tp.h"
+#include "swift.h"
 
-using namespace p2tp;
+using namespace swift;
 
 class SimpleSelector : public PeerSelector {
     typedef std::pair<Address,Sha1Hash> memo_t;

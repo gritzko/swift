@@ -9,11 +9,11 @@
 
 #include <gtest/gtest.h>
 //#include <glog/logging.h>
-#include "p2tp.h"
+#include "swift.h"
 #include <time.h>
 
 
-using namespace p2tp;
+using namespace swift;
 
 
 TEST(P2TP,CwndTest) {
@@ -26,35 +26,35 @@ TEST(P2TP,CwndTest) {
     int size = st.st_size;//, sizek = (st.st_size>>10) + (st.st_size%1024?1:0) ;
     Channel::SELF_CONN_OK = true;
 
-    int sock1 = p2tp::Listen(7001);
+    int sock1 = swift::Listen(7001);
 	ASSERT_TRUE(sock1>=0);
 
-	int file = p2tp::Open("doc/sofi.jpg");
+	int file = swift::Open("doc/sofi.jpg");
     FileTransfer* fileobj = FileTransfer::file(file);
     //FileTransfer::instance++;
 
-    p2tp::SetTracker(Address("127.0.0.1",7001));
+    swift::SetTracker(Address("127.0.0.1",7001));
 
-	int copy = p2tp::Open("doc/sofi-copy.jpg",fileobj->root_hash());
+	int copy = swift::Open("doc/sofi-copy.jpg",fileobj->root_hash());
 
-	p2tp::Loop(TINT_SEC);
+	swift::Loop(TINT_SEC);
 
     int count = 0;
-    while (p2tp::SeqComplete(copy)!=size && count++<600)
-        p2tp::Loop(TINT_SEC);
-    ASSERT_EQ(size,p2tp::SeqComplete(copy));
+    while (swift::SeqComplete(copy)!=size && count++<600)
+        swift::Loop(TINT_SEC);
+    ASSERT_EQ(size,swift::SeqComplete(copy));
 
-	p2tp::Close(file);
-	p2tp::Close(copy);
+	swift::Close(file);
+	swift::Close(copy);
 
-	p2tp::Shutdown(sock1);
+	swift::Shutdown(sock1);
 
 }
 
 
 int main (int argc, char** argv) {
 
-	p2tp::LibraryInit();
+	swift::LibraryInit();
 	testing::InitGoogleTest(&argc, argv);
 	int ret = RUN_ALL_TESTS();
 	return ret;

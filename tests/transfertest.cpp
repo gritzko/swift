@@ -1,6 +1,6 @@
 /*
  *  transfertest.cpp
- *  p2tp
+ *  swift
  *
  *  Created by Victor Grishchenko on 10/7/09.
  *  Copyright 2009 Delft University of Technology. All rights reserved.
@@ -8,11 +8,11 @@
  */
 //#include <gtest/gtest.h>
 //#include <glog/logging.h>
-#include "p2tp.h"
+#include "swift.h"
 #include "compat.h"
 #include <gtest/gtest.h>
 
-using namespace p2tp;
+using namespace swift;
 
 const char* BTF = "test_file";
 

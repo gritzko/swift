@@ -6,11 +6,11 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#include "p2tp.h"
+#include "swift.h"
 #include "compat/util.h"
 
 
-using namespace p2tp;
+using namespace swift;
 using namespace std;
 
 /*
