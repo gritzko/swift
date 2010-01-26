@@ -15,9 +15,9 @@ DEBUG = True
 
 TestDir='tests'
 
-target = 'p2tp'
+target = 'swift'
 source = [ 'bin64.cpp','sha1.cpp','hashtree.cpp','datagram.cpp','bins.cpp',
-    'transfer.cpp', 'p2tp.cpp', 'sendrecv.cpp', 'send_control.cpp',
+    'transfer.cpp', 'swift.cpp', 'sendrecv.cpp', 'send_control.cpp',
     'compat/hirestimeofday.cpp', 'compat.cpp', 'compat/util.cpp']
 
 env = Environment()
@@ -28,7 +28,7 @@ if sys.platform == "win32":
 
 	# Make sure scons finds std MSVC include files
 	if not 'INCLUDE' in os.environ:
-		print "p2tp: Please run scons in a Visual Studio Command Prompt"
+		print "swift: Please run scons in a Visual Studio Command Prompt"
 		sys.exit(-1)
 		
 	include = os.environ['INCLUDE']

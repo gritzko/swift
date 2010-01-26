@@ -6,7 +6,7 @@ Import("libs")
 Import("libpath")
 
 cpppath = env["CPPPATH"]
-libs = ['p2tp'] + libs  # order is important, crypto needs to be last
+libs = ['swift'] + libs  # order is important, crypto needs to be last
 
 if sys.platform == "win32":
     cpppath = ".."

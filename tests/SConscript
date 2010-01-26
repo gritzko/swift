@@ -7,9 +7,9 @@ Import("libpath")
 
 cpppath = env["CPPPATH"]
 if DEBUG and sys.platform == "win32":
-	libs = ['p2tp','gtestd'] + libs  # order is important, crypto needs to be last
+	libs = ['swift','gtestd'] + libs  # order is important, crypto needs to be last
 else:
-	libs = ['p2tp','gtest'] + libs  # order is important, crypto needs to be last
+	libs = ['swift','gtest'] + libs  # order is important, crypto needs to be last
 
 if sys.platform == "win32":
     cpppath = ".."

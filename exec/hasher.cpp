@@ -8,6 +8,7 @@
  */
 #include <stdio.h>
 #include "hashtree.h"
+#include "swift.h"
 
 
 int main (int argn, char** args) {
