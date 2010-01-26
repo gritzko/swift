@@ -30,6 +30,9 @@ public:
     /** Copying constructor. */
     binmap_t(const binmap_t& b);
     
+    /** Destructor. */
+    ~binmap_t() { delete [] cells; }
+
     /** Get value for the bin. */
     uint16_t    get (bin64_t bin); 
     
