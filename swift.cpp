@@ -178,7 +178,7 @@ const Sha1Hash& swift::RootMerkleHash (int file) {
 }
 
 
-/**    <h2> P2TP handshake </h2>
+/**    <h2> swift handshake </h2>
  Basic rules:
  <ul>
  <li>    to send a datagram, a channel must be created

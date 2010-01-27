@@ -6,8 +6,8 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#ifndef P2TP_COMPAT_H
-#define P2TP_COMPAT_H
+#ifndef SWIFT_COMPAT_H
+#define SWIFT_COMPAT_H
 
 #ifdef _MSC_VER
 #include "compat/stdint.h"

@@ -22,7 +22,7 @@ using namespace std;
 void    Channel::AddPeakHashes (Datagram& dgram) {
     for(int i=0; i<file().peak_count(); i++) {
         bin64_t peak = file().peak(i);
-        dgram.Push8(P2TP_HASH);
+        dgram.Push8(SWIFT_HASH);
         dgram.Push32((uint32_t)peak);
         dgram.PushHash(file().peak_hash(i));
         //DLOG(INFO)<<"#"<<id<<" +pHASH"<<file().peak(i);
@@ -36,7 +36,7 @@ void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
     while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
             ack_in_.get(pos.parent())==binmap_t::EMPTY  ) {
         bin64_t uncle = pos.sibling();
-        dgram.Push8(P2TP_HASH);
+        dgram.Push8(SWIFT_HASH);
         dgram.Push32((uint32_t)uncle);
         dgram.PushHash( file().hash(uncle) );
         //DLOG(INFO)<<"#"<<id<<" +uHASH"<<uncle;
@@ -88,13 +88,13 @@ bin64_t        Channel::DequeueHint () {
 
 void    Channel::AddHandshake (Datagram& dgram) {
     if (!peer_channel_id_) { // initiating
-        dgram.Push8(P2TP_HASH);
+        dgram.Push8(SWIFT_HASH);
         dgram.Push32(bin64_t::ALL32);
         dgram.PushHash(file().root_hash());
         dprintf("%s #%u +hash ALL %s\n",
                 tintstr(),id_,file().root_hash().hex().c_str());
     }
-    dgram.Push8(P2TP_HANDSHAKE);
+    dgram.Push8(SWIFT_HANDSHAKE);
     int encoded = EncodeID(id_);
     dgram.Push32(encoded);
     dprintf("%s #%u +hs %x\n",tintstr(),id_,encoded);
@@ -165,7 +165,7 @@ void    Channel::AddHint (Datagram& dgram) {
         bin64_t hint = transfer().picker().Pick(ack_in_,diff,NOW+plan_for*2);
         
         if (hint!=bin64_t::NONE) {
-            dgram.Push8(P2TP_HINT);
+            dgram.Push8(SWIFT_HINT);
             dgram.Push32(hint);
             dprintf("%s #%u +hint %s [%lli]\n",tintstr(),id_,hint.str(),hint_out_size_);
             hint_out_.push_back(hint);
@@ -207,7 +207,7 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         dgram.Push32(peer_channel_id_);
     }
     
-    dgram.Push8(P2TP_DATA);
+    dgram.Push8(SWIFT_DATA);
     dgram.Push32(tosend.to32());
     
     uint8_t buf[1024];
@@ -229,7 +229,7 @@ bin64_t        Channel::AddData (Datagram& dgram) {
 
 
 void    Channel::AddTs (Datagram& dgram) {
-    dgram.Push8(P2TP_TS);
+    dgram.Push8(SWIFT_TS);
     dgram.Push64(data_in_.time);
     dprintf("%s #%u +ts %s\n",tintstr(),id_,tintstr(data_in_.time));
 }
@@ -237,14 +237,14 @@ void    Channel::AddTs (Datagram& dgram) {
 
 void    Channel::AddAck (Datagram& dgram) {
     if (data_in_dbl_!=bin64_t::NONE) { // TODO: do redundancy better
-        dgram.Push8(P2TP_ACK);
+        dgram.Push8(SWIFT_ACK);
         dgram.Push32(data_in_dbl_.to32());
         data_in_dbl_=bin64_t::NONE;
     }
     if (data_in_.time!=TINT_NEVER) { // TODO: ACK NONE for corrupted data
         AddTs(dgram);
         bin64_t pos = file().ack_out().cover(data_in_.bin);
-        dgram.Push8(P2TP_ACK);
+        dgram.Push8(SWIFT_ACK);
         dgram.Push32(pos.to32());
         //dgram.Push64(data_in_.time);
         ack_out_.set(pos);
@@ -259,7 +259,7 @@ void    Channel::AddAck (Datagram& dgram) {
             break;
         ack = file().ack_out().cover(ack);
         ack_out_.set(ack);
-        dgram.Push8(P2TP_ACK);
+        dgram.Push8(SWIFT_ACK);
         dgram.Push32(ack.to32());
         dprintf("%s #%u +ack %s\n",tintstr(),id_,ack.str());
     }
@@ -280,13 +280,13 @@ void    Channel::Recv (Datagram& dgram) {
     while (dgram.size()) {
         uint8_t type = dgram.Pull8();
         switch (type) {
-            case P2TP_HANDSHAKE: OnHandshake(dgram); break;
-            case P2TP_DATA:      data=OnData(dgram); break;
-            case P2TP_TS:        OnTs(dgram); break;
-            case P2TP_ACK:       OnAck(dgram); break;
-            case P2TP_HASH:      OnHash(dgram); break;
-            case P2TP_HINT:      OnHint(dgram); break;
-            case P2TP_PEX_ADD:   OnPex(dgram); break;
+            case SWIFT_HANDSHAKE: OnHandshake(dgram); break;
+            case SWIFT_DATA:      data=OnData(dgram); break;
+            case SWIFT_TS:        OnTs(dgram); break;
+            case SWIFT_ACK:       OnAck(dgram); break;
+            case SWIFT_HASH:      OnHash(dgram); break;
+            case SWIFT_HINT:      OnHint(dgram); break;
+            case SWIFT_PEX_ADD:   OnPex(dgram); break;
             default:
                 eprintf("%s #%u ?msg id unknown %i\n",tintstr(),id_,(int)type);
                 return;
@@ -474,7 +474,7 @@ void    Channel::AddPex (Datagram& dgram) {
     if (chid==-1 || chid==id_)
         return;
     Address a = channels[chid]->peer();
-    dgram.Push8(P2TP_PEX_ADD);
+    dgram.Push8(SWIFT_PEX_ADD);
     dgram.Push32(a.ipv4());
     dgram.Push16(a.port());
     dprintf("%s #%u +pex %s\n",tintstr(),id_,a.str());
@@ -495,7 +495,7 @@ Channel*    Channel::RecvDatagram (int socket) {
         if (data.size()<1+4+1+4+Sha1Hash::SIZE) 
             return_log ("incorrect size %i initial handshake packet %s\n",data.size(),addr.str());
         uint8_t hashid = data.Pull8();
-        if (hashid!=P2TP_HASH) 
+        if (hashid!=SWIFT_HASH) 
             return_log ("no hash in the initial handshake %s\n",addr.str());
         bin64_t pos = data.Pull32();
         if (pos!=bin64_t::ALL) 

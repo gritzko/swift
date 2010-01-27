@@ -12,7 +12,7 @@
 using namespace swift;
 
 
-/** P2TP seeder. Params: filename, own ip/port, tracker ip/port */
+/** swift seeder. Params: filename, own ip/port, tracker ip/port */
 int main (int argn, char** args) {
 
     if (argn<3) {

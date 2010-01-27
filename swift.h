@@ -8,7 +8,7 @@
  */
 /*
 
-The P2TP protocol
+The swift protocol
 
 Messages
 
@@ -46,8 +46,8 @@ Messages
  in the case with swarm supervisors).
 
 */
-#ifndef P2TP_H
-#define P2TP_H
+#ifndef SWIFT_H
+#define SWIFT_H
 
 #ifdef _MSC_VER
 #include "compat/stdint.h"
@@ -112,16 +112,18 @@ namespace swift {
 
     /** swift protocol message types; these are used on the wire. */
     typedef enum {
-        P2TP_HANDSHAKE = 0,
-        P2TP_DATA = 1,
-        P2TP_ACK = 2,
-        P2TP_TS = 8,
-        P2TP_HINT = 3,
-        P2TP_HASH = 4,
-        P2TP_PEX_ADD = 5,
-        P2TP_PEX_RM = 6,
-        P2TP_SIGNED_HASH = 7,
-        P2TP_MESSAGE_COUNT = 8
+        SWIFT_HANDSHAKE = 0,
+        SWIFT_DATA = 1,
+        SWIFT_ACK = 2,
+        SWIFT_TS = 8,
+        SWIFT_HINT = 3,
+        SWIFT_HASH = 4,
+        SWIFT_PEX_ADD = 5,
+        SWIFT_PEX_RM = 6,
+        SWIFT_SIGNED_HASH = 7,
+        SWIFT_MSGTYPE_SENT = 8,
+        SWIFT_MSGTYPE_RCVD = 9,
+        SWIFT_MESSAGE_COUNT = 10
     } messageid_t;
 
     class PiecePicker;
@@ -235,7 +237,7 @@ namespace swift {
     };
 
 
-    /**    P2TP channel's "control block"; channels loosely correspond to TCP
+    /**    swift channel's "control block"; channels loosely correspond to TCP
         connections or FTP sessions; one channel is created for one file
         being transferred between two peers. As we don't need buffers and
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.

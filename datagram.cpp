@@ -215,7 +215,7 @@ std::string sock2str (struct sockaddr_in addr) {
 }
 
 /*
-std::string Datagram::to_string () const { // TODO: pretty-print P2TP
+std::string Datagram::to_string () const { // TODO: pretty-print swift
     std::string addrs = sock2str(addr);
     char hex[MAXDGRAMSZ*2];
     for(int i=offset; i<length; i++)

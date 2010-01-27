@@ -16,7 +16,7 @@
 using namespace swift;
 
 
-TEST(P2TP,CwndTest) {
+TEST(SWIFT,CwndTest) {
 
     srand ( time(NULL) );
 

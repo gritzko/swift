@@ -6,8 +6,8 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#ifndef P2TP_SHA1_HASH_TREE_H
-#define P2TP_SHA1_HASH_TREE_H
+#ifndef SWIFT_SHA1_HASH_TREE_H
+#define SWIFT_SHA1_HASH_TREE_H
 #include "bin64.h"
 #include "bins.h"
 #include <string.h>
