@@ -392,7 +392,7 @@ Table of Contents
    have three peaks, bin numbers 3, 9, 12.
    Thus, once a newcomer joins a swarm, the first peer sending him
    data prepends it with peak hashes; the newcomer checks them against
-   the root hash (see Sec 4.2.2).
+   the root hash (see Sec 4.4.2).
    
    04 00000003 1234567890ABCDEF1234567890ABCDEF12345678
    04 00000009 234567890ABCDEF1234567890ABCDEF123456789
@@ -405,13 +405,13 @@ Table of Contents
    In the case of static file download a transfer is bootstrapped with
    a root hash. The root hash corresponds to the root bin covering
    the entire 2**63 KB data range. Every hash in the tree is defined
-   in the usual way, as a SHA-1 hash of a concatenation of two
-   lower-level SHA-1 hashes, corresponding to left and right data
+   in the usual way, as a SHA1 hash of a concatenation of two
+   lower-level SHA1 hashes, corresponding to left and right data
    half-ranges resp. For example,
                 hash_1 = SHA1 (hash_0+hash_2)
    where + stands for concatenation and hash_i stands for Merkle hash
    of the bin number i. Obviously, that does not hold for the
-   base-layer hashes, which are normal SHA-1 hashes over 1KB data
+   base-layer hashes, which are normal SHA1 hashes over 1KB data
    ranges ("packets"), except probably for the tail packet, which
    might have less than 1KB of data. The normal recursive formula does
    not apply to empty bins, i.e. bins that have no data absolutely;
@@ -438,9 +438,11 @@ Table of Contents
    anchors for building uncle chains during the transmission (as the
    root hash is too high in the sky). A newcomer peer MAY signal it
    already has peak hashes by acknowledging any bin, even empty one:
+
    02 FFFFFFFF
-   Otherwise, the first of the senders bootstraps him with all the
-   peak hashes.
+
+   Otherwise, the first of the senders SHOULD bootstrap him with all
+   the peak hashes.
    
 
 4.4.3. Hash trees for streams
@@ -454,14 +456,14 @@ Table of Contents
    data range the receiver has peak hashes for and to prepend the data
    and the uncle hashes with the necessary (signed) peak hashes.
    Except for the fact that the set of peak hashes changes with the
-   time, other parts of the algorithm work as described in 4.4.3 As we
+   time, other parts of the algorithm work as described in 4.4.2 As we
    see, in both cases data length is not known on advance, bit derived
    on-the-go from the peak hashes. Suppose, our 7KB stream extended to
-   another kilobyte. Thus, now hash 15 becomes the only peak hash,
-   eating hashes 7, 10, 11 and the source sends out a signed peak hash
+   another kilobyte. Thus, now hash 7 becomes the only peak hash,
+   eating hashes 3, 9, 12 and the source sends out a signed peak hash
    message (type 7) to announce the fact:
    
-   07 0000000F 1234567890ABCDEF1234567890ABCDEF12345678 SOME-SIGN-HERE
+   07 00000007 1234567890ABCDEF1234567890ABCDEF12345678 SOME-SIGN-HERE
 
 
 4.5.  Peer exchange and NAT hole punching
@@ -521,7 +523,7 @@ Table of Contents
 
 5. Security Considerations
 
-   simplify as possible (e.g. no buffer overruns) Still, resource,
+   Simplify as possible (e.g. no buffer overruns). Still, resource,
    membership subverting [] for DDoS Thus, implementation MUST at
    least rate-limit activity to untested destinations. E.g. 4 attempts
    a second: million peers, 1Gb/sec, amplification ratio 4.

@@ -120,7 +120,8 @@ namespace swift {
         P2TP_HASH = 4,
         P2TP_PEX_ADD = 5,
         P2TP_PEX_RM = 6,
-        P2TP_MESSAGE_COUNT = 7
+        P2TP_SIGNED_HASH = 7,
+        P2TP_MESSAGE_COUNT = 8
     } messageid_t;
 
     class PiecePicker;
