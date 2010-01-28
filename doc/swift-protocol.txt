@@ -577,7 +577,7 @@ Table of Contents
    root hash is supplied in the handshake message, the crypto scheme
    in use will be known from the very beginning. As the root hash is
    the identifier, different schemes of crypto cannot be mixed in the
-   same swarms, but different swarms may distribute the same content
+   same swarm, but different swarms may distribute the same content
    using different crypto.
 
 
