@@ -146,7 +146,7 @@ Table of Contents
      4. TCP congestion control is less useful as custom congestion
      control is often needed.
    In general, TCP is built and optimized for a different usecase than
-   we have with swarmed downloads. The abstraction of a Òdata pipeÓ
+   we have with swarmed downloads. The abstraction of a "data pipe"
    orderly delivering some stream of bytes from one peer to another
    turned out to be irrelevant. In even more general terms, TCP
    supports the abstraction of pairwise _conversations_, while we need
@@ -158,7 +158,7 @@ Table of Contents
    reserving HTTP tonneling as an universal fallback. Further, instead
    of reimplementing TCP we create a datagram-based protocol,
    completely dropping the sequential data stream abstraction. Ripping
-   of unnecessary features of TCP makes it easier both to implement
+   off unnecessary features of TCP makes it easier both to implement
    the protocol and to check it for vulnerabilities; numerous TCP
    vulnerabilities were caused by complexity of the protocol's state
    machine.
@@ -205,11 +205,12 @@ Table of Contents
    hex-like two char per byte notation is used to represent message
    formats.
 
-   A sender MUST always put a data message (type id 1) in the tail of
-   a datagram. Such message consists of type id, bin number (see Sec.
-   4.3) and the actual data. Normally there is 1 kilobyte of data,
-   except the case when file size is not a multiple of 1024 bytes, so
-   the tail packet is somewhat shorter. Example:
+   In case a datagram has a piece of data, a sender MUST always put
+   the data message (type id 1) in the tail of a datagram. Such a
+   message consists of type id, bin number (see Sec. 4.3) and the
+   actual data. Normally there is 1 kilobyte of data, except the case
+   when file size is not a multiple of 1024 bytes, so the tail packet
+   is somewhat shorter. Example:
    01 00000000 48656c6c6f20776f726c6421
    (This message accommodates an entire file: "Hello world!")
 
@@ -236,7 +237,7 @@ Table of Contents
       00000000  00 00000011  04 7FFFFFFF
       1234123412341234123412341234123412341234
    (to unknown channel, handshake from channel 0x11, initiating a
-   transfer for a file with a root hash 123...1234)
+   transfer of a file with a root hash 123...1234)
    
    Peer's response datagram:
       00000011  00 00000022  02 00000003
@@ -251,9 +252,10 @@ Table of Contents
    payload, e.g. a couple of ACK messages roughly indicating the
    current progress of a peer or a HINT (see Sec. 4.7).
       00000022
-   (this is a simple zero-payload keepalive datagram; at this point
-   both peers have the proof they really talk to each other; three-way
-   handshake is complete)
+   (this is a simple zero-payload keepalive datagram; consisting of
+   the 4-byte channel id, only. At this point both peers have the
+   proof they really talk to each other; three-way handshake is
+   complete)
    
    In general, no error codes or responses are used in the protocol;
    absence of any response indicates an error. Invalid messages are
@@ -276,20 +278,21 @@ Table of Contents
    to become overly complex and multilayered with the conventional
    approach. Take BitTorrent+TCP tandem for example:
    
-   1. Its highest-level unit is a ``torrent'', physically a byte range
-   resulting from concatenation of one or many content files.
-   2. A torrent is divided into ``pieces'', typically about a thousand
+   1. The basic data unit is of course a byte of content in a file.
+   2. BitTorrent's highest-level unit is a "torrent", physically a
+   byte range resulting from concatenation of one or many content
+   files.
+   2. A torrent is divided into "pieces", typically about a thousand
    of them. Pieces are used to communicate own progress to other
    peers. Pieces are also basic data integrity units, as the torrent's
    metadata includes SHA1 hash for every piece.
    3. The actual data transfers are requested and made in 16KByte
-   units, named blocks or chunks.
-   4. The ``basic'' data unit is of course a byte of content.
+   units, named "blocks" or chunks.
    5. Still, one layer lower, TCP also operates with bytes and byte
    offsets which are totally different from the torrent's bytes and
    offsets as TCP considers cumulative byte offsets for all content
    sent by a connection, be it data, metadata or commands.
-   6. Finally, one more layer lower IP transfers independent datagrams
+   6. Finally, another layer lower IP transfers independent datagrams
    (typically around a kilobyte), which TCP then reassembles into
    continuous streams.
    
@@ -330,6 +333,11 @@ Table of Contents
    02 00000003
    (got/checked first four kilobytes of a file/stream)
    
+   The data is acknowledged in terms of bins; as a result, every
+   single packet is acknowledged logarithmical number of times. That
+   provides some necessary redundancy of acknowledgements and
+   sufficiently compensates unreliability of datagrams. Compare that
+   e.g. to TCP acknowledgements, which are (linearly) cumulative.
    For keeping the state information, an implementation MAY use the
    "binmap" datastructure, which is a hybrid of a bitmap and a binary
    tree, discussed in detail in [BINMAP].
@@ -557,12 +565,12 @@ Table of Contents
 
 6.1.1. 32 bit vs 64 bit
    While in principle the protocol supports bigger (>1TB) files, all
-   the mentioned counters are 32-bit. It is an optimization as using
-   64-bit numbers in the on-wire packet format may cost ~2% overhead.
-   64-bit version of every message has typeid of 64+t, e.g. typeid
-   68 for 64-bit hash message. E.g.
+   the mentioned counters are 32-bit. It is an optimization, as using
+   64-bit numbers on-wire packet format may cost ~2% overhead. 64-bit
+   version of every message has typeid of 64+t, e.g. typeid 68 for
+   64-bit hash message:
    44 000000000000000E 01234567890ABCDEF1234567890ABCDEF1234567
-   Once 32-bit message is supported, 64-bit version MUST be
+   Once 32-bit message is supported, its 64-bit version MUST be
    understood as well.
 
 6.1.2. IPv6
@@ -573,11 +581,11 @@ Table of Contents
 6.1.5. Reciprocity algorithms
 6.1.6. Different crypto/hashing schemes
    Once a flavour of swift will need to use a different crypto scheme
-   (e.g. SHA-256), a message should be allocated for that. As the
-   root hash is supplied in the handshake message, the crypto scheme
-   in use will be known from the very beginning. As the root hash is
-   the identifier, different schemes of crypto cannot be mixed in the
-   same swarm, but different swarms may distribute the same content
+   (e.g. SHA-256), a message should be allocated for that. As the root
+   hash is supplied in the handshake message, the crypto scheme in use
+   will be known from the very beginning. As the root hash is the
+   content's identifier, different schemes of crypto cannot be mixed
+   in the same swarm; different swarms may distribute the same content
    using different crypto.
 
 
