@@ -107,8 +107,7 @@ void    swift::Loop (tint till) {
 
 int      swift::Open (const char* filename, const Sha1Hash& hash) {
     FileTransfer* ft = new FileTransfer(filename, hash);
-    int fdes = ft->file().file_descriptor();
-    if (fdes>0) {
+    if (ft && ft->file().file_descriptor()) {
 
         /*if (FileTransfer::files.size()<fdes)  // FIXME duplication
             FileTransfer::files.resize(fdes);
@@ -118,9 +117,10 @@ int      swift::Open (const char* filename, const Sha1Hash& hash) {
         if (Channel::tracker!=Address())
             new Channel(ft);
 
-        return fdes;
+        return ft->file().file_descriptor();
     } else {
-        delete ft;
+        if (ft)
+            delete ft;
         return -1;
     }
 }
@@ -185,9 +185,6 @@ const Sha1Hash& swift::RootMerkleHash (int file) {
  (channels are cheap and easily recycled)
  <li>    a datagram must contain either the receiving
  channel id (scrambled) or the root hash
- <li>    initially, the control structure (p2tp_channel)
- is mostly zeroed; intialization happens as
- conversation progresses
  </ul>
  <b>Note:</b>
  */
