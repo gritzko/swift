@@ -308,7 +308,7 @@ namespace swift {
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
         tint ack_timeout () {
-            return rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4;
+            return std::min(30*TINT_SEC,rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4);
         }
         uint32_t    id () const { return id_; }
         
