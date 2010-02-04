@@ -31,7 +31,7 @@ public:
     binmap_t(const binmap_t& b);
     
     /** Destructor. */
-    ~binmap_t() { delete [] cells; }
+    ~binmap_t() { if (cells) free(cells); }
 
     /** Get value for the bin. */
     uint16_t    get (bin64_t bin); 
