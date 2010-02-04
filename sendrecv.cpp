@@ -452,8 +452,9 @@ void Channel::OnHandshake (Datagram& dgram) {
     if (!SELF_CONN_OK) {
         uint32_t try_id = DecodeID(peer_channel_id_);
         if (channel(try_id) && !channel(try_id)->peer_channel_id_) {
-            delete this;
-            return;
+            peer_channel_id_ = 0;
+            Close();
+            return; // this is a self-connection
         }
     }
     // FUTURE: channel forking
@@ -537,8 +538,8 @@ void    Channel::Loop (tint howlong) {
         Channel* sender(NULL);
         while (!sender && !send_queue.is_empty()) { // dequeue
             tintbin next = send_queue.pop();
-            send_time = next.time;
             sender = channel((int)next.bin);
+            send_time = next.time;
             if (sender && sender->next_send_time_!=send_time &&
                      sender->next_send_time_!=TINT_NEVER )
                 sender = NULL; // it was a stale entry
@@ -546,15 +547,10 @@ void    Channel::Loop (tint howlong) {
         
         if ( sender!=NULL && send_time<=NOW ) { // it's time
             
-            if (sender->next_send_time_<NOW+TINT_MIN) {  // either send
-                dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
-                        tintstr(send_time));
-                sender->Send();
-                sender->Reschedule();
-            } else { // or close the channel
-                dprintf("%s #%u closed sendctrl\n",tintstr(),sender->id());
-                delete sender;
-            }
+            dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
+                    tintstr(send_time));
+            sender->Send();
+            sender->Reschedule();
             
         } else {  // it's too early, wait
             
@@ -576,12 +572,19 @@ void    Channel::Loop (tint howlong) {
 }
 
  
+void Channel::Close () {
+    this->SwitchSendControl(CLOSE_CONTROL);
+}
+
+
 void Channel::Reschedule () {
     next_send_time_ = NextSendTime();
     if (next_send_time_!=TINT_NEVER) {
         assert(next_send_time_<NOW+TINT_MIN);
         send_queue.push(tintbin(next_send_time_,id_));
-    } else
-        send_queue.push(tintbin(NOW+TINT_MIN,id_));
-    dprintf("%s requeue #%u for %s\n",tintstr(),id_,tintstr(next_send_time_));
+        dprintf("%s requeue #%u for %s\n",tintstr(),id_,tintstr(next_send_time_));
+    } else {
+        dprintf("%s #%u closed\n",tintstr(),id_);
+        delete this;
+    }
 }

@@ -28,6 +28,7 @@ tint    Channel::NextSendTime () {
         case SLOW_START_CONTROL: return SlowStartNextSendTime();
         case AIMD_CONTROL:       return AimdNextSendTime();
         case LEDBAT_CONTROL:     return LedbatNextSendTime();
+        case CLOSE_CONTROL:      return TINT_NEVER;
         default:                 assert(false);
     }
 }
@@ -54,6 +55,8 @@ tint    Channel::SwitchSendControl (int control_mode) {
             break;
         case LEDBAT_CONTROL:
             break;
+        case CLOSE_CONTROL:
+            break;
         default: 
             assert(false);
     }
@@ -63,7 +66,7 @@ tint    Channel::SwitchSendControl (int control_mode) {
 
 tint    Channel::KeepAliveNextSendTime () {
     if (sent_since_recv_>=3 && last_recv_time_<NOW-TINT_MIN)
-        return TINT_NEVER;
+        return SwitchSendControl(CLOSE_CONTROL);
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
     if (data_in_.time!=TINT_NEVER)

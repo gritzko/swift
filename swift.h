@@ -252,7 +252,8 @@ namespace swift {
             PING_PONG_CONTROL,
             SLOW_START_CONTROL,
             AIMD_CONTROL,
-            LEDBAT_CONTROL
+            LEDBAT_CONTROL,
+            CLOSE_CONTROL
         } send_control_t;
         
         static const char* SEND_CONTROL_MODES[];
@@ -263,6 +264,7 @@ namespace swift {
 
         void        Recv (Datagram& dgram);
         void        Send ();
+        void        Close ();
 
         void        OnAck (Datagram& dgram);
         void        OnTs (Datagram& dgram);
