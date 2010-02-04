@@ -127,8 +127,7 @@ int      swift::Open (const char* filename, const Sha1Hash& hash) {
 
 
 void    swift::Close (int fd) {
-    // FIXME delete all channels
-    if (fd>FileTransfer::files.size() && FileTransfer::files[fd])
+    if (fd<FileTransfer::files.size() && FileTransfer::files[fd])
         delete FileTransfer::files[fd];
 }
 

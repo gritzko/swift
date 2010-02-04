@@ -50,6 +50,7 @@ FileTransfer::~FileTransfer ()
 {
     Channel::CloseTransfer(this);
     files[fd()] = NULL;
+    delete picker_;
 }
 
 
