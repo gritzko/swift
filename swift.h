@@ -185,7 +185,7 @@ namespace swift {
         /** Channels working for this transfer. */
         binqueue        hs_in_;
         int             hs_in_offset_;
-        std::deque<Address>        pex_in_;
+        std::deque<Address> pex_in_;
 
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
@@ -219,6 +219,7 @@ namespace swift {
          *  @param  expires     (not used currently) when to consider request expired
          *  @return             the bin number to request */
         virtual bin64_t Pick (binmap_t& offered, uint64_t max_width, tint expires) = 0;
+        virtual ~PiecePicker() {}
     };
 
 

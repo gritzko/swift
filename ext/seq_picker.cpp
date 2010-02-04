@@ -27,6 +27,7 @@ public:
     transfer_(file_to_pick_from), ack_hint_out_(), twist_(0) {
         ack_hint_out_.copy_range(file().ack_out(),bin64_t::ALL);
     }
+    virtual ~SeqPiecePicker() {}
     
     HashTree& file() { 
         return transfer_->file(); 
