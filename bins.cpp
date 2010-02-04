@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
 #include <utility>
@@ -58,6 +59,11 @@ binmap_t::binmap_t() :  height(4), blocks_allocated(0), cells(NULL),
                 free_top(0), cells_allocated(0), twist_mask(0) {
     alloc_cell();
     assert( free_top == 1 );
+}
+
+binmap_t::~binmap_t () {
+    if (cells)
+        free(cells);
 }
 
 void binmap_t::twist (uint64_t mask) {
