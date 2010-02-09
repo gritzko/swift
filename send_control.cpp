@@ -17,6 +17,7 @@ tint Channel::MAX_SEND_INTERVAL = TINT_SEC*58;
 tint Channel::LEDBAT_TARGET = TINT_MSEC*25;
 float Channel::LEDBAT_GAIN = 1.0/LEDBAT_TARGET;
 tint Channel::LEDBAT_DELAY_BIN = TINT_SEC*30;
+tint Channel::MAX_POSSIBLE_RTT = TINT_SEC*10;
 const char* Channel::SEND_CONTROL_MODES[] = {"keepalive", "pingpong",
     "slowstart", "standard_aimd", "ledbat"};
 
@@ -28,6 +29,7 @@ tint    Channel::NextSendTime () {
         case SLOW_START_CONTROL: return SlowStartNextSendTime();
         case AIMD_CONTROL:       return AimdNextSendTime();
         case LEDBAT_CONTROL:     return LedbatNextSendTime();
+        case CLOSE_CONTROL:      return TINT_NEVER;
         default:                 assert(false);
     }
 }
@@ -54,6 +56,8 @@ tint    Channel::SwitchSendControl (int control_mode) {
             break;
         case LEDBAT_CONTROL:
             break;
+        case CLOSE_CONTROL:
+            break;
         default: 
             assert(false);
     }
@@ -63,7 +67,7 @@ tint    Channel::SwitchSendControl (int control_mode) {
 
 tint    Channel::KeepAliveNextSendTime () {
     if (sent_since_recv_>=3 && last_recv_time_<NOW-TINT_MIN)
-        return TINT_NEVER;
+        return SwitchSendControl(CLOSE_CONTROL);
     if (ack_rcvd_recent_)
         return SwitchSendControl(SLOW_START_CONTROL);
     if (data_in_.time!=TINT_NEVER)
@@ -97,7 +101,8 @@ tint    Channel::CwndRateNextSendTime () {
     if (send_interval_>std::max(rtt_avg_,TINT_SEC)*4)
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (data_out_.size()<cwnd_) {
-        dprintf("%s #%u sendctrl next in %llius\n",tintstr(),id_,send_interval_);
+        dprintf("%s #%u sendctrl next in %llius (cwnd %f.2, data_out %i)\n",
+                tintstr(),id_,send_interval_,cwnd_,(int)data_out_.size());
         return last_data_out_time_ + send_interval_;
     } else {
         assert(data_out_.front().time!=TINT_NEVER);
@@ -154,6 +159,8 @@ tint Channel::LedbatNextSendTime () {
     tint queueing_delay = owd_cur - owd_min;
     tint off_target = LEDBAT_TARGET - queueing_delay;
     cwnd_ += LEDBAT_GAIN * off_target / cwnd_;
+    if (cwnd_<1)
+        cwnd_ = 1;
     dprintf("%s #%u sendctrl ledbat %lli-%lli => %3.2f\n",
             tintstr(),id_,owd_cur,owd_min,cwnd_);
     return CwndRateNextSendTime();

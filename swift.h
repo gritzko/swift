@@ -185,7 +185,7 @@ namespace swift {
         /** Channels working for this transfer. */
         binqueue        hs_in_;
         int             hs_in_offset_;
-        std::deque<Address>        pex_in_;
+        std::deque<Address> pex_in_;
 
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
@@ -219,6 +219,7 @@ namespace swift {
          *  @param  expires     (not used currently) when to consider request expired
          *  @return             the bin number to request */
         virtual bin64_t Pick (binmap_t& offered, uint64_t max_width, tint expires) = 0;
+        virtual ~PiecePicker() {}
     };
 
 
@@ -252,7 +253,8 @@ namespace swift {
             PING_PONG_CONTROL,
             SLOW_START_CONTROL,
             AIMD_CONTROL,
-            LEDBAT_CONTROL
+            LEDBAT_CONTROL,
+            CLOSE_CONTROL
         } send_control_t;
         
         static const char* SEND_CONTROL_MODES[];
@@ -263,6 +265,7 @@ namespace swift {
 
         void        Recv (Datagram& dgram);
         void        Send ();
+        void        Close ();
 
         void        OnAck (Datagram& dgram);
         void        OnTs (Datagram& dgram);
@@ -298,6 +301,7 @@ namespace swift {
         static float LEDBAT_GAIN;
         static tint LEDBAT_DELAY_BIN;
         static bool SELF_CONN_OK;
+        static tint MAX_POSSIBLE_RTT;
         
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
@@ -306,7 +310,7 @@ namespace swift {
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
         tint ack_timeout () {
-            return rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4;
+            return std::min(30*TINT_SEC,rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4);
         }
         uint32_t    id () const { return id_; }
         
@@ -337,6 +341,8 @@ namespace swift {
         bin64_t     data_in_dbl_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;
+        /** Timeouted data (potentially to be retransmitted). */
+        tbqueue     data_out_tmo_;
         bin64_t     data_out_cap_;
         /** Index in the history array. */
         binmap_t        ack_out_;
