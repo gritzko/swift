@@ -1,10 +1,12 @@
 #!/bin/bash
 
 HASH=66b9644bb01eaad09269354df00172c8a924773b
-HEAD=node300.das2.ewi.tudelft.nl
+HEAD=83.96.143.114
 
 sleep 1 
+rm -f core
 ulimit -c 1024000
 cd swift || exit 1
 rm -f chunk
-./exec/leecher $HASH chunk $HEAD:20000 0.0.0.0:10000 >lout 2>lerr || exit 2
+#valgrind --leak-check=yes \
+./exec/leecher $HASH chunk $HEAD:10001 0.0.0.0:10002 2>lerr | gzip > lout.gz || exit 2
