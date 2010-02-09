@@ -361,10 +361,11 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                 rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
                 dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
                 if (peer_send_time_) {
+                    assert(data_out_[i].time!=TINT_NEVER);
                     tint owd = peer_send_time_ - data_out_[i].time;
                     owd_cur_bin_ = (owd_cur_bin_+1) & 3;
                     owd_current_[owd_cur_bin_] = owd;
-                    if (owd_min_bin_start_<NOW+TINT_SEC*30) {
+                    if ( owd_min_bin_start_+TINT_SEC*30 < NOW ) {
                         owd_min_bin_start_ = NOW;
                         owd_min_bin_ = (owd_min_bin_+1) & 3;
                         owd_min_bins_[owd_min_bin_] = TINT_NEVER;
