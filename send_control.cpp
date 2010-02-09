@@ -17,6 +17,7 @@ tint Channel::MAX_SEND_INTERVAL = TINT_SEC*58;
 tint Channel::LEDBAT_TARGET = TINT_MSEC*25;
 float Channel::LEDBAT_GAIN = 1.0/LEDBAT_TARGET;
 tint Channel::LEDBAT_DELAY_BIN = TINT_SEC*30;
+tint Channel::MAX_POSSIBLE_RTT = TINT_SEC*10;
 const char* Channel::SEND_CONTROL_MODES[] = {"keepalive", "pingpong",
     "slowstart", "standard_aimd", "ledbat"};
 

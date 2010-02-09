@@ -352,15 +352,18 @@ bin64_t Channel::OnData (Datagram& dgram) {
 void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
     
     int max_ack_off = 0;
-    //FIXME do LEDBAT magic somewhere here
     
     if (ackd_pos!=bin64_t::NONE) {
-        for (int i=0; i<8 && i<data_out_.size(); i++) {
+        for (int i=0; i<data_out_.size(); i++) {
             if (data_out_[i]!=tintbin() && data_out_[i].bin.within(ackd_pos)) {
-                tint rtt = NOW-data_out_[i].time;
-                rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
-                dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
-                if (peer_send_time_) {
+                if (peer_send_time_)
+                    for(tbqueue::iterator j=data_out_tmo_.begin(); j!=data_out_tmo_.end(); j++)
+                        if (j->bin==data_out_[i].bin)
+                            peer_send_time_=0; // possibly retransmit
+                if (peer_send_time_) { // well, it is sorta ACK ACK
+                    tint rtt = NOW-data_out_[i].time;
+                    rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
+                    dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
                     assert(data_out_[i].time!=TINT_NEVER);
                     tint owd = peer_send_time_ - data_out_[i].time;
                     owd_cur_bin_ = (owd_cur_bin_+1) & 3;
@@ -372,8 +375,10 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                     }
                     if (owd_min_bins_[owd_min_bin_]>owd)
                         owd_min_bins_[owd_min_bin_] = owd;
+                    peer_send_time_ = 0;
                 }
-                dprintf("%s #%u rtt %lli dev %lli\n",tintstr(),id_,rtt_avg_,dev_avg_);
+                dprintf("%s #%u rtt %lli dev %lli based on %s\n",
+                        tintstr(),id_,rtt_avg_,dev_avg_,data_out_[i].bin.str());
                 bin64_t pos = data_out_[i].bin;
                 ack_rcvd_recent_++;
                 data_out_[i]=tintbin();
@@ -395,6 +400,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
             }
             while (max_ack_off>MAX_REORDERING) {
                 ack_not_rcvd_recent_++;
+                data_out_tmo_.push_back(data_out_.front().bin);
                 dprintf("%s #%u Rdata %s\n",tintstr(),id_,data_out_.front().bin.str());
                 data_out_.pop_front();
                 max_ack_off--;
@@ -407,6 +413,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
         if (data_out_.front().bin!=bin64_t::NONE && ack_in_.is_empty(data_out_.front().bin)) {
             ack_not_rcvd_recent_++;
             data_out_cap_ = bin64_t::ALL;
+            data_out_tmo_.push_back(data_out_.front().bin);
             dprintf("%s #%u Tdata %s\n",tintstr(),id_,data_out_.front().bin.str());
         }
         data_out_.pop_front();
@@ -414,6 +421,8 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
     while (!data_out_.empty() && data_out_.front().bin==bin64_t::NONE)
         data_out_.pop_front();
     assert(data_out_.empty() || data_out_.front().time!=TINT_NEVER);
+    while (!data_out_tmo_.empty() && data_out_tmo_.front().time<NOW-MAX_POSSIBLE_RTT)
+        data_out_tmo_.pop_front();
 
 }
 

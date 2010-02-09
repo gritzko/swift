@@ -301,6 +301,7 @@ namespace swift {
         static float LEDBAT_GAIN;
         static tint LEDBAT_DELAY_BIN;
         static bool SELF_CONN_OK;
+        static tint MAX_POSSIBLE_RTT;
         
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
@@ -340,6 +341,8 @@ namespace swift {
         bin64_t     data_in_dbl_;
         /** The history of data sent and still unacknowledged. */
         tbqueue     data_out_;
+        /** Timeouted data (potentially to be retransmitted). */
+        tbqueue     data_out_tmo_;
         bin64_t     data_out_cap_;
         /** Index in the history array. */
         binmap_t        ack_out_;
