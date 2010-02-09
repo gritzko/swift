@@ -27,6 +27,22 @@
 	
 	<div id='motto'>Turn the Net into a single data Cloud!</div>
 	
+    <div id='abstract'>
+    <b>Abstract</b>.
+    &nbsp;<i>swift</i> is a multiparty transport protocol; its mission is to
+    disseminate content among a swarm of peers. It is a sort of BitTorrent
+    at the transport layer. <a href="http://bittorrent.org">BitTorrent</a> can't
+    underlie a distributed filesystem or deliver Web pages; while
+    <a href="http://github.com/gritzko/swift/raw/master/doc/swift-protocol.txt">swift</a> can.
+    <a href="http://github.com/gritzko/swift">libswift</a>
+    is 4000 lines of cross-platform C++ code
+    licensed under LGPL; it runs on misc Unices, Mac OS X and Windows;
+    it uses UDP with <a href="http://tools.ietf.org/wg/ledbat/">LEDBAT</a> congestion control.
+    So far our speed record is mere 400Mbps, but we are working on that.
+    The library is delivered as a part of <a href="http://p2p-next.org">P2P-Next</a>,
+    funded by <a href="http://cordis.europa.eu/fp7/dc/index.cfm">EU FP7</a>.
+    </div>
+    
 	<div>	<h2>Ideas</h2>
 		<p>As <a href="http://en.wikipedia.org/wiki/Content-centric_networking">
 		wise people say</a>, the Internet was initially built for
@@ -44,7 +60,8 @@
 		transport layer</a>. Ultimately, it aims at the abstraction of the Internet
 		as a single big data <a href="http://en.wikipedia.org/wiki/Cloud_computing">
 		Cloud</a>. Such entities as storage, servers and connections are abstracted
-		away and are virtually invisible at the API layer. The data is received
+		away and are virtually invisible at the API layer. Given a hash,
+        the data is received
 		from whatever source available and data integrity is checked 
 		cryptographically with <a href="http://en.wikipedia.org/wiki/Hash_tree">
 		Merkle hash trees</a>.</p>

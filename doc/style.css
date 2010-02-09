@@ -45,6 +45,14 @@ div#motto {
 	text-align: right;
 	font-style: italic;
 	font-size: larger;
+    margin-bottom: 28pt;
+}
+
+div#abstract {
+    letter-spacing: 0.06em;
+    #font-size: larger;
+    font-style: italic;
+    font-family: Georgia;
 }
 
 div.fold>h2, div.fold>h3, div.fold>h4 {
