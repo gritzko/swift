@@ -413,6 +413,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
     }
     while (!data_out_.empty() && data_out_.front().bin==bin64_t::NONE)
         data_out_.pop_front();
+    assert(data_out_.empty() || data_out_.front().time!=TINT_NEVER);
 
 }
 
