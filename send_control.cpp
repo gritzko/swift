@@ -101,7 +101,7 @@ tint    Channel::CwndRateNextSendTime () {
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (data_out_.size()<cwnd_) {
         dprintf("%s #%u sendctrl next in %llius (cwnd %f.2, data_out %i)\n",
-                tintstr(),id_,send_interval_,cwnd_,data_out_.size());
+                tintstr(),id_,send_interval_,cwnd_,(int)data_out_.size());
         return last_data_out_time_ + send_interval_;
     } else {
         assert(data_out_.front().time!=TINT_NEVER);
@@ -158,6 +158,8 @@ tint Channel::LedbatNextSendTime () {
     tint queueing_delay = owd_cur - owd_min;
     tint off_target = LEDBAT_TARGET - queueing_delay;
     cwnd_ += LEDBAT_GAIN * off_target / cwnd_;
+    if (cwnd_<1)
+        cwnd_ = 1;
     dprintf("%s #%u sendctrl ledbat %lli-%lli => %3.2f\n",
             tintstr(),id_,owd_cur,owd_min,cwnd_);
     return CwndRateNextSendTime();
