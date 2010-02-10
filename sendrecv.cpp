@@ -407,6 +407,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                 data_out_cap_ = bin64_t::ALL;
             }
         }
+        peer_send_time_ = 0;
     }
     tint timeout = NOW - rtt_avg_ - 4*std::max(dev_avg_,TINT_MSEC*50);
     while (!data_out_.empty() && data_out_.front().time<timeout) {
