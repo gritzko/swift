@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ ! $SERVERS ]; then
+    SERVERS="servers.txt"
+fi
+
+rm -rf harvest
+mkdir harvest
+
+for s in `cat $SERVERS`; do
+    (if ssh $s "cat ./swift/lout.gz" | gunzip | \
+        perl -ne 's/(#\d+)/'$s' $1/ && print' \
+        > harvest/$s.log ; then
+        echo $s harvest OK
+    else
+        echo $s harvest FAIL
+    fi) &
+done  
+
+wait
+echo 'harvested all; sorting'
+sort -m harvest/*.log | ./swlognm | gzip > harvest/swarm.log.gz
+
+echo DONE
