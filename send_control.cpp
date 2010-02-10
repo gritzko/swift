@@ -19,7 +19,7 @@ float Channel::LEDBAT_GAIN = 1.0/LEDBAT_TARGET;
 tint Channel::LEDBAT_DELAY_BIN = TINT_SEC*30;
 tint Channel::MAX_POSSIBLE_RTT = TINT_SEC*10;
 const char* Channel::SEND_CONTROL_MODES[] = {"keepalive", "pingpong",
-    "slowstart", "standard_aimd", "ledbat"};
+    "slowstart", "standard_aimd", "ledbat", "closing"};
 
 
 tint    Channel::NextSendTime () {
@@ -160,6 +160,8 @@ tint Channel::LedbatNextSendTime () {
     tint off_target = LEDBAT_TARGET - queueing_delay;
     cwnd_ += LEDBAT_GAIN * off_target / cwnd_;
     if (cwnd_<1)
+        cwnd_ = 1;
+    if (owd_cur==TINT_NEVER || owd_min==TINT_NEVER)
         cwnd_ = 1;
     dprintf("%s #%u sendctrl ledbat %lli-%lli => %3.2f\n",
             tintstr(),id_,owd_cur,owd_min,cwnd_);

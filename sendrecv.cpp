@@ -243,7 +243,7 @@ void    Channel::AddAck (Datagram& dgram) {
     }
     if (data_in_.time!=TINT_NEVER) { // TODO: ACK NONE for corrupted data
         AddTs(dgram);
-        bin64_t pos = file().ack_out().cover(data_in_.bin);
+        bin64_t pos = data_in_.bin; // be precise file().ack_out().cover(data_in_.bin);
         dgram.Push8(SWIFT_ACK);
         dgram.Push32(pos.to32());
         //dgram.Push64(data_in_.time);
@@ -407,6 +407,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                 data_out_cap_ = bin64_t::ALL;
             }
         }
+        peer_send_time_ = 0;
     }
     tint timeout = NOW - rtt_avg_ - 4*std::max(dev_avg_,TINT_MSEC*50);
     while (!data_out_.empty() && data_out_.front().time<timeout) {
