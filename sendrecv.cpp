@@ -243,7 +243,7 @@ void    Channel::AddAck (Datagram& dgram) {
     }
     if (data_in_.time!=TINT_NEVER) { // TODO: ACK NONE for corrupted data
         AddTs(dgram);
-        bin64_t pos = file().ack_out().cover(data_in_.bin);
+        bin64_t pos = data_in_.bin; // be precise file().ack_out().cover(data_in_.bin);
         dgram.Push8(SWIFT_ACK);
         dgram.Push32(pos.to32());
         //dgram.Push64(data_in_.time);
