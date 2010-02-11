@@ -11,14 +11,14 @@ fi
 rm -rf harvest
 mkdir harvest
 
-for s in `cat $SERVERS`; do
-    mkfifo harvest/$s.log
+for s in `grep -v '#' $SERVERS`; do
+    mkfifo harvest/$s.fifo
 done
 
-for s in `cat $SERVERS`; do
+for s in `grep -v '#' $SERVERS`; do
     (if ssh $s "cat ./swift/lout.gz" | gunzip | \
         ./logparse $s \
-        > harvest/$s.log-fifo ; then
+        > harvest/$s.fifo ; then
         echo $s harvest OK
     else
         echo $s harvest FAIL
@@ -27,8 +27,8 @@ done
 
 # Ensure your version of sort is recent enough
 # batch-size is critical for performance
-LC_ALL=C sort -m -s --batch-size=64 harvest/*.log-fifo | gzip > harvest/swarm.log.gz &
+LC_ALL=C sort -m -s --batch-size=64 harvest/*.fifo | gzip > harvest/swarm.log.gz &
 wait
-rm harvest/*.log-fifo
+rm harvest/*.fifo
 
 echo DONE

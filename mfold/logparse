@@ -2,8 +2,8 @@
 
 $SERVER=shift;
 %HOSTS = ();
-%CHANN = ();
-$CHANN{"#0"} = "none";
+%CHANN = ( "#0" => "none" );
+%EVENTS = ( "#0" => {"+hs"=>0} );
 
 open(SRV,$ENV{"HOME"}."/.ssh/config") or die;
 while (<SRV>) {
@@ -22,8 +22,24 @@ while (<>) {
         $rest =~ /\d+b ([\d\.]+):/;
         $ip = $1;
         $CHANN{"$channel"} = $HOSTS{$ip};
+        $EVENTS{"$channel"} = { "+hs"=>0 } if not exists $EVENTS{"$channel"};
     }
     my $host = $CHANN{"$channel"};
     $host = "unknown" if not $host;
+    
     print "$time $SERVER $host$channel $event $rest\n";
+
+    # DO STATS
+    $EVENTS{"$channel"}{"$event"} = 0 if not exists $EVENTS{"$channel"}{"$event"};
+    $EVENTS{"$channel"}{"$event"}++;
+
+}
+
+for $channel (keys %CHANN) {
+    my $host = $CHANN{"$channel"};
+    open(STATS,"> harvest/$SERVER-$host.stat") or die;
+    for $event ( keys %{ $EVENTS{"$channel"} } ) {
+        print STATS "$event\t".($EVENTS{"$channel"}{"$event"})."\n";
+    }
+    close STATS;
 }

@@ -4,10 +4,6 @@ HOST=$1
 CMD=$2
 ENV=env.default.sh
 
-if [ ! $SERVERS ]; then
-    SERVERS="servers.txt"
-fi
-
 if [ -e $CMD.$HOST.sh ] ; then 
     SHSC=$CMD.$HOST.sh ;
 else 
