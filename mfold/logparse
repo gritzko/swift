@@ -4,6 +4,12 @@ $SERVER=shift;
 %HOSTS = ();
 %CHANN = ( "#0" => "none" );
 %EVENTS = ( "#0" => {"+hs"=>0} );
+%SENT = ();
+%RCVD = ();
+%DSENT = ();
+%DRCVD = ();
+$SENTB = 0;
+$RCVDB = 0;
 
 open(SRV,$ENV{"HOME"}."/.ssh/config") or die;
 while (<SRV>) {
@@ -18,28 +24,80 @@ while (<>) {
     my $channel = $2;
     my $event = $3;
     my $rest = $4;
-    if ($event eq "sent") {
-        $rest =~ /\d+b ([\d\.]+):/;
-        $ip = $1;
-        $CHANN{"$channel"} = $HOSTS{$ip};
-        $EVENTS{"$channel"} = { "+hs"=>0 } if not exists $EVENTS{"$channel"};
-    }
     my $host = $CHANN{"$channel"};
     $host = "unknown" if not $host;
+    if ($event eq "sent") {
+        $rest =~ /(\d+)b ([\d\.]+):/;
+        $ip = $2;
+        $host = $HOSTS{$ip};
+        #$SENT{$h} = 0 if not exists $SENT{$h};
+        $SENT{$host} += $1;
+        $SENTB += $1;
+        $DSENT{$host}++;
+        $CHANN{"$channel"} = $host;
+    } elsif ($event eq "recvd") {
+        $rest =~ /(\d+)/;
+        #$RCVD{$h} = 0 if not exists $RCVD{$h};
+        $DRCVD{$host}++;
+        $RCVD{$host} += $1;
+        $RCVDB += $1;
+    }
+    $EVENTS{"$host"} = { "+hs"=>0 } if not exists $EVENTS{"$host"};
     
     print "$time $SERVER $host$channel $event $rest\n";
 
     # DO STATS
-    $EVENTS{"$channel"}{"$event"} = 0 if not exists $EVENTS{"$channel"}{"$event"};
-    $EVENTS{"$channel"}{"$event"}++;
+    $EVENTS{"$host"}{"$event"} = 0 if not exists $EVENTS{"$host"}{"$event"};
+    $EVENTS{"$host"}{"$event"}++;
 
 }
 
 for $channel (keys %CHANN) {
     my $host = $CHANN{"$channel"};
     open(STATS,"> harvest/$SERVER-$host.stat") or die;
-    for $event ( keys %{ $EVENTS{"$channel"} } ) {
-        print STATS "$event\t".($EVENTS{"$channel"}{"$event"})."\n";
+    my %events = %{ $EVENTS{"$host"} };
+    for $event ( keys %events ) {
+        print STATS "$event\t".($events{"$event"})."\n";
     }
     close STATS;
+    open(HTML,"> harvest/$SERVER-$host.html") or die;
+    print HTML "<table class='channel'><th><td>sent</td><td>rcvd</td></th>\n";
+    my $rcvd = $RCVD{$host};
+    my $sent = $SENT{$host};
+    $rcvd=0.001 if not $rcvd;
+    $sent=0.001 if not $sent;
+    printf HTML 
+        "<tr class='bytes'><td>bytes</td><td>%i/<pp>%.1f%%</pp></td>".
+        "<td>%i/<pp>%.1f%%</pp></td></tr>\n",
+        $sent, $SENTB?$sent/$SENTB*100:0, $rcvd, $RCVDB?$rcvd/$RCVDB*100:0;
+    print HTML
+        "<tr><td>dgrams</td><td>".$DSENT{$host}."</td><td>".$DRCVD{$host}."</td></tr>\n";
+    printf HTML
+        "<tr><td>data</td><td>%i/<pp><b>%.1f%%</b></pp></td><td>%i/<pp><b>%.1f%%</b></pp></td></tr>\n",
+        $events{"+data"}, ($events{"+data"}*1029)/$sent*100,
+        $events{"-data"}, ($events{"-data"}*1029)/$rcvd*100;
+    printf HTML
+        "<tr><td>hash</td><td>%i/<pp>%.1f%%</pp></td><td>%i/<pp>%.1f%%</pp></td></tr>\n",
+        $events{"+hash"}, ($events{"+hash"}*25)/$sent*100,
+        $events{"-hash"}, ($events{"-hash"}*25)/$rcvd*100;
+    printf HTML
+        "<tr><td>ack</td><td>%i/<pp>%.1f%%</pp></td><td>%i/<pp>%.1f%%</pp></td></tr>\n",
+        $events{"+ack"}, ($events{"+ack"}*5)/$sent*100,
+        $events{"-ack"}, ($events{"-ack"}*5)/$rcvd*100;
+    printf HTML
+        "<tr><td>hint</td><td>%i/<pp>%.1f%%</pp></td><td>%i/<pp>%.1f%%</pp></td></tr>\n",
+        $events{"+hint"}, ($events{"+hint"}*5)/$sent*100,
+        $events{"-hint"}, ($events{"-hint"}*5)/$rcvd*100;
+    printf HTML
+        "<tr><td>hs</td><td>%i</td><td>%i</td></tr>\n",
+        $events{"+hs"}, $events{"-hs"};
+    my $losses = $events{"+data"}>0 ? 
+        ($events{"Rdata"}+$events{"Tdata"})/$events{"+data"}*100 : 0;
+    printf HTML
+        "<tr><td>losses</td><td colspan='2'>R:%i+T:%i=%i/<pp>%.1f%%</pp></td></tr>\n",
+        $events{"Rdata"}, $events{"Tdata"},
+        $events{"Rdata"}+$events{"Tdata"}, $losses;
+
+    print HTML "</table>\n";
+    close HTML;
 }

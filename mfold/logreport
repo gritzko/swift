@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo '<html><head>'
+echo '<link rel="stylesheet" href="report.css" type="text/css">'
+echo '</head><body>'
+echo '<table id="main"><th>'
+for to in `grep -v '#' servers.txt`; do
+    echo '<td class="host">&gt;'$to'</td>'
+done
+echo '</th>'
+for from in `grep -v '#' servers.txt`; do
+    echo '<tr><td class="host">'$from'&gt;</td>'
+    for to in `grep -v '#' servers.txt`; do
+        echo '<td>'
+        cat harvest/$from-$to.html
+        echo '</td>'
+    done
+    echo '</tr>'
+done
+echo '<body></html>'
