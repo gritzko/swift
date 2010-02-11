@@ -1,5 +1,9 @@
 #!/bin/bash
-
+#   The script downloads logs in parallel,
+#   feeds them into fifos; sort takes logs
+#   from fifos, merges and gzips them;
+#   the result is put into harvest/
+#
 if [ ! $SERVERS ]; then
     SERVERS="servers.txt"
 fi
@@ -8,17 +12,23 @@ rm -rf harvest
 mkdir harvest
 
 for s in `cat $SERVERS`; do
+    mkfifo harvest/$s.log
+done
+
+for s in `cat $SERVERS`; do
     (if ssh $s "cat ./swift/lout.gz" | gunzip | \
-        perl -ne 's/(#\d+)/'$s' $1/ && print' \
-        > harvest/$s.log ; then
+        ./logparse $s \
+        > harvest/$s.log-fifo ; then
         echo $s harvest OK
     else
         echo $s harvest FAIL
     fi) &
 done  
 
+# Ensure your version of sort is recent enough
+# batch-size is critical for performance
+LC_ALL=C sort -m -s --batch-size=64 harvest/*.log-fifo | gzip > harvest/swarm.log.gz &
 wait
-echo 'harvested all; sorting'
-sort -m harvest/*.log | ./swlognm | gzip > harvest/swarm.log.gz
+rm harvest/*.log-fifo
 
 echo DONE

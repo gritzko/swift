@@ -1,0 +1,29 @@
+#!/usr/bin/perl -w
+
+$SERVER=shift;
+%HOSTS = ();
+%CHANN = ();
+$CHANN{"#0"} = "none";
+
+open(SRV,$ENV{"HOME"}."/.ssh/config") or die;
+while (<SRV>) {
+    $srvname=$1 if /Host (\S+)/;
+    $HOSTS{$1}=$srvname if /HostName (\S+)/;
+}
+close SRV;
+
+while (<>) {
+    /([\d\_]+) (#\d+) (\S+) (.*)/ or next;
+    my $time = $1;
+    my $channel = $2;
+    my $event = $3;
+    my $rest = $4;
+    if ($event eq "sent") {
+        $rest =~ /\d+b ([\d\.]+):/;
+        $ip = $1;
+        $CHANN{"$channel"} = $HOSTS{$ip};
+    }
+    my $host = $CHANN{"$channel"};
+    $host = "unknown" if not $host;
+    print "$time $SERVER $host$channel $event $rest\n";
+}

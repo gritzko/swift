@@ -2,6 +2,11 @@
 
 HOST=$1
 CMD=$2
+ENV=env.default.sh
+
+if [ ! $SERVERS ]; then
+    SERVERS="servers.txt"
+fi
 
 if [ -e $CMD.$HOST.sh ] ; then 
     SHSC=$CMD.$HOST.sh ;
@@ -9,11 +14,14 @@ else
     SHSC=$CMD.default.sh ;
 fi
 
-if ( cat $SHSC | ssh $HOST ) > .$HOST.$CMD.out 2> .$HOST.$CMD.err; then
+if [ ! -d logs ]; then mkdir logs; fi
+
+if ( cat $ENV $SHSC | ssh $HOST ) > logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; then
     echo $HOST  $CMD    OK
     exit 0
 else
     echo $HOST  $CMD    FAIL
+    cat $SHSC
     cat .$HOST.$CMD.out .$HOST.$CMD.err
     exit 1
 fi
