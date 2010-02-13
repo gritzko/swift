@@ -18,6 +18,6 @@ if ( cat $ENV $SHSC | ssh $HOST ) > logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; 
 else
     echo $HOST  $CMD    FAIL
     cat $SHSC
-    cat .$HOST.$CMD.out .$HOST.$CMD.err
+    cat logs/$HOST.$CMD.out logs/$HOST.$CMD.err
     exit 1
 fi
