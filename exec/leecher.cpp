@@ -52,9 +52,10 @@ int main (int argn, char** args) {
 
     tint start = NOW;
 
-    while (!swift::IsComplete(file)){// && NOW-start<TINT_SEC*60) {
+    while (true){ //!swift::IsComplete(file)){// && NOW-start<TINT_SEC*60) {
 	    swift::Loop(TINT_SEC);
-        eprintf("done %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
+        eprintf("%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, %lli dgram %lli bytes down\n",
+               swift::IsComplete(file) ? "DONE" : "done",
                swift::Complete(file), swift::Size(file), swift::SeqComplete(file),
                Datagram::dgrams_up, Datagram::bytes_up,
                Datagram::dgrams_down, Datagram::bytes_down );
