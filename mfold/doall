@@ -5,8 +5,9 @@
 # docmd.sh); all failed executions are
 # put to the FAILURES file
 rm -f FAILURES
-rm -rf logs
-mkdir logs
+if [ ! -d logs ]; then
+    mkdir logs
+fi
 
 if [ -z "$SERVERS" ]; then
     SERVERS="servers.txt"

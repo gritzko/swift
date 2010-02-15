@@ -8,6 +8,9 @@ $SERVER=shift;
 %RCVD = ();
 %DSENT = ();
 %DRCVD = ();
+%CWNDLOG = ();
+%RTTLOG = ();
+%OWDLOG = ();
 $SENTB = 0;
 $RCVDB = 0;
 
@@ -19,13 +22,15 @@ while (<SRV>) {
 close SRV;
 
 while (<>) {
-    /([\d\_]+) (#\d+) (\S+) (.*)/ or next;
+    /(\d+_\d+_\d+_\d+_\d+) (#\d+) (\S+) (.*)/ or next;
     my $time = $1;
     my $channel = $2;
     my $event = $3;
     my $rest = $4;
     my $host = $CHANN{"$channel"};
     $host = "unknown" if not $host;
+    $time =~ /^(\d+)_(\d+)_(\d+)_(\d+)/;
+    my $ms=$1*60; $ms=($ms+$2)*60; $ms=($ms+$3)*1000; $ms+=$4;
     if ($event eq "sent") {
         $rest =~ /(\d+)b ([\d\.]+):/;
         $ip = $2;
@@ -41,6 +46,26 @@ while (<>) {
         $DRCVD{$host}++;
         $RCVD{$host} += $1;
         $RCVDB += $1;
+    } elsif ($event eq "sendctrl") {
+        if ($rest =~ /cwnd (\d+\.\d+).*data_out (\d+)/) {
+            if (not exists $CWNDLOG{$host}) {
+                open(my $handle, '>', "harvest/$SERVER-$host-cwnd.log") or die;
+                $CWNDLOG{$host} = $handle;
+            }
+            print {$CWNDLOG{$host}} "$ms\t$1\t$2\n";
+        } elsif ($rest =~ /ledbat (\-?\d+)\-(\-?\d+)/) {
+            if (not exists $OWDLOG{$host}) {
+                open(my $handle, '>', "harvest/$SERVER-$host-owd.log") or die;
+                $OWDLOG{$host} = $handle;
+            }
+            print {$OWDLOG{$host}} "$ms\t$1\t$2\n";
+        } elsif ($rest =~ /rtt (\d+) dev (\d+)/) {
+            if (not exists $RTTLOG{$host}) {
+                open(my $handle, '>', "harvest/$SERVER-$host-rtt.log") or die;
+                $RTTLOG{$host} = $handle;
+            }
+            print {$RTTLOG{$host}} "$ms\t$1\t$2\n";
+        }
     }
     $EVENTS{"$host"} = { "+hs"=>0 } if not exists $EVENTS{"$host"};
     
@@ -52,8 +77,20 @@ while (<>) {
 
 }
 
+for $host (keys %CWNDLOG) {
+    close($CWNDLOG{$host});
+}
+for $host (keys %OWDLOG) {
+    close ($OWDLOG{$host});
+}
+for $host (keys %RTTLOG) {
+    close ($RTTLOG{$host});
+}
+open(LEGEND,"> harvest/$SERVER-legend.txt") or die;
+
 for $channel (keys %CHANN) {
     my $host = $CHANN{"$channel"};
+    print LEGEND "$channel\t$host\n";
     open(STATS,"> harvest/$SERVER-$host.stat") or die;
     my %events = %{ $EVENTS{"$host"} };
     for $event ( keys %events ) {
@@ -98,6 +135,12 @@ for $channel (keys %CHANN) {
         $events{"Rdata"}, $events{"Tdata"},
         $events{"Rdata"}+$events{"Tdata"}, $losses;
 
+    printf HTML
+        "<tr><td colspan='3'><a href='harvest/%s-%s.png'>".
+        "cwnd/data_out/rtt/owd graph</a></td></tr>\n",
+        $SERVER, $host;
+
     print HTML "</table>\n";
     close HTML;
 }
+close LEGEND;

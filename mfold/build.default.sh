@@ -5,6 +5,7 @@ if ! which git || ! which g++ || ! which scons || ! which make ; then
 fi
 
 if [ ! -e ~/include/gtest/gtest.h ]; then
+    echo installing gtest
     mkdir tmp
     cd tmp || exit -3
     wget -c http://googletest.googlecode.com/files/gtest-1.4.0.tar.bz2 || exit -2
@@ -14,14 +15,34 @@ if [ ! -e ~/include/gtest/gtest.h ]; then
     ./configure --prefix=$HOME || exit 2
     make || exit 3
     make install || exit 4
+    echo done gtest
 fi
+
+#if ! which pcregrep ; then
+#    echo installing pcregrep
+#    mkdir tmp
+#    cd tmp
+#    wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.01.tar.gz || exit 5
+#    tar -xzf pcre-8.01.tar.gz 
+#    cd pcre-8.01
+#    ./configure --prefix=$HOME || exit 6
+#    make -j4 || exit 7
+#    make install || exit 8
+#    echo done pcregrep
+#fi
 
 if [ ! -e swift ]; then
-    git clone git://github.com/gritzko/swift.git || exit 6
+    echo clone the repo
+    git clone $ORIGIN || exit 6
 fi
 cd swift
-git pull || exit 5
+echo pulling updates
+git pull origin $BRANCH:$BRANCH || exit 5
+echo switching the branch
+git checkout $BRANCH || exit 5
 
+echo building
 CPPPATH=~/include LIBPATH=~/lib scons -j4 || exit 7
+echo testing
 tests/connecttest || exit 8
-
+echo done
