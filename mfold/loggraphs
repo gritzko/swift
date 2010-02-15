@@ -1,0 +1,53 @@
+#!/bin/bash
+
+if [ -z "$SERVERS" ]; then
+    SERVERS="servers.txt"
+fi
+
+cd harvest
+
+for from in `grep -v '^#' ../$SERVERS`; do
+    for to in `grep -v '^#' ../$SERVERS`; do
+        CWNDLOG="$from-$to-cwnd.log"
+        if [ ! -e $CWNDLOG ]; then
+            continue
+        fi
+        GP="$from-$to.gnuplot"
+        echo "set term png large size 1024,768" > $GP
+        PNG="$from-$to.png"
+        if [ -e $PNG ]; then rm $PNG; fi
+        echo "set out '$from-$to.png'" >> $GP
+        echo "set y2tics" >> $GP
+        echo "set y2label 'packets'" >> $GP
+        echo "set ylabel 'microseconds'" >> $GP
+        echo "set xlabel 'run time millis'" >> $GP
+        CWNDLOG="$from-$to-cwnd.log"
+        echo -ne "plot '$CWNDLOG' using 1:2 with lines title 'cwnd'"\
+                " axis x1y2, "\
+                " '$CWNDLOG' using 1:3 with lines title 'data out'"\
+                " axis x1y2 "\
+                >> $GP
+        RTTLOG="$from-$to-rtt.log"
+        if [ -e $RTTLOG ]; then
+            echo -ne ", '$RTTLOG' using 1:2 with lines title 'rtt' "\
+                "axis x1y1, "\
+                "'$RTTLOG' using 1:3 with lines title 'dev' "\
+                "axis x1y1"\
+                >> $GP
+        fi
+        OWDLOG="$from-$to-owd.log"
+        if [ -e $OWDLOG ]; then
+            echo -ne ", '$OWDLOG' using 1:2 with lines title 'owd' "\
+                "axis x1y1, "\
+                "'$OWDLOG' using 1:3 with lines title 'min owd'"\
+                "axis x1y1 "\
+                >> $GP
+        fi
+        echo >> $GP
+        cat $GP | gnuplot &
+    done
+done
+
+wait
+cd ..
+echo DONE

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+./loggraphs &
+
 echo '<html><head>'
 echo '<link rel="stylesheet" href="report.css" type="text/css">'
 echo '</head><body>'
@@ -18,3 +20,5 @@ for from in `grep -v '#' servers.txt`; do
     echo '</tr>'
 done
 echo '<body></html>'
+
+wait
