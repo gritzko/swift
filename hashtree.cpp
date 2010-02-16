@@ -58,7 +58,10 @@ Sha1Hash::Sha1Hash(bool hex, const char* hash) {
         int val;
         for(int i=0; i<SIZE; i++) {
             strncpy(hx,hash+i*2,2);
-            sscanf(hx, "%x", &val);
+            if (sscanf(hx, "%x", &val)!=1) {
+                memset(bits,0,20);
+                return;
+            }
             bits[i] = val;
         }
         assert(this->hex()==std::string(hash));
@@ -257,7 +260,6 @@ Sha1Hash        HashTree::DeriveRoot () {
             p = p.parent();
             c--;
         }
-        //dprintf("p %lli %s\n",(uint64_t)p,hash.hex().c_str());
     }
     return hash;
 }

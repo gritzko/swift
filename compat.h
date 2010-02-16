@@ -42,7 +42,7 @@ typedef int64_t tint;
 #define TINT_SEC ((tint)1000000)
 #define TINT_MSEC ((tint)1000)
 #define TINT_uSEC ((tint)1)
-#define TINT_NEVER ((tint)0x7fffffffffffffffLL)
+#define TINT_NEVER ((tint)0x3fffffffffffffffLL)
 
 
 size_t  file_size (int fd);

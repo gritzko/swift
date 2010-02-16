@@ -186,12 +186,12 @@ bin64_t        Channel::AddData (Datagram& dgram) {
     if (data_out_.size()<cwnd_ && last_data_out_time_<=NOW-send_interval_) {
         tosend = DequeueHint();
         if (tosend==bin64_t::NONE) {
-            dprintf("%s #%u no idea what to send #sendctrl\n",tintstr(),id_);
+            dprintf("%s #%u sendctrl no idea what to send\n",tintstr(),id_);
             if (send_control_!=KEEP_ALIVE_CONTROL)
                 SwitchSendControl(KEEP_ALIVE_CONTROL);
         }
     } else
-        dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id_);
+        dprintf("%s #%u sendctrl no cwnd\n",tintstr(),id_);
     
     if (tosend==bin64_t::NONE)// && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty())) 
         return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
@@ -274,7 +274,7 @@ void    Channel::Recv (Datagram& dgram) {
         rtt_avg_ = NOW - last_send_time_;
         dev_avg_ = rtt_avg_;
         dip_avg_ = rtt_avg_;
-        dprintf("%s #%u rtt init %lli\n",tintstr(),id_,rtt_avg_);
+        dprintf("%s #%u sendctrl rtt init %lli\n",tintstr(),id_,rtt_avg_);
     }
     bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
     while (dgram.size()) {
@@ -377,7 +377,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
                         owd_min_bins_[owd_min_bin_] = owd;
                     peer_send_time_ = 0;
                 }
-                dprintf("%s #%u rtt %lli dev %lli based on %s\n",
+                dprintf("%s #%u sendctrl rtt %lli dev %lli based on %s\n",
                         tintstr(),id_,rtt_avg_,dev_avg_,data_out_[i].bin.str());
                 bin64_t pos = data_out_[i].bin;
                 ack_rcvd_recent_++;
@@ -570,7 +570,7 @@ void    Channel::Loop (tint howlong) {
         } else {  // it's too early, wait
             
             tint towait = min(limit,send_time) - NOW;
-            dprintf("%s waiting %lliusec\n",tintstr(),towait);
+            dprintf("%s #0 waiting %lliusec\n",tintstr(),towait);
             int rd = Datagram::Wait(socket_count,sockets,towait);
             if (rd!=INVALID_SOCKET) { // in meantime, received something
                 Channel* receiver = RecvDatagram(rd);
@@ -597,7 +597,7 @@ void Channel::Reschedule () {
     if (next_send_time_!=TINT_NEVER) {
         assert(next_send_time_<NOW+TINT_MIN);
         send_queue.push(tintbin(next_send_time_,id_));
-        dprintf("%s requeue #%u for %s\n",tintstr(),id_,tintstr(next_send_time_));
+        dprintf("%s #%u requeue for %s\n",tintstr(),id_,tintstr(next_send_time_));
     } else {
         dprintf("%s #%u closed\n",tintstr(),id_);
         delete this;
