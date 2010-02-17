@@ -26,9 +26,9 @@ public:
         //uint32_t fp = for_root.fingerprint();
         for(peer_queue_t::iterator i=peers.begin(); i!=peers.end(); i++)
             if (i->second==for_root) {
-                i->second = 0;
+                i->second = Sha1Hash::ZERO; // horror TODO rewrite
                 sockaddr_in ret = i->first;
-                while (peers.begin()->second==0)
+                while (peers.begin()->second==Sha1Hash::ZERO)
                     peers.pop_front();
                 return ret;
             }

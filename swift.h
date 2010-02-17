@@ -302,6 +302,7 @@ namespace swift {
         static tint LEDBAT_DELAY_BIN;
         static bool SELF_CONN_OK;
         static tint MAX_POSSIBLE_RTT;
+        static FILE* debug_file;
         
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
@@ -461,5 +462,11 @@ namespace swift {
 
 } // namespace end
 
+#ifndef SWIFT_MUTE
+#define dprintf(...) { if (Channel::debug_file) fprintf(Channel::debug_file,__VA_ARGS__); }
+#else
+#define dprintf(...) {}
+#endif
+#define eprintf(...) fprintf(stderr,__VA_ARGS__)
 
 #endif

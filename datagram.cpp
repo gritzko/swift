@@ -181,7 +181,6 @@ SOCKET Datagram::Bind (Address addr_) {
     }
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 #endif
-    dprintf("socket buffers: %i send %i recv\n",sndbuf,rcvbuf);
     if (::bind(fd, (sockaddr*)&addr, len) != 0) {
         print_error("bind fails");
         return INVALID_SOCKET;
