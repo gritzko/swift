@@ -183,8 +183,9 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         return bin64_t::NONE;
     
     bin64_t tosend = bin64_t::NONE;
-    tint luft = send_interval_>>2; // may wake up a bit earlier
-    if (data_out_.size()<cwnd_ && last_data_out_time_+send_interval_+luft<=NOW) {
+    tint luft = send_interval_>>4; // may wake up a bit earlier
+    if (data_out_.size()<cwnd_ &&
+            last_data_out_time_+send_interval_<=NOW+luft) {
         tosend = DequeueHint();
         if (tosend==bin64_t::NONE) {
             dprintf("%s #%u sendctrl no idea what to send\n",tintstr(),id_);
