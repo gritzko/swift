@@ -45,7 +45,7 @@ int main (int argc, char** argv) {
             case 'h':
                 if (strlen(optarg)!=40)
                     quit("SHA1 hash must be 40 hex symbols\n");
-                root_hash = Sha1Hash(optarg);
+                root_hash = Sha1Hash(true,optarg); // FIXME ambiguity
                 if (root_hash==Sha1Hash::ZERO)
                     quit("SHA1 hash must be 40 hex symbols\n");
                 break;
@@ -95,10 +95,6 @@ int main (int argc, char** argv) {
     
     LibraryInit();
     
-	int file = Open(filename,root_hash);
-    // FIXME open err 
-    printf("Root hash: %s\n", RootMerkleHash(file).hex().c_str());
-    
     if (root_hash==Sha1Hash() && bindaddr==Address())
         exit(0);
 
@@ -114,10 +110,13 @@ int main (int argc, char** argv) {
             quit("cant listen to a port\n");
     }
     
-    
     if (tracker!=Address())
         SetTracker(tracker);
     
+	int file = Open(filename,root_hash);
+    // FIXME open err 
+    printf("Root hash: %s\n", RootMerkleHash(file).hex().c_str());
+
     tint start_time = NOW;
     tint end_time = TINT_NEVER;
     
