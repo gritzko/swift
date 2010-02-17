@@ -5,7 +5,7 @@
 #   the result is put into harvest/
 #
 if [ ! $SERVERS ]; then
-    SERVERS="servers.txt"
+    export SERVERS="servers.txt"
 fi
 
 rm -rf harvest
@@ -29,7 +29,9 @@ done
 # batch-size is critical for performance
 LC_ALL=C sort -m -s --batch-size=64 harvest/*.fifo | gzip > harvest/swarm.log.gz &
 wait
-./logreport > report.html
+./logreport > harvest/index.html
+
 rm harvest/*.fifo
+cp report.css harvest
 
 echo DONE

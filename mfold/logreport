@@ -1,24 +1,31 @@
 #!/bin/bash
 
-./loggraphs &
+./loggraphs
+
+cd harvest
 
 echo '<html><head>'
 echo '<link rel="stylesheet" href="report.css" type="text/css">'
+echo '<title>Manifold: swarm tomography</title>'
 echo '</head><body>'
 echo '<table id="main"><th>'
-for to in `grep -v '#' servers.txt`; do
+for to in `grep -v '#' ../$SERVERS`; do
     echo '<td class="host">&gt;'$to'</td>'
 done
 echo '</th>'
-for from in `grep -v '#' servers.txt`; do
+for from in `grep -v '#' ../$SERVERS`; do
     echo '<tr><td class="host">'$from'&gt;</td>'
-    for to in `grep -v '#' servers.txt`; do
+    for to in `grep -v '#' ../$SERVERS`; do
         echo '<td>'
-        cat harvest/$from-$to.html
+        cat $from-$to.html
+        PNG="$from-$to.png"
+        if [ -e $PNG ]; then 
+            echo "<a href='$PNG'>"
+            echo "<img class='thumb' src='$PNG'/>"
+            echo "</a>"
+        fi
         echo '</td>'
     done
     echo '</tr>'
 done
 echo '<body></html>'
-
-wait

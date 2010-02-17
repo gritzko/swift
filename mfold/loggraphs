@@ -40,14 +40,15 @@ for from in `grep -v '^#' ../$SERVERS`; do
             echo -ne ", '$OWDLOG' using 1:2 with lines title 'owd' "\
                 "axis x1y1, "\
                 "'$OWDLOG' using 1:3 with lines title 'min owd'"\
+                "axis x1y1, "\
+                "'$OWDLOG' using 1:($2+25000) with lines title 'target'"\
                 "axis x1y1 "\
                 >> $GP
         fi
         echo >> $GP
-        cat $GP | gnuplot &
+        ( cat $GP | gnuplot ) &
     done
 done
 
 wait
 cd ..
-echo DONE

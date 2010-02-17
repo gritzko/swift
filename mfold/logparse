@@ -135,11 +135,6 @@ for $channel (keys %CHANN) {
         $events{"Rdata"}, $events{"Tdata"},
         $events{"Rdata"}+$events{"Tdata"}, $losses;
 
-    printf HTML
-        "<tr><td colspan='3'><a href='harvest/%s-%s.png'>".
-        "cwnd/data_out/rtt/owd graph</a></td></tr>\n",
-        $SERVER, $host;
-
     print HTML "</table>\n";
     close HTML;
 }

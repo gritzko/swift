@@ -24,3 +24,11 @@ pp {
 tr.bytes {
     background: #fed;
 }
+
+img.thumb {
+    width: 150pt;
+}
+
+table#main tr td {
+    vertical-align: top;
+}

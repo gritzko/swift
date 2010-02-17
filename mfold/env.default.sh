@@ -3,5 +3,5 @@
 export SEEDER=130.161.211.198
 export SEEDPORT=10004
 export RUNPORT=10008
-export BRANCH=swiftapp
+export BRANCH=master
 export ORIGIN=git://github.com/gritzko/swift.git
