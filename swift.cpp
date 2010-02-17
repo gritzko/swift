@@ -64,6 +64,7 @@ int main (int argc, char** argv) {
                 tracker = Address(optarg);
                 if (tracker==Address())
                     quit("address must be hostname:port, ip:port or just port\n");
+                SetTracker(tracker);
                 break;
             case 'D':
                 Channel::debug_file = optarg ? fopen(optarg,"a") : stdout;
