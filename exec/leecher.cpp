@@ -43,7 +43,10 @@ int main (int argn, char** args) {
     else
         bindaddr = Address((uint32_t)INADDR_ANY,rand()%10000+7000);
 
-    assert(0<swift::Listen(bindaddr));
+    if (swift::Listen(bindaddr)<=0) {
+        fprintf(stderr,"Cannot listen on %s\n",bindaddr.str());
+        return -3;
+    }
 
 	swift::SetTracker(tracker);
 

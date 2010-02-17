@@ -183,7 +183,8 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         return bin64_t::NONE;
     
     bin64_t tosend = bin64_t::NONE;
-    if (data_out_.size()<cwnd_ && last_data_out_time_<=NOW-send_interval_) {
+    tint luft = send_interval_>>2; // may wake up a bit earlier
+    if (data_out_.size()<cwnd_ && last_data_out_time_+send_interval_+luft<=NOW) {
         tosend = DequeueHint();
         if (tosend==bin64_t::NONE) {
             dprintf("%s #%u no idea what to send #sendctrl\n",tintstr(),id_);
@@ -191,7 +192,8 @@ bin64_t        Channel::AddData (Datagram& dgram) {
                 SwitchSendControl(KEEP_ALIVE_CONTROL);
         }
     } else
-        dprintf("%s #%u no cwnd #sendctrl\n",tintstr(),id_);
+        dprintf("%s #%u sendctrl wait cwnd %f data_out %i next %s\n",
+                tintstr(),id_,cwnd_,data_out_.size(),tintstr(last_data_out_time_+NOW-send_interval_));
     
     if (tosend==bin64_t::NONE)// && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty())) 
         return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
