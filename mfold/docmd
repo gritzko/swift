@@ -11,6 +11,10 @@ else
 fi
 
 if [ ! -d logs ]; then mkdir logs; fi
+if [ ! -e $SHSC ]; then
+    echo $HOST  $CMD    EMPTY
+    exit 0
+fi
 
 if ( cat $ENV $SHSC | ssh $HOST ) > logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; then
     echo $HOST  $CMD    OK

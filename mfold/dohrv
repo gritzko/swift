@@ -16,10 +16,15 @@ for s in `grep -v '#' $SERVERS`; do
 done
 
 for s in `grep -v '#' $SERVERS`; do
-    (if ssh $s "cat ./swift/lout.gz" | gunzip | \
-        ./logparse $s \
-        > harvest/$s.fifo ; then
+    (if ssh $s \
+        "cd swift/  && \
+        rm -rf harvest && mkdir harvest && \
+        ( zcat lout.gz | ./mfold/logparse $s | gzip )" \
+        | gunzip > harvest/$s.fifo ; then
+
+        ssh $s "cd swift/; tar cz harvest" | tar xz
         echo $s harvest OK
+
     else
         echo $s harvest FAIL
     fi) &
@@ -29,6 +34,7 @@ done
 # batch-size is critical for performance
 LC_ALL=C sort -m -s --batch-size=64 harvest/*.fifo | gzip > harvest/swarm.log.gz &
 wait
+./loggraphs
 ./logreport > harvest/index.html
 
 rm harvest/*.fifo

@@ -11,6 +11,8 @@ $SERVER=shift;
 %CWNDLOG = ();
 %RTTLOG = ();
 %OWDLOG = ();
+%TDATALOG = ();
+%RDATALOG = ();
 $SENTB = 0;
 $RCVDB = 0;
 
@@ -66,6 +68,18 @@ while (<>) {
             }
             print {$RTTLOG{$host}} "$ms\t$1\t$2\n";
         }
+    } elsif ($event eq "Tdata") {
+        if (not exists $TDATALOG{$host}) {
+            open(my $handle, '>', "harvest/$SERVER-$host-tdata.log") or die;
+            $TDATALOG{$host} = $handle;
+        }
+        print {$TDATALOG{$host}} "$ms\n";
+    } elsif ($event eq "Rdata") {
+        if (not exists $RDATALOG{$host}) {
+            open(my $handle, '>', "harvest/$SERVER-$host-rdata.log") or die;
+            $RDATALOG{$host} = $handle;
+        }
+        print {$RDATALOG{$host}} "$ms\n";
     }
     $EVENTS{"$host"} = { "+hs"=>0 } if not exists $EVENTS{"$host"};
     
@@ -86,6 +100,13 @@ for $host (keys %OWDLOG) {
 for $host (keys %RTTLOG) {
     close ($RTTLOG{$host});
 }
+for $host (keys %TDATALOG) {
+    close ($TDATALOG{$host});
+}
+for $host (keys %RDATALOG) {
+    close ($RDATALOG{$host});
+}
+
 open(LEGEND,"> harvest/$SERVER-legend.txt") or die;
 
 for $channel (keys %CHANN) {

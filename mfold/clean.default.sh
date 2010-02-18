@@ -1,9 +1,12 @@
+if [ -e .netem-on ]; then
+    sudo tc qdisc del dev `cat .netem-on` root
+    rm .netem-on
+fi
+sudo iptables -F &
 cd swift
-rm -f chunk core lout lerr
+rm -f chunk core
 killall leecher
 killall seeder
-if [ -e .netem-iface ]; then
-    sudo tc qdisc del dev `cat .netem-iface` root
-    rm .netem-iface
-fi
+killall swift-o3
+killall swift-dbg
 echo DONE

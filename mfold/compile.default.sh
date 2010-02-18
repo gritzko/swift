@@ -1,18 +1,12 @@
 cd swift || exit 1
+if [ ! -d bin ]; then mkdir bin; fi
 git pull || exit 2
-rm exec/*-pg exec/*-o3
+rm bin/swift-pg bin/swift-o3 bin/swift-dbg
 
-g++ -I. exec/leecher.cpp *.cpp compat/*.cpp ext/seq_picker.cpp -pg -o exec/leecher-pg &
-g++ -I. exec/seeder.cpp *.cpp compat/*.cpp ext/seq_picker.cpp -pg -o exec/seeder-pg &
-g++ -I. exec/leecher.cpp *.cpp compat/*.cpp ext/seq_picker.cpp -O3 -o exec/leecher-o3 &
-g++ -I. exec/seeder.cpp *.cpp compat/*.cpp ext/seq_picker.cpp -O3 -o exec/seeder-o3 &
-
+g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -pg -o bin/swift-pg &
+g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -g -o bin/swift-dbg &
+g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -O3 -o bin/swift-o3 &
 wait
-
-cd exec
-
-if [ ! -e leecher-pg ]; then exit 3; fi
-if [ ! -e leecher-o3 ]; then exit 4; fi
-if [ ! -e seeder-pg ]; then exit 5; fi
-if [ ! -e seeder-o3 ]; then exit 6; fi
-
+if [ ! -e bin/swift-pg ]; then exit 4; fi
+if [ ! -e bin/swift-dbg ]; then exit 5; fi
+if [ ! -e bin/swift-o3 ]; then exit 6; fi
