@@ -16,10 +16,12 @@ for from in `grep -v '^#' ../$SERVERS`; do
             continue
         fi
         GP="$from-$to.gnuplot"
-        echo "set term png large size 1024,768" > $GP
-        PNG="$from-$to.png"
+
+        echo "set term png large size 2048,768" > $GP
+        PNG="$from-$to.big.png"
         if [ -e $PNG ]; then rm $PNG; fi
-        echo "set out '$from-$to.png'" >> $GP
+        echo "set out '$PNG'" >> $GP
+
         echo "set y2tics" >> $GP
         echo "set y2label 'packets'" >> $GP
         echo "set ylabel 'microseconds'" >> $GP
@@ -62,6 +64,13 @@ for from in `grep -v '^#' ../$SERVERS`; do
                 >> $GP
         fi
         echo >> $GP
+
+        echo "set term png size 512,192" >> $GP
+        PNG="$from-$to.thumb.png"
+        if [ -e $PNG ]; then rm $PNG; fi
+        echo "set out '$PNG'" >> $GP
+        echo "replot" >> $GP
+
         ( cat $GP | gnuplot ) &
     done
 done

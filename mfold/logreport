@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ ! $SERVERS ]; then
+    export SERVERS="servers.txt"
+fi
+
 cd harvest
 
 echo '<html><head>'
@@ -16,10 +20,9 @@ for from in `grep -v '#' ../$SERVERS`; do
     for to in `grep -v '#' ../$SERVERS`; do
         echo '<td>'
         cat $from-$to.html
-        PNG="$from-$to.png"
-        if [ -e $PNG ]; then 
-            echo "<a href='$PNG'>"
-            echo "<img class='thumb' src='$PNG'/>"
+        if [ -e "$from-$to.big.png" ]; then 
+            echo "<a href='$from-$to.big.png'>"
+            echo "<img class='thumb' src='$from-$to.thumb.png'/>"
             echo "</a>"
         fi
         echo '</td>'

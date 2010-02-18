@@ -26,7 +26,8 @@ tr.bytes {
 }
 
 img.thumb {
-    width: 150pt;
+    width: 160pt;
+    border-style: none;
 }
 
 table#main tr td {
