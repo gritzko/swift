@@ -8,13 +8,17 @@
 	<script src="http://code.jquery.com/jquery-latest.js"></script>
 	<script>
   	$(document).ready(function(){
+            $("div.fold>p, div.fold>ul, div.fold>div").hide("fast");
+            $("div.fold>h2, div.fold>h3, div.fold>h4").attr("bullet","closed");
     		$("div.fold>h4, div.fold>h3, div.fold>h2").click(function () {
-			$("div.fold>p, div.fold>ul, div.fold>div").hide("fast");
-      		$(this).siblings().each(
-				function(){
-					$(this).show("normal");
-				}
-			);
+			    $("div.fold>p, div.fold>ul, div.fold>div").hide("fast");
+                $("div.fold>h2, div.fold>h3, div.fold>h4").attr("bullet","closed");
+                $(this).attr("bullet","open");
+      		    $(this).siblings().each(
+				    function(){
+					    $(this).show("normal");
+				    }
+			    );
     		});
   	});
   </script>
@@ -29,16 +33,30 @@
 	
     <div id='abstract'>
     <b>Abstract</b>.
-    &nbsp;<i>swift</i> is a multiparty transport protocol; its mission is to
+    Current Internet protocols are geared for 1:1 client/server
+    communication. We expanded the TCP/IP protocol suit with swarming.
+    Our protocol is designed to be capable of integration
+    into browsers / operating systems and able to serve 95% of current Internet
+    traffic.
+    <p>
+    <b>swift</b> is a multiparty transport protocol; its mission is to
     disseminate content among a swarm of peers. It is a sort of BitTorrent
-    at the transport layer. <a href="http://bittorrent.org">BitTorrent</a> can't
-    underlie a distributed filesystem or deliver Web pages; while
-    <a href="http://github.com/gritzko/swift/raw/master/doc/swift-protocol.txt">swift</a> can.
-    <a href="http://github.com/gritzko/swift">libswift</a>
-    is 4000 lines of cross-platform C++ code
-    licensed under LGPL; it runs on misc Unices, Mac OS X and Windows;
+    at the transport layer. We generalised the ideas of 
+    <a href="http://bittorrent.org">BitTorrent</a> to make it 
+    suitable for new usage areas such as distributed filesystems and
+    Web page delivery. The TCP+Bittorrent stack consists of
+    60<a href='http://en.wikipedia.org/wiki/Source_lines_of_code'>KSLoC</a>
+    + 90KSLoC respectively
+    (by <a href='http://www.dwheeler.com/sloccount/'>SLOCCount</a>).
+    With novel datastructures and refactoring we managed to implement 
+    <a href="http://github.com/gritzko/swift/raw/master/doc/swift-protocol.txt">swift</a>
+    in a mere 4KSLoC of cross-platform C++ code.
+    <a href="http://github.com/gritzko/swift">libswift</a> library
+    is licensed under LGPL; it runs on misc Unices, Mac OS X and Windows;
     it uses UDP with <a href="http://tools.ietf.org/wg/ledbat/">LEDBAT</a> congestion control.
-    So far our speed record is mere 400Mbps, but we are working on that.
+    Currently maximum throughput is 400Mbps, but we are
+    <a href='http://mughal.tribler.org:8080'>working on that</a>;
+    <!--going to 600 Mbps with further optimizations, and final--> our next target is 1 Gbps.
     The library is delivered as a part of <a href="http://p2p-next.org">P2P-Next</a>,
     funded by <a href="http://cordis.europa.eu/fp7/dc/index.cfm">EU FP7</a>.
     </div>

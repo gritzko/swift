@@ -16,7 +16,8 @@ if [ ! -e $SHSC ]; then
     exit 0
 fi
 
-if ( cat $ENV $SHSC | ssh $HOST ) > logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; then
+if ( (echo "HOST=$HOST"; cat $ENV $SHSC) | ssh $HOST ) > \
+    logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; then
     echo $HOST  $CMD    OK
     exit 0
 else

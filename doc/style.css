@@ -16,18 +16,18 @@ body > div {
 	margin: auto;
 	margin-top: 64px;
 	margin-bottom: 64px;
-	#background: #d0e0ff;
+	/*background: #d0e0ff;*/
 	background: rgba(208,224,255,0.9);
 	padding-top: 16px;
 	padding-bottom: 16px;
 }
 
 img#logo {
-	#display: block;
-    #margin-left: auto;
-    #margin-right: auto;
-	#position: relative;
-	#top: -40px;
+	/*display: block;
+    margin-left: auto;
+    margin-right: auto;
+	position: relative;
+	top: -40px;*/
 	position:absolute;
 	top: 4px;
 }
@@ -50,16 +50,19 @@ div#motto {
 
 div#abstract {
     letter-spacing: 0.06em;
-    #font-size: larger;
+    /*font-size: larger;*/
     font-style: italic;
     font-family: Georgia;
 }
 
 div.fold>h2, div.fold>h3, div.fold>h4 {
-	text-decoration: underline;
 	cursor: pointer;
 }
 
-div.fold > p, div.fold > ul, div.fold > div {
-	display: none;
+[bullet='open']:before {
+    content: "⊟ ";
+}
+
+[bullet='closed']:before {
+    content: "⊞ ";
 }
