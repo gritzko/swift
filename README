@@ -1,0 +1,9 @@
+swift: the multiparty transport protocol
+
+see doc/index.html for marketing stuff, ideas and rants
+    doc/swift.txt for protocol draft spec
+    *.cpp for the actual code
+    swift.cpp is the main exec file; may run as e.g.
+        ./swift -t node300.das2.ewi.tudelft.nl:20000 -h \
+        d1502706c46779d361a1d562a10da0a45c4c40e5 -f \
+        trailer.ogg
