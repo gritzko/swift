@@ -95,17 +95,14 @@ int main (int argc, char** argv) {
     
     LibraryInit();
     
-    if (root_hash==Sha1Hash() && bindaddr==Address())
-        exit(0);
-
     if (bindaddr!=Address()) { // seeding
         if (Listen(bindaddr)<=0)
             quit("cant listen to %s\n",bindaddr.str())
         if (wait_time==0)
             wait_time=TINT_NEVER;
-    } else {
+    } else if (tracker!=Address()) { // leeching
         int base = rand()%10000, i;
-        for (i=0; i<100 && Listen(Address(INADDR_ANY,i*7+base))<=0; i++);
+        for (i=0; i<100 && Listen(Address((uint32_t)INADDR_ANY,i*7+base))<=0; i++);
         if (i==100)
             quit("cant listen to a port\n");
     }
@@ -116,6 +113,9 @@ int main (int argc, char** argv) {
 	int file = Open(filename,root_hash);
     // FIXME open err 
     printf("Root hash: %s\n", RootMerkleHash(file).hex().c_str());
+
+	if (root_hash==Sha1Hash() && bindaddr==Address() && tracker==Address())
+        exit(0);
 
     tint start_time = NOW;
     tint end_time = TINT_NEVER;

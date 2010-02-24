@@ -9,11 +9,12 @@
 #ifndef DATAGRAM_H
 #define DATAGRAM_H
 
-#ifdef _MSC_VER
-    #include "compat/stdint.h"
-#else
-    #include <stdint.h>
-#endif
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <stdio.h>
+#include <string>
 #ifdef _WIN32
     #include <winsock2.h>
     #include "compat.h"
@@ -26,14 +27,7 @@
     #include <netinet/in.h>
     #include <unistd.h>
 #endif
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <string.h>
-#include <stdio.h>
-#include <string>
 #include "hashtree.h"
-#include "compat/util.h"
 #include "compat.h"
 
 

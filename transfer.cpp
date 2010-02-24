@@ -6,16 +6,10 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-#ifdef _WIN32
-#include "compat.h"
-#else
-#include <sys/mman.h>
-#endif
 #include <errno.h>
 #include <string>
 #include <sstream>
 #include "swift.h"
-#include "compat/util.h"
 
 #include "ext/seq_picker.cpp" // FIXME FIXME FIXME FIXME 
 

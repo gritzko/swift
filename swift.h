@@ -49,11 +49,6 @@ Messages
 #ifndef SWIFT_H
 #define SWIFT_H
 
-#ifdef _MSC_VER
-#include "compat/stdint.h"
-#else
-#include <stdint.h>
-#endif
 #include <deque>
 #include <vector>
 #include <algorithm>
@@ -311,7 +306,9 @@ namespace swift {
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
         tint ack_timeout () {
-            return std::min(30*TINT_SEC,rtt_avg_ + std::max(dev_avg_,MIN_DEV)*4);
+			tint dev = dev_avg_ < MIN_DEV ? MIN_DEV : dev_avg_;
+			tint tmo = rtt_avg_ + dev * 4;
+			return tmo < 30*TINT_SEC ? tmo : 30*TINT_SEC; 
         }
         uint32_t    id () const { return id_; }
         

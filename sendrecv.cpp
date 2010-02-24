@@ -7,8 +7,6 @@
  *
  */
 #include "swift.h"
-#include "compat/util.h"
-
 
 using namespace swift;
 using namespace std;

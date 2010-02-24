@@ -10,7 +10,14 @@
 #define SWIFT_COMPAT_H
 
 #ifdef _MSC_VER
-#include "compat/stdint.h"
+typedef unsigned char uint8_t;
+typedef signed char int8_t;
+typedef unsigned short uint16_t;
+typedef short int16_t;
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
 #else
 #include <stdint.h>
 #endif
@@ -27,9 +34,17 @@
 
 #ifdef _WIN32
 #define open(a,b,c)    _open(a,b,c)
+#endif
+#ifndef S_IRUSR
 #define S_IRUSR _S_IREAD
-#define S_IWUSR    _S_IWRITE
+#endif
+#ifndef S_IWUSR
+#define S_IWUSR _S_IWRITE
+#endif
+#ifndef S_IRGRP
 #define S_IRGRP _S_IREAD
+#endif
+#ifndef S_IROTH
 #define S_IROTH _S_IREAD
 #endif
 

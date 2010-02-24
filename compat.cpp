@@ -15,7 +15,6 @@
 #include <Tchar.h>
 #include <io.h>
 #include <sys/timeb.h>
-#include "compat/hirestimeofday.h"
 #else
 #include <unistd.h>
 #include <sys/time.h>
@@ -121,10 +120,28 @@ int inet_aton(const char *cp, struct in_addr *inp)
     return 1;
 }
 
+#endif
+
+#ifdef _WIN32
+
+LARGE_INTEGER get_freq() {
+    LARGE_INTEGER proc_freq;
+    if (!::QueryPerformanceFrequency(&proc_freq))
+    	print_error("HiResTimeOfDay: QueryPerformanceFrequency() failed");
+    return proc_freq;
+}
+
 tint usec_time(void)
 {
-    HiResTimeOfDay* tod = HiResTimeOfDay::Instance();
-    return tod->getTimeUSec();
+	static LARGE_INTEGER last_time;
+	LARGE_INTEGER cur_time;
+	QueryPerformanceCounter(&cur_time);
+	if (cur_time.QuadPart<last_time.QuadPart)
+		print_error("QueryPerformanceCounter wrapped"); // does this happen?
+	last_time = cur_time;
+	static float freq = 1000000.0/get_freq().QuadPart;
+	tint usec = cur_time.QuadPart * freq;
+	return usec;
 }
 
 
@@ -142,5 +159,17 @@ tint usec_time(void)
 }
 
 #endif
+
+void LibraryInit(void)
+{
+#ifdef _WIN32
+	static WSADATA _WSAData;
+	// win32 requires you to initialize the Winsock DLL with the desired
+	// specification version
+	WORD wVersionRequested;
+    wVersionRequested = MAKEWORD(2, 2);
+	WSAStartup(wVersionRequested, &_WSAData);
+#endif
+}
 
 }
