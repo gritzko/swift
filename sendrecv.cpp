@@ -7,6 +7,7 @@
  *
  */
 #include "swift.h"
+#include <algorithm>  // kill it
 
 using namespace swift;
 using namespace std;
@@ -155,7 +156,7 @@ void    Channel::AddHint (Datagram& dgram) {
     /*int peer_cwnd = (int)(rtt_avg_ / dip_avg_);
     if (!peer_cwnd)
         peer_cwnd = 1;*/
-    int plan_pck = std::max ( (tint)1, plan_for / dip_avg_ );
+    int plan_pck = max ( (tint)1, plan_for / dip_avg_ );
     
     if ( hint_out_size_ < plan_pck ) {
             
@@ -410,7 +411,7 @@ void    Channel::CleanDataOut (bin64_t ackd_pos) { // TODO: isn't it too long?
         }
         peer_send_time_ = 0;
     }
-    tint timeout = NOW - rtt_avg_ - 4*std::max(dev_avg_,TINT_MSEC*50);
+    tint timeout = NOW - rtt_avg_ - 4*max(dev_avg_,TINT_MSEC*50);
     while (!data_out_.empty() && data_out_.front().time<timeout) {
         if (data_out_.front().bin!=bin64_t::NONE && ack_in_.is_empty(data_out_.front().bin)) {
             ack_not_rcvd_recent_++;

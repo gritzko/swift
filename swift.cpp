@@ -8,7 +8,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
+#include "compat.h"
 #include "swift.h"
 
 using namespace swift;
@@ -37,6 +37,8 @@ int main (int argc, char** argv) {
     Address bindaddr;
     Address tracker;
     tint wait_time = 0;
+    
+    LibraryInit();
     
     int c;
     while ( -1 != (c = getopt_long (argc, argv, ":h:f:dl:t:Dpw::", long_options, 0)) ) {
@@ -93,8 +95,6 @@ int main (int argc, char** argv) {
 
     }   // arguments parsed
     
-    LibraryInit();
-    
     if (bindaddr!=Address()) { // seeding
         if (Listen(bindaddr)<=0)
             quit("cant listen to %s\n",bindaddr.str())
@@ -125,7 +125,7 @@ int main (int argc, char** argv) {
             end_time = NOW;
         // and yes, I add up infinities and go away with that
         tint towait = (end_time+wait_time)-NOW;
-	    Loop(std::min(TINT_SEC,towait));
+		Loop(TINT_SEC<towait?TINT_SEC:towait);
         if (report_progress) {
             fprintf(stderr,
                     "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "\

@@ -21,6 +21,7 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <stdint.h>
 #endif
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <sys/stat.h>
@@ -28,9 +29,17 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <sys/mman.h>
 #endif
+
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+
+#ifdef _MSC_VER
+#include "getopt_win.h"
+#else
+#include <getopt.h>
+#endif
 
 #ifdef _WIN32
 #define open(a,b,c)    _open(a,b,c)
@@ -82,6 +91,8 @@ size_t  pwrite(int fildes, const void *buf, size_t nbyte, long offset);
 int     inet_aton(const char *cp, struct in_addr *inp);
 
 #endif
+
+std::string gettmpdir(void);
 
 tint    usec_time ();
 

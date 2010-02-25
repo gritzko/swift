@@ -98,7 +98,7 @@ tint    Channel::CwndRateNextSendTime () {
     //if (last_recv_time_<NOW-rtt_avg_*4)
     //    return SwitchSendControl(KEEP_ALIVE_CONTROL);
     send_interval_ = rtt_avg_/cwnd_;
-    if (send_interval_>std::max(rtt_avg_,TINT_SEC)*4)
+    if (send_interval_>max(rtt_avg_,TINT_SEC)*4)
         return SwitchSendControl(KEEP_ALIVE_CONTROL);
     if (data_out_.size()<cwnd_) {
         dprintf("%s #%u sendctrl next in %llius (cwnd %.2f, data_out %i)\n",

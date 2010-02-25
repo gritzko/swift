@@ -71,7 +71,7 @@ struct Address {
     Address(const char* ip_port);
     Address(uint16_t port) {
         clear();
-        set_ipv4(LOCALHOST);
+        set_ipv4((uint32_t)INADDR_ANY);
         set_port(port);
     }
     Address(uint32_t ipv4addr, uint16_t port) {
