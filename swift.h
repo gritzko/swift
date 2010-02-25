@@ -20,12 +20,12 @@ Messages
  DATA        01, bin_32, buffer
  1K of data.
 
- ACK        02, bin_32
- ACKTS      08, bin_32, timestamp_32
+ ACK        02, bin_32, timestamp_32
+ HAVE       03, bin_32
  Confirms successfull delivery of data. Used for
  congestion control, as well.
 
- HINT        03, bin_32
+ HINT        08, bin_32
  Practical value of "hints" is to avoid overlap, mostly.
  Hints might be lost in the network or ignored.
  Peer might send out data without a hint.
@@ -61,9 +61,9 @@ Messages
 namespace swift {
 
     #define NOW Datagram::now
-    
+
     /** tintbin is basically a pair<tint,bin64_t> plus some nice operators.
-        Most frequently used in different queues (acknowledgements, requests, 
+        Most frequently used in different queues (acknowledgements, requests,
         etc). */
     struct tintbin {
         tint    time;
@@ -72,7 +72,7 @@ namespace swift {
         tintbin() : time(TINT_NEVER), bin(bin64_t::NONE) {}
         tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
         tintbin(bin64_t bin_) : time(NOW), bin(bin_) {}
-        bool operator < (const tintbin& b) const 
+        bool operator < (const tintbin& b) const
             { return time > b.time; }
         bool operator == (const tintbin& b) const
             { return time==b.time && bin==b.bin; }
@@ -110,13 +110,12 @@ namespace swift {
         SWIFT_HANDSHAKE = 0,
         SWIFT_DATA = 1,
         SWIFT_ACK = 2,
-        SWIFT_TS = 8,
-        SWIFT_HINT = 3,
+        SWIFT_HAVE = 3,
         SWIFT_HASH = 4,
         SWIFT_PEX_ADD = 5,
         SWIFT_PEX_RM = 6,
         SWIFT_SIGNED_HASH = 7,
-        SWIFT_MSGTYPE_SENT = 8,
+        SWIFT_HINT = 8,
         SWIFT_MSGTYPE_RCVD = 9,
         SWIFT_MESSAGE_COUNT = 10
     } messageid_t;
@@ -131,8 +130,8 @@ namespace swift {
 
     public:
 
-        /** A constructor. Open/submit/retrieve a file. 
-         *  @param file_name    the name of the file 
+        /** A constructor. Open/submit/retrieve a file.
+         *  @param file_name    the name of the file
          *  @param root_hash    the root hash of the file; zero hash if the file
                                 is newly submitted */
         FileTransfer(const char *file_name, const Sha1Hash& root_hash=Sha1Hash::ZERO);
@@ -184,7 +183,7 @@ namespace swift {
 
         /** Messages we are accepting.    */
         uint64_t        cap_out_;
-        
+
         tint            init_time_;
 
     public:
@@ -209,7 +208,7 @@ namespace swift {
     public:
         virtual void Randomize (uint64_t twist) = 0;
         /** The piece picking method itself.
-         *  @param  offered     the daata acknowledged by the peer 
+         *  @param  offered     the daata acknowledged by the peer
          *  @param  max_width   maximum number of packets to ask for
          *  @param  expires     (not used currently) when to consider request expired
          *  @return             the bin number to request */
@@ -238,11 +237,11 @@ namespace swift {
         being transferred between two peers. As we don't need buffers and
         lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
         Normally, API users do not deal with this class. */
-    class Channel {  
+    class Channel {
     public:
         Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
         ~Channel();
-        
+
         typedef enum {
             KEEP_ALIVE_CONTROL,
             PING_PONG_CONTROL,
@@ -251,7 +250,7 @@ namespace swift {
             LEDBAT_CONTROL,
             CLOSE_CONTROL
         } send_control_t;
-        
+
         static const char* SEND_CONTROL_MODES[];
 
         static Channel*
@@ -263,7 +262,7 @@ namespace swift {
         void        Close ();
 
         void        OnAck (Datagram& dgram);
-        void        OnTs (Datagram& dgram);
+        void        OnHave (Datagram& dgram);
         bin64_t     OnData (Datagram& dgram);
         void        OnHint (Datagram& dgram);
         void        OnHash (Datagram& dgram);
@@ -272,7 +271,7 @@ namespace swift {
         void        AddHandshake (Datagram& dgram);
         bin64_t     AddData (Datagram& dgram);
         void        AddAck (Datagram& dgram);
-        void        AddTs (Datagram& dgram);
+        void        AddHave (Datagram& dgram);
         void        AddHint (Datagram& dgram);
         void        AddUncleHashes (Datagram& dgram, bin64_t pos);
         void        AddPeakHashes (Datagram& dgram);
@@ -287,7 +286,7 @@ namespace swift {
         tint        SlowStartNextSendTime ();
         tint        AimdNextSendTime ();
         tint        LedbatNextSendTime ();
-        
+
         static int  MAX_REORDERING;
         static tint TIMEOUT;
         static tint MIN_DEV;
@@ -298,7 +297,7 @@ namespace swift {
         static bool SELF_CONN_OK;
         static tint MAX_POSSIBLE_RTT;
         static FILE* debug_file;
-        
+
         const std::string id_string () const;
         /** A channel is "established" if had already sent and received packets. */
         bool        is_established () { return peer_channel_id_ && own_id_mentioned_; }
@@ -308,10 +307,10 @@ namespace swift {
         tint ack_timeout () {
 			tint dev = dev_avg_ < MIN_DEV ? MIN_DEV : dev_avg_;
 			tint tmo = rtt_avg_ + dev * 4;
-			return tmo < 30*TINT_SEC ? tmo : 30*TINT_SEC; 
+			return tmo < 30*TINT_SEC ? tmo : 30*TINT_SEC;
         }
         uint32_t    id () const { return id_; }
-        
+
         static int  DecodeID(int scrambled);
         static int  EncodeID(int unscrambled);
         static Channel* channel(int i) {
@@ -363,7 +362,6 @@ namespace swift {
         tint        last_data_in_time_;
         tint        last_loss_time_;
         tint        next_send_time_;
-        tint        peer_send_time_;
         /** Congestion window; TODO: int, bytes. */
         float       cwnd_;
         /** Data sending interval. */
@@ -391,7 +389,8 @@ namespace swift {
         }
         /** Get a request for one packet from the queue of peer's requests. */
         bin64_t     DequeueHint();
-        void        CleanDataOut (bin64_t acks_pos=bin64_t::NONE);
+        bin64_t     ImposeHint();
+        void        TimeoutDataOut ();
         void        CleanStaleHintOut();
         void        CleanHintOut(bin64_t pos);
         void        Reschedule();
@@ -401,7 +400,7 @@ namespace swift {
         static SOCKET   sockets[8];
         static int      socket_count;
         static tint     last_tick;
-        static tbheap   send_queue;        
+        static tbheap   send_queue;
 
         static Address  tracker;
         static std::vector<Channel*> channels;
