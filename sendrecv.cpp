@@ -401,7 +401,8 @@ void    Channel::OnAck (Datagram& dgram) {
 void Channel::TimeoutDataOut ( ) {
     // losses: timeouted packets
     tint timeout = NOW - ack_timeout();
-    while (!data_out_.empty() && data_out_.front().time<timeout) {
+    while (!data_out_.empty() && 
+        ( data_out_.front().time<timeout || data_out_.front()==tintbin() ) ) {
         if (data_out_.front()!=tintbin() && ack_in_.is_empty(data_out_.front().bin)) {
             ack_not_rcvd_recent_++;
             data_out_cap_ = bin64_t::ALL;
