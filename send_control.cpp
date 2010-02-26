@@ -23,6 +23,7 @@ const char* Channel::SEND_CONTROL_MODES[] = {"keepalive", "pingpong",
 
 
 tint    Channel::NextSendTime () {
+    TimeoutDataOut(); // precaution to know free cwnd
     switch (send_control_) {
         case KEEP_ALIVE_CONTROL: return KeepAliveNextSendTime();
         case PING_PONG_CONTROL:  return PingPongNextSendTime();

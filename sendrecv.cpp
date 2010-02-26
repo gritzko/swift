@@ -256,7 +256,7 @@ void    Channel::AddHave (Datagram& dgram) {
 
 
 void    Channel::Recv (Datagram& dgram) {
-    dprintf("%s #%u recvd %i\n",tintstr(),id_,dgram.size()+4);
+    dprintf("%s #%u recvd %ib\n",tintstr(),id_,dgram.size()+4);
     dgrams_rcvd_++;
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
@@ -569,7 +569,6 @@ void Channel::Close () {
 
 
 void Channel::Reschedule () {
-    TimeoutDataOut(); // precaution to know free cwnd
     next_send_time_ = NextSendTime();
     if (next_send_time_!=TINT_NEVER) {
         assert(next_send_time_<NOW+TINT_MIN);
