@@ -378,18 +378,19 @@ void    Channel::OnAck (Datagram& dgram) {
         dprintf("%s #%u sendctrl rtt %lli dev %lli based on %s\n",
                 tintstr(),id_,rtt_avg_,dev_avg_,data_out_[di].bin.str());
         ack_rcvd_recent_++;
+        // early loss detection by packet reordering
+        for (int re=0; re<di-MAX_REORDERING; re++) {
+            if (data_out_[re]==tintbin())
+                continue;
+            ack_not_rcvd_recent_++;
+            data_out_tmo_.push_back(data_out_.front().bin);
+            dprintf("%s #%u Rdata %s\n",tintstr(),id_,data_out_.front().bin.str());
+            data_out_cap_ = bin64_t::ALL;
+            data_out_[re] = tintbin();
+        }
+    }
+    if (di!=data_out_.size())
         data_out_[di]=tintbin();
-    }
-    // early loss detection by packet reordering
-    for (int re=0; re<di-MAX_REORDERING; re++) {
-        if (data_out_[re]==tintbin())
-            continue;
-        ack_not_rcvd_recent_++;
-        data_out_tmo_.push_back(data_out_.front().bin);
-        dprintf("%s #%u Rdata %s\n",tintstr(),id_,data_out_.front().bin.str());
-        data_out_cap_ = bin64_t::ALL;
-        data_out_[re] = tintbin();
-    }
     // clear zeroed items
     while (!data_out_.empty() && ( data_out_.front()==tintbin() ||
             ack_in_.is_filled(data_out_.front().bin) ) )
