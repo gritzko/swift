@@ -102,8 +102,8 @@ void    Channel::AddHandshake (Datagram& dgram) {
     int encoded = EncodeID(id_);
     dgram.Push32(encoded);
     dprintf("%s #%u +hs %x\n",tintstr(),id_,encoded);
-    ack_out_.clear();
-    AddAck(dgram);
+    have_out_.clear();
+    AddHave(dgram);
 }
 
 
@@ -224,9 +224,9 @@ void    Channel::AddAck (Datagram& dgram) {
     if (data_in_==tintbin())
         return;
     dgram.Push8(SWIFT_ACK);
-    dgram.Push32(data_in_.bin.to32());
-    dgram.Push32(data_in_.time);
-    ack_out_.set(data_in_.bin);
+    dgram.Push32(data_in_.bin.to32()); // FIXME not cover
+    dgram.Push64(data_in_.time); // FIXME 32
+    have_out_.set(data_in_.bin);
     dprintf("%s #%u +ack %s %s\n",
         tintstr(),id_,data_in_.bin.str(),tintstr(data_in_.time));
     if (data_in_.bin.layer()>2)
@@ -243,11 +243,11 @@ void    Channel::AddHave (Datagram& dgram) {
     }
     for(int count=0; count<4; count++) {
         bin64_t ack = file().ack_out().find_filtered // FIXME: do rotating queue
-            (ack_out_, bin64_t::ALL, binmap_t::FILLED);
+            (have_out_, bin64_t::ALL, binmap_t::FILLED);
         if (ack==bin64_t::NONE)
             break;
         ack = file().ack_out().cover(ack);
-        ack_out_.set(ack);
+        have_out_.set(ack);
         dgram.Push8(SWIFT_HAVE);
         dgram.Push32(ack.to32());
         dprintf("%s #%u +have %s\n",tintstr(),id_,ack.str());
@@ -338,7 +338,8 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
 
 void    Channel::OnAck (Datagram& dgram) {
     bin64_t ackd_pos = dgram.Pull32();
-    tint peer_time_ = dgram.Pull64();
+    tint peer_time_ = dgram.Pull64(); // FIXME 32
+    // FIXME FIXME: wrap around here
     if (ackd_pos==bin64_t::NONE)
         return; // likely, brocken packet / insufficient hashes
     if (file().size() && ackd_pos.base_offset()>=file().packet_size()) {
@@ -355,9 +356,9 @@ void    Channel::OnAck (Datagram& dgram) {
     // rule out retransmits
     while (  ri<data_out_tmo_.size() && !data_out_tmo_[ri].bin.within(ackd_pos) )
         ri++;
-    dprintf("%s #%u %cack %s %s\n",tintstr(),id_,
-            di==data_out_.size()?'?':'-',ackd_pos.str(),tintstr(peer_time_));
-    if (ri==data_out_tmo_.size()) { // not a retransmit
+    dprintf("%s #%u %cack %s %lli\n",tintstr(),id_,
+            di==data_out_.size()?'?':'-',ackd_pos.str(),peer_time_);
+    if (di!=data_out_.size() && ri==data_out_tmo_.size()) { // not a retransmit
             // round trip time calculations
         tint rtt = NOW-data_out_[di].time;
         rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;

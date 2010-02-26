@@ -342,7 +342,7 @@ namespace swift {
         tbqueue     data_out_tmo_;
         bin64_t     data_out_cap_;
         /** Index in the history array. */
-        binmap_t        ack_out_;
+        binmap_t        have_out_;
         /**    Transmit schedule: in most cases filled with the peer's hints */
         tbqueue     hint_in_;
         /** Hints sent (to detect and reschedule ignored hints). */

@@ -16,7 +16,7 @@
 using namespace swift;
 
 
-TEST(SWIFT,CwndTest) {
+TEST(Connection,CwndTest) {
 
     srand ( time(NULL) );
 
@@ -56,6 +56,7 @@ int main (int argc, char** argv) {
 
 	swift::LibraryInit();
 	testing::InitGoogleTest(&argc, argv);
+    Channel::debug_file = stdout;
 	int ret = RUN_ALL_TESTS();
 	return ret;
 
