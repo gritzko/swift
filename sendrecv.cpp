@@ -383,7 +383,7 @@ void    Channel::OnAck (Datagram& dgram) {
             if (data_out_[re]==tintbin())
                 continue;
             ack_not_rcvd_recent_++;
-            data_out_tmo_.push_back(data_out_.front().bin);
+            data_out_tmo_.push_back(data_out_[re].bin);
             dprintf("%s #%u Rdata %s\n",tintstr(),id_,data_out_.front().bin.str());
             data_out_cap_ = bin64_t::ALL;
             data_out_[re] = tintbin();
