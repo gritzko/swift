@@ -113,6 +113,7 @@ void    Channel::Send () {
     bin64_t data = bin64_t::NONE;
     if ( is_established() ) {
         // FIXME: seeder check
+        AddHave(dgram);
         AddAck(dgram);
         if (!file().is_complete())
             AddHint(dgram);
@@ -121,6 +122,7 @@ void    Channel::Send () {
         data = AddData(dgram);
     } else {
         AddHandshake(dgram);
+        AddHave(dgram);
         AddAck(dgram);
     }
     dprintf("%s #%u sent %ib %s:%x\n",
