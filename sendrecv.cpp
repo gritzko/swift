@@ -340,7 +340,7 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
 
 void    Channel::OnAck (Datagram& dgram) {
     bin64_t ackd_pos = dgram.Pull32();
-    tint peer_time_ = dgram.Pull64(); // FIXME 32
+    tint peer_time = dgram.Pull64(); // FIXME 32
     // FIXME FIXME: wrap around here
     if (ackd_pos==bin64_t::NONE)
         return; // likely, brocken packet / insufficient hashes
@@ -359,7 +359,7 @@ void    Channel::OnAck (Datagram& dgram) {
     while (  ri<data_out_tmo_.size() && !data_out_tmo_[ri].bin.within(ackd_pos) )
         ri++;
     dprintf("%s #%u %cack %s %lli\n",tintstr(),id_,
-            di==data_out_.size()?'?':'-',ackd_pos.str(),peer_time_);
+            di==data_out_.size()?'?':'-',ackd_pos.str(),peer_time);
     if (di!=data_out_.size() && ri==data_out_tmo_.size()) { // not a retransmit
             // round trip time calculations
         tint rtt = NOW-data_out_[di].time;
@@ -367,8 +367,8 @@ void    Channel::OnAck (Datagram& dgram) {
         dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
         assert(data_out_[di].time!=TINT_NEVER);
             // one-way delay calculations
-        tint owd = peer_time_ - data_out_[di].time;
-        owd_cur_bin_ = (owd_cur_bin_+1) & 3;
+        tint owd = peer_time - data_out_[di].time;
+        owd_cur_bin_ = 0;//(owd_cur_bin_+1) & 3;
         owd_current_[owd_cur_bin_] = owd;
         if ( owd_min_bin_start_+TINT_SEC*30 < NOW ) {
             owd_min_bin_start_ = NOW;
