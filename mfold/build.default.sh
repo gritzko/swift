@@ -48,9 +48,9 @@ tests/connecttest || exit 8
 
 # TODO: one method
 if [ ! -e bin ]; then mkdir bin; fi
-g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -pg -o bin/swift-pg &
-g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -g -o bin/swift-dbg &
-g++ -I. *.cpp compat/*.cpp ext/seq_picker.cpp -O3 -o bin/swift-o3 &
+g++ -I. *.cpp ext/seq_picker.cpp -pg -o bin/swift-pg &
+g++ -I. *.cpp ext/seq_picker.cpp -g -o bin/swift-dbg &
+g++ -I. *.cpp ext/seq_picker.cpp -O2 -o bin/swift-o2 &
 wait
 
 echo done

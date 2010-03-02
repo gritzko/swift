@@ -8,7 +8,7 @@ cd harvest
 
 echo '<html><head>'
 echo '<link rel="stylesheet" href="report.css" type="text/css">'
-echo '<title>Manifold: swarm tomography</title>'
+echo '<title>Manifold: swarm tomography' `date` `git log --summary | head -1` '</title>'
 echo '</head><body>'
 echo '<table id="main"><th>'
 for to in `grep -v '#' ../$SERVERS`; do

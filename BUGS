@@ -1,12 +1,14 @@
+    * min_owd TINT_NEVER is logged
+
     v hints, data for non-existing ranges
-    * opens multiple channels to the same address
+    v opens multiple channels to the same address
     v hints do not expire
     v RTT calculations need improvement (test)
     v google-log is unnecessary
     * reduce template use (peer queue)
     v hints do not expire
     v survive 10% loss
-    * unlimited ping pong
+    v unlimited ping pong
     v git sha-1
     v check hints agains ack_out?_
     v check data against ack_in
@@ -36,21 +38,21 @@
      0_11_10_575_703 #9 sendctrl loss detected
      0_11_10_575_703 #9 Tdata (0,194)
      0_11_10_575_703 #9 sendctrl may send 0 < 0.000000 & 1732919509_-49_-44_-700_-110 (rtt 59661)
-    * complete peer reconnects 1259967418.out.gz
+    v complete peer reconnects 1259967418.out.gz
     * underhinting causes repetition causes interarr underest causes underhinting
     * misterious initiating handshake bursts
     v whether sending is limited by cwnd or app
     * actually: whether packets are ACKed faster than sent
     * uproot DATA NONE: complicates and deceives
-    * r735 goes to github; r741
+    v r735 goes to github; r741
     * receiver is swapping => strange behavior
     v on high losses cwnd goes to silly fractions => slows down recovery
-    * code the pingpong<->keepalive<->slowstart transition
-    * empty datagram hammering (see at linode)
+    v code the pingpong<->keepalive<->slowstart transition
+    v empty datagram hammering (see at linode)
     * make a testkit!!!
     * never back from keepalive syndrome (because of underhashing)
     * HTTP daemon, combined select() loop
     * range requests, priorities
-    * LEDBAT
+    v LEDBAT
     * CUBIC
     v misterious mass packet losses (!data)

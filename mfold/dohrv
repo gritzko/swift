@@ -8,12 +8,16 @@ if [ ! $SERVERS ]; then
     export SERVERS="servers.txt"
 fi
 
-rm -rf harvest
+mv harvest .hrv-old
+rm -rf .hrv-old &
 mkdir harvest
 
 for s in `grep -v '#' $SERVERS`; do
     mkfifo harvest/$s.fifo
+    # yas, yes, yes
+    ( scp ~/.ssh/config $s:.ssh/config > /dev/null ) &
 done
+wait
 
 for s in `grep -v '#' $SERVERS`; do
     (if ssh $s \
@@ -39,5 +43,6 @@ wait
 
 rm harvest/*.fifo
 cp report.css harvest
+scp -rq harvest mfold.libswift.org:/storage/mfold-granary/`date +%d%b_%H:%M`_`whoami` &
 
 echo DONE

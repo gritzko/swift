@@ -1,12 +1,10 @@
-if [ -e .netem-on ]; then
-    sudo tc qdisc del dev `cat .netem-on` root
-    rm .netem-on
+if [ $EMIF ]; then
+    sudo tc qdisc del dev $EMIF ingress
+    sudo tc qdisc del dev ifb0 root
 fi
 sudo iptables -F &
 cd swift
 rm -f chunk core
-killall leecher
-killall seeder
-killall swift-o3
+killall swift-o2
 killall swift-dbg
 echo DONE
