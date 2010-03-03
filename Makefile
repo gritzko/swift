@@ -1,4 +1,4 @@
-CPPFLAGS=-I.
+CPPFLAGS=-O2 -I.
 
 all: swift
 
