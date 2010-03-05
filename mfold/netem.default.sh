@@ -1,7 +1,12 @@
-#!/bin/sh
+#!/bin/bash
  
 if [ ! $EMIF ] ; then
     exit
+fi
+
+if [ ! $SWFTPORT ]; then
+    echo No swift port defined!
+    exit 1
 fi
 
 if [ ! $EMLOSS ]; then
@@ -20,24 +25,61 @@ if [ ! $EMJTTR ]; then
     EMJTTR=0ms
 fi
 
+# ingress params
+if [ ! $EMLOSS_IN ]; then
+    EMLOSS_IN=$EMLOSS
+fi
+
+if [ ! $EMDELAY_IN ]; then
+    EMDELAY_IN=$EMDELAY
+fi
+
+if [ ! $EMBW_IN ]; then
+    EMBW_IN=$EMBW
+fi
+
+if [ ! $EMJTTR_IN ]; then
+    EMJTTR_IN=$EMJTTR
+fi
+
+# egress params
+if [ ! $EMLOSS_OUT ]; then
+    EMLOSS_OUT=$EMLOSS
+fi
+
+if [ ! $EMDELAY_OUT ]; then
+    EMDELAY_OUT=$EMDELAY
+fi
+
+if [ ! $EMBW_OUT ]; then
+    EMBW_OUT=$EMBW
+fi
+
+if [ ! $EMJTTR_OUT ]; then
+    EMJTTR_OUT=$EMJTTR
+fi
+
 TC="sudo tc "
 
-echo ifb0 up
-sudo modprobe ifb
-sudo ip link set dev ifb0 up
+CLASSID=$(($SWFTPORT - 9900))
+HANDLEID=1$CLASSID
 
-echo cleanup
-$TC qdisc del dev $EMIF ingress
-$TC qdisc del dev ifb0 root
- 
-echo adding ingress
-$TC qdisc add dev $EMIF ingress || exit 1
+# ingress config
+echo adding htb class 1:$CLASSID with rate $EMBW_IN to ifb0
+$TC class add dev ifb0 parent 1: classid 1:$CLASSID htb rate $EMBW_IN || exit 2
+echo adding filter for source port $SWFTPORT for to ifb0
+$TC filter add dev ifb0 protocol ip prio 1 handle ::$CLASSID u32 \
+    match ip sport $SWFTPORT 0xffff flowid 1:$CLASSID || exit 3
+    echo adding downlink netem handle $HANDLEID for $EMDELAY_IN, $EMLOSS_IN to ifb0
+$TC qdisc add dev ifb0 parent 1:$CLASSID handle $HANDLEID \
+    netem delay $EMDELAY_IN $EMJTTR_IN 25% loss $EMLOSS_IN || exit 4
 
-echo redirecting to ifb
-$TC filter add dev $EMIF parent ffff: protocol ip prio 1 u32 \
-	match ip sport $SWFTPORT 0xffff flowid 1:1 action mirred egress redirect dev ifb0 || exit 2
-echo adding netem for $EMDELAY - $EMLOSS
-$TC qdisc add dev ifb0 root handle 1:0 netem delay $EMDELAY $EMJTTR 25% loss $EMLOSS || exit 3
-echo adding tfb for $EMBW
-$TC qdisc add dev ifb0 parent 1:1 handle 10: tbf rate $EMBW buffer 102400 latency 40ms || exit 4
-
+#egress config
+echo adding htb class 1:$CLASSID with rate $EMBW_OUT to $EMIF
+$TC class add dev $EMIF parent 1: classid 1:$CLASSID htb rate $EMBW_OUT || exit 5
+echo adding filter for source port $SWFTPORT for to $EMIF
+$TC filter add dev $EMIF protocol ip prio 1 handle ::$CLASSID u32 \
+    match ip sport $SWFTPORT 0xffff flowid 1:$CLASSID || exit 6
+echo adding uplink netem handle $HANDLEID for $EMDELAY_OUT, $EMLOSS_OUT to $EMIF
+$TC qdisc add dev $EMIF parent 1:$CLASSID handle $HANDLEID \
+    netem delay $EMDELAY_OUT $EMJTTR_OUT 25% loss $EMLOSS_OUT || exit 7
