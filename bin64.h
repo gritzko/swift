@@ -137,13 +137,13 @@ struct bin64_t {
     }
 
     /** Check whether this bin is the left sibling. */
-    bool is_left () const {
+    inline bool is_left () const {
         uint64_t tb = tail_bit();
         return !(v&(tb<<1));
     }
     
     /** Check whether this bin is the right sibling. */
-    bool is_right() const { return !is_left(); }
+    inline bool is_right() const { return !is_left(); }
 
     /** Get the leftmost basic bin within this bin. */
     bin64_t left_foot () const {

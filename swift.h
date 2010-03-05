@@ -239,7 +239,7 @@ namespace swift {
         Normally, API users do not deal with this class. */
     class Channel {
     public:
-        Channel    (FileTransfer* file, int socket=-1, Address peer=Address());
+        Channel    (FileTransfer* file, int socket=INVALID_SOCKET, Address peer=Address());
         ~Channel();
 
         typedef enum {
@@ -253,8 +253,7 @@ namespace swift {
 
         static const char* SEND_CONTROL_MODES[];
 
-        static Channel*
-                    RecvDatagram (int socket);
+        static void RecvDatagram (SOCKET socket);
         static void Loop (tint till);
 
         void        Recv (Datagram& dgram);
@@ -317,7 +316,7 @@ namespace swift {
             return i<channels.size()?channels[i]:NULL;
         }
         static void CloseTransfer (FileTransfer* trans);
-        static SOCKET default_socket() { return sockets[0]; }
+        static SOCKET default_socket() { return sockets[0].sock; }
 
     protected:
         /** Channel id: index in the channel array. */
@@ -397,7 +396,8 @@ namespace swift {
 
         static PeerSelector* peer_selector;
 
-        static SOCKET   sockets[8];
+        #define SWFT_MAX_SOCK_OPEN 128
+        static socket_callbacks_t sockets[SWFT_MAX_SOCK_OPEN];
         static int      socket_count;
         static tint     last_tick;
         static tbheap   send_queue;
@@ -410,6 +410,7 @@ namespace swift {
         friend void     AddPeer (Address address, const Sha1Hash& root);
         friend void     SetTracker(const Address& tracker);
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
+        friend bool     Listen3rdPartySocket (socket_callbacks_t);
 
     };
 
@@ -420,6 +421,7 @@ namespace swift {
     int     Listen (Address addr);
     /** Run send/receive loop for the specified amount of time. */
     void    Loop (tint till);
+    bool    Listen3rdPartySocket (socket_callbacks_t);
     /** Stop listening to a port. */
     void    Shutdown (int sock_des=-1);
 

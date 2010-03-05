@@ -9,24 +9,8 @@
 #ifndef DATAGRAM_H
 #define DATAGRAM_H
 
-#include <stdlib.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <stdio.h>
-#include <string>
-#ifdef _WIN32
-    #include <winsock2.h>
-    #include "compat.h"
-#else
-    typedef int SOCKET;
-
-    #include <arpa/inet.h>
-    #include <sys/select.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <unistd.h>
-#endif
 #include "hashtree.h"
 #include "compat.h"
 
@@ -100,6 +84,17 @@ struct Address {
 };
 
 
+typedef void (*sock_cb_t) (SOCKET);
+struct socket_callbacks_t {
+    socket_callbacks_t (SOCKET s=0) : sock(s),
+        may_read(NULL), may_write(NULL), on_error(NULL) {}
+    SOCKET sock;
+    sock_cb_t   may_read;
+    sock_cb_t   may_write;
+    sock_cb_t   on_error;
+};
+
+
 /** UDP datagram class, a nice wrapping around sendto/recvfrom/select. 
     Reading/writing from/to a datagram is done in a FIFO (deque) fashion:
     written data is appended to the tail (push) while read data is
@@ -115,12 +110,16 @@ public:
 
     /** bind to the address */
     static SOCKET Bind(Address address);
+
     /** close the port */
     static void Close(int port);
+
     /** the current time */
     static tint Time();
+
     /** wait till one of the sockets has some io to do; usec is the timeout */
-    static SOCKET Wait (int sockcnt, SOCKET* sockets, tint usec=0);
+    static void Wait (int sockcnt, socket_callbacks_t* sockets, tint usec=0);
+
     static tint now, epoch, start;
     static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;
 

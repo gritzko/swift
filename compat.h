@@ -28,8 +28,17 @@ typedef unsigned __int64 uint64_t;
 #include <io.h>
 #else
 #include <sys/mman.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #endif
 
+#ifndef _WIN32
+typedef int SOCKET;
+#endif
+
+#include <unistd.h>
 #include <fcntl.h>
 #include <cstdio>
 #include <cstdlib>
@@ -95,6 +104,11 @@ int     inet_aton(const char *cp, struct in_addr *inp);
 std::string gettmpdir(void);
 
 tint    usec_time ();
+
+bool    make_socket_nonblocking(SOCKET s);
+
+bool    close_socket (SOCKET sock);
+
 
 };
 

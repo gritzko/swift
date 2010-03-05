@@ -92,16 +92,16 @@ int Datagram::Send () {
         perror("can't send");
     dgrams_up++;
     bytes_up+=size();
-	offset=0;
-	length=0;
-	Time();
-	return r;
+    offset=0;
+    length=0;
+    Time();
+    return r;
 }
 
 int Datagram::Recv () {
     socklen_t addrlen = sizeof(struct sockaddr_in);
     offset = 0;
-    length = recvfrom (sock, (char *)buf, MAXDGRAMSZ, 0,
+    length = recvfrom (sock, (char *)buf, MAXDGRAMSZ*2, 0,
                        (struct sockaddr*)&(addr.addr), &addrlen);
     if (length<0) {
         length = 0;
@@ -114,30 +114,39 @@ int Datagram::Recv () {
 }
 
 
-SOCKET Datagram::Wait (int sockcnt, SOCKET* sockets, tint usec) {
+void Datagram::Wait (int sockcnt, socket_callbacks_t* sockets, tint usec) {
     struct timeval timeout;
     timeout.tv_sec = usec/TINT_SEC;
     timeout.tv_usec = usec%TINT_SEC;
     int max_sock_fd = 0;
-    fd_set bases, err;
-    FD_ZERO(&bases);
-    FD_ZERO(&err);
+    fd_set rdfd, wrfd, errfd;
+    FD_ZERO(&rdfd);
+    FD_ZERO(&wrfd);
+    FD_ZERO(&errfd);
     for(int i=0; i<sockcnt; i++) {
-        FD_SET(sockets[i],&bases);
-        FD_SET(sockets[i],&err);
-        if (sockets[i]>max_sock_fd)
-            max_sock_fd = sockets[i];
+        if (sockets[i].may_read!=0)
+            FD_SET(sockets[i].sock,&rdfd);
+        if (sockets[i].may_write!=0)
+            FD_SET(sockets[i].sock,&wrfd);
+        if (sockets[i].on_error!=0)
+            FD_SET(sockets[i].sock,&errfd);
+        if (sockets[i].sock>max_sock_fd)
+            max_sock_fd = sockets[i].sock;
     }
-    int sel = select(max_sock_fd+1, &bases, NULL, &err, &timeout);
+    int sel = select(max_sock_fd+1, &rdfd, &wrfd, &errfd, &timeout);
     Time();
     if (sel>0) {
-        for (int i=0; i<=sockcnt; i++)
-            if (FD_ISSET(sockets[i],&bases))
-                return sockets[i];
+        for (int i=0; i<=sockcnt; i++) {
+            if (FD_ISSET(sockets[i].sock,&rdfd))
+                (*(sockets[i].may_read))(sockets[i].sock);
+            if (FD_ISSET(sockets[i].sock,&wrfd))
+                (*(sockets[i].may_write))(sockets[i].sock);
+            if (FD_ISSET(sockets[i].sock,&errfd))
+                (*(sockets[i].on_error))(sockets[i].sock);
+        }
     } else if (sel<0) {
         print_error("select fails");
     }
-    return INVALID_SOCKET;
 }
 
 tint Datagram::Time () {
@@ -151,49 +160,23 @@ SOCKET Datagram::Bind (Address addr_) {
     struct sockaddr_in addr = addr_;
     SOCKET fd;
     int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        print_error("socket() fails");
-        return INVALID_SOCKET;
-    }
+    #define dbnd_ensure(x) { if (!(x)) { print_error("binding fails"); close_socket(fd); return INVALID_SOCKET; } }
+    dbnd_ensure ( (fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0 );
+    dbnd_ensure( make_socket_nonblocking(fd) );  // FIXME may remove this
 #ifdef _WIN32
-    u_long enable = 1;
-    ioctlsocket(fd, FIONBIO, &enable);
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&sndbuf, sizeof(int)) != 0 ) {
-        print_error("setsockopt fails");
-        return INVALID_SOCKET;
-    }
-       if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&rcvbuf, sizeof(int)) != 0 ) {
-        print_error("setsockopt2 fails");
-        return INVALID_SOCKET;
-    }
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&enable, sizeof(int));
+#define parptype (char*)
 #else
-    int enable=1;
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-        return INVALID_SOCKET;
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int)) < 0 ) {
-        print_error("setsockopt fails");
-        return INVALID_SOCKET;
-    }
-       if ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(int)) < 0 ) {
-        print_error("setsockopt2 fails");
-        return INVALID_SOCKET;
-    }
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+#define parptype void*
 #endif
-    if (::bind(fd, (sockaddr*)&addr, len) != 0) {
-        print_error("bind fails");
-        return INVALID_SOCKET;
-    }
+    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (parptype)&sndbuf, sizeof(int)) == 0 );
+    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (parptype)&rcvbuf, sizeof(int)) == 0 );
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (parptype)&enable, sizeof(int));
+    dbnd_ensure ( ::bind(fd, (sockaddr*)&addr, len) == 0 );
     return fd;
 }
 
-void Datagram::Close (int sock) { // remove from fd_set
-#ifdef _WIN32
-    if (closesocket(sock)!=0)
-#else
-    if (::close(sock)!=0)
-#endif
+void Datagram::Close (SOCKET sock) {
+    if (!close_socket(sock))
         print_error("on closing a socket");
 }
 

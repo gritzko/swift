@@ -31,7 +31,7 @@ int Channel::MAX_REORDERING = 4;
 bool Channel::SELF_CONN_OK = false;
 swift::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
-SOCKET Channel::sockets[8] = {0,0,0,0,0,0,0,0};
+socket_callbacks_t Channel::sockets[SWFT_MAX_SOCK_OPEN] = {};
 int Channel::socket_count = 0;
 Address Channel::tracker;
 tbheap Channel::send_queue;
@@ -41,7 +41,7 @@ PeerSelector* Channel::peer_selector = new SimpleSelector();
 
 Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
     transfer_(transfer), peer_(peer_addr), peer_channel_id_(0), pex_out_(0),
-    socket_(socket==-1?sockets[0]:socket), // FIXME
+    socket_(socket==INVALID_SOCKET?sockets[0].sock:socket), // FIXME
     data_out_cap_(bin64_t::ALL), last_data_out_time_(0), last_data_in_time_(0),
     own_id_mentioned_(false), next_send_time_(0), last_send_time_(0),
     last_recv_time_(0), rtt_avg_(TINT_SEC), dev_avg_(0), dip_avg_(TINT_SEC),
@@ -86,16 +86,19 @@ int Channel::EncodeID(int unscrambled) {
 
 int     swift::Listen (Address addr) {
     int sock = Datagram::Bind(addr);
-    if (sock!=INVALID_SOCKET)
-        Channel::sockets[Channel::socket_count++] = sock;
+    if (sock!=INVALID_SOCKET) {
+        socket_callbacks_t cb(sock);
+        cb.may_read = &Channel::RecvDatagram;
+        Channel::sockets[Channel::socket_count++] = cb;
+    }
     return sock;
 }
 
 
 void    swift::Shutdown (int sock_des) {
     for(int i=0; i<Channel::socket_count; i++)
-        if (sock_des==-1 || Channel::sockets[i]==sock_des) {
-            Datagram::Close(Channel::sockets[i]);
+        if (sock_des==-1 || Channel::sockets[i].sock==sock_des) {
+            Datagram::Close(Channel::sockets[i].sock);
             Channel::sockets[i] = Channel::sockets[--Channel::socket_count];
         }
 }
@@ -103,6 +106,19 @@ void    swift::Shutdown (int sock_des) {
 
 void    swift::Loop (tint till) {
     Channel::Loop(till);
+}
+
+
+bool    swift::Listen3rdPartySocket (socket_callbacks_t cb) {
+    int i=0;
+    while (i<Channel::socket_count && Channel::sockets[i].sock!=cb.sock) i++;
+    if (i==Channel::socket_count)
+        if (i==SWFT_MAX_SOCK_OPEN)
+            return false;
+        else
+            Channel::socket_count++;
+    Channel::sockets[i]=cb;
+    return true;
 }
 
 

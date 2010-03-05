@@ -135,6 +135,7 @@ void    Channel::Send () {
     last_send_time_ = NOW;
     sent_since_recv_++;
     dgrams_sent_++;
+    Reschedule();
 }
 
 
@@ -284,6 +285,7 @@ void    Channel::Recv (Datagram& dgram) {
     }
     last_recv_time_ = NOW;
     sent_since_recv_ = 0;
+    Reschedule();
 }
 
 
@@ -474,11 +476,11 @@ void    Channel::AddPex (Datagram& dgram) {
 }
 
 
-Channel*    Channel::RecvDatagram (int socket) {
+void    Channel::RecvDatagram (SOCKET socket) {
     Datagram data(socket);
     data.Recv();
     const Address& addr = data.address();
-#define return_log(...) { printf(__VA_ARGS__); return NULL; }
+#define return_log(...) { printf(__VA_ARGS__); }
     if (data.size()<4)
         return_log("datagram shorter than 4 bytes %s\n",addr.str());
     uint32_t mych = data.Pull32();
@@ -519,7 +521,6 @@ Channel*    Channel::RecvDatagram (int socket) {
     }
     //dprintf("recvd %i bytes for %i\n",data.size(),channel->id);
     channel->Recv(data);
-    return channel;
 }
 
 
@@ -545,18 +546,12 @@ void    Channel::Loop (tint howlong) {
             dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
                     tintstr(send_time));
             sender->Send();
-            sender->Reschedule();
 
         } else {  // it's too early, wait
 
             tint towait = min(limit,send_time) - NOW;
             dprintf("%s #0 waiting %lliusec\n",tintstr(),towait);
-            int rd = Datagram::Wait(socket_count,sockets,towait);
-            if (rd!=INVALID_SOCKET) { // in meantime, received something
-                Channel* receiver = RecvDatagram(rd);
-                if (receiver) // receiver's state may have changed
-                    receiver->Reschedule();
-            }
+            Datagram::Wait(socket_count,sockets,towait);
             if (sender)  // get back to that later
                 send_queue.push(tintbin(send_time,sender->id()));
 

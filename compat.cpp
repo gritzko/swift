@@ -193,5 +193,23 @@ std::string gettmpdir(void)
 #endif
 }
 
+bool    make_socket_nonblocking(SOCKET fd) {
+#ifdef _WIN32
+    u_long enable = 1;
+    return 0==ioctlsocket(fd, FIONBIO, &enable);
+#else
+    int enable=1;
+    return 0==fcntl(fd, F_SETFL, O_NONBLOCK);
+#endif
+}
+
+bool    close_socket (SOCKET sock) {
+#ifdef _WIN32
+    return 0==closesocket(sock);
+#else
+    return 0==::close(sock);
+#endif
+}
+
 
 }
