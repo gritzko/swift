@@ -86,8 +86,8 @@ struct Address {
 
 typedef void (*sock_cb_t) (SOCKET);
 struct socket_callbacks_t {
-    socket_callbacks_t (SOCKET s=0) : sock(s),
-        may_read(NULL), may_write(NULL), on_error(NULL) {}
+    socket_callbacks_t (SOCKET s=0, sock_cb_t mr=NULL, sock_cb_t mw=NULL, sock_cb_t oe=NULL) :
+        sock(s), may_read(mr), may_write(mw), on_error(oe) {}
     SOCKET sock;
     sock_cb_t   may_read;
     sock_cb_t   may_write;

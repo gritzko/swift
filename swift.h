@@ -123,6 +123,7 @@ namespace swift {
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
+    typedef void (*TransferProgressCallback) (int transfer, bin64_t bin);
 
 
     /** A class representing single file transfer. */
@@ -186,6 +187,10 @@ namespace swift {
 
         tint            init_time_;
 
+        #define SWFT_MAX_TRANSFER_CB 8
+        TransferProgressCallback    callbacks[SWFT_MAX_TRANSFER_CB];
+        int             cb_installed;
+
     public:
         void            OnDataIn (bin64_t pos);
         void            OnPexIn (const Address& addr);
@@ -197,6 +202,8 @@ namespace swift {
         friend uint64_t  SeqComplete (int fdes);
         friend int     Open (const char* filename, const Sha1Hash& hash) ;
         friend void    Close (int fd) ;
+        friend void AddProgressCallback (int transfer,TransferProgressCallback cb);
+        friend void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
     };
 
 
@@ -450,6 +457,8 @@ namespace swift {
         beginning, till the first not-yet-retrieved packet. */
     uint64_t  SeqComplete (int fdes);
 
+    void AddProgressCallback (int transfer,TransferProgressCallback cb);
+    void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
 
     //uint32_t Width (const tbinvec& v);
 

@@ -11,6 +11,8 @@
 #include "compat.h"
 #include "swift.h"
 
+#include "httpgw.cpp"
+
 using namespace swift;
 
 #define quit(...) {fprintf(stderr,__VA_ARGS__); exit(1); }
@@ -27,6 +29,7 @@ int main (int argc, char** argv) {
         {"tracker", required_argument, 0, 't'},
         {"debug",   no_argument, 0, 'D'},
         {"progress",no_argument, 0, 'p'},
+        {"http",    optional_argument, 0, 'g'},
         {"wait",    optional_argument, 0, 'w'},
         {0, 0, 0, 0}
     };
@@ -36,12 +39,13 @@ int main (int argc, char** argv) {
     bool daemonize = false, report_progress = false;
     Address bindaddr;
     Address tracker;
+    Address http_gw;
     tint wait_time = 0;
     
     LibraryInit();
     
     int c;
-    while ( -1 != (c = getopt_long (argc, argv, ":h:f:dl:t:Dpw::", long_options, 0)) ) {
+    while ( -1 != (c = getopt_long (argc, argv, ":h:f:dl:t:Dpg::w::", long_options, 0)) ) {
         
         switch (c) {
             case 'h':
@@ -74,6 +78,8 @@ int main (int argc, char** argv) {
             case 'p':
                 report_progress = true;
                 break;
+            case 'g':
+                http_gw = optarg ? Address(optarg) : Address(8080);
             case 'w':
                 wait_time = TINT_NEVER;
                 if (optarg) {
@@ -109,12 +115,16 @@ int main (int argc, char** argv) {
     
     if (tracker!=Address())
         SetTracker(tracker);
+
+
+    if (http_gw!=Address())
+        InstallHTTPGateway(http_gw);
     
-	int file = Open(filename,root_hash);
+    int file = Open(filename,root_hash);
     // FIXME open err 
     printf("Root hash: %s\n", RootMerkleHash(file).hex().c_str());
 
-	if (root_hash==Sha1Hash() && bindaddr==Address() && tracker==Address())
+    if (root_hash==Sha1Hash() && bindaddr==Address() && tracker==Address())
         exit(0);
 
     tint start_time = NOW;
@@ -137,12 +147,12 @@ int main (int argc, char** argv) {
         }
     }
     
-	Close(file);
+    Close(file);
     
     if (Channel::debug_file)
         fclose(Channel::debug_file);
     
-	Shutdown();
+    Shutdown();
     
     return 0;
     
