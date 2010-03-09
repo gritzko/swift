@@ -66,6 +66,13 @@ typedef int SOCKET;
 #define S_IROTH _S_IREAD
 #endif
 
+#ifdef _WIN32
+#define setsockoptptr_t (char*)
+#else
+#define setsockoptptr_t void*
+#endif
+
+
 namespace swift {
 
 /** tint is the time integer type; microsecond-precise. */

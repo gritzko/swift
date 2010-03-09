@@ -8,12 +8,13 @@ enum {
     HTTPGW_RANGE=0,
     HTTPGW_MAX_HEADER=1
 };
-char * HTTPGW_HEADERS[HTTPGW_MAX_HEADER] = {
+const char * HTTPGW_HEADERS[HTTPGW_MAX_HEADER] = {
     "Content-Range"
 };
 
 
 struct http_gw_t {
+    int      id;
     uint64_t offset;
     uint64_t tosend;
     int      transfer;
@@ -23,6 +24,7 @@ struct http_gw_t {
 
 
 int http_gw_reqs_open = 0;
+int http_gw_reqs_count = 0;
 
 void HttpGwNewRequestCallback (SOCKET http_conn);
 void HttpGwNewRequestCallback (SOCKET http_conn);
@@ -43,9 +45,10 @@ void HttpGwCloseConnection (SOCKET sock) {
                 free(req->headers[i]);
                 req->headers[i] = NULL;
             }
-        *req = http_requests[http_gw_reqs_open--];
+        *req = http_requests[--http_gw_reqs_open];
     }
     swift::close_socket(sock);
+    swift::Listen3rdPartySocket(socket_callbacks_t(sock));
 }
  
 
@@ -55,7 +58,7 @@ void HttpGwMayWriteCallback (SOCKET sink) {
     if (complete>req->offset) { // send data
         char buf[1<<12];
         uint64_t tosend = std::min((uint64_t)1<<12,complete-req->offset);
-        size_t rd = read(req->transfer,buf,tosend); // hope it is cached
+        size_t rd = pread(req->transfer,buf,tosend,req->offset); // hope it is cached
         if (rd<0) {
             HttpGwCloseConnection(sink);
             return;
@@ -91,17 +94,36 @@ void HttpGwSwiftProgressCallback (int transfer, bin64_t bin) {
 
 
 void HttpGwFirstProgressCallback (int transfer, bin64_t bin) {
-    printf("200 OK\r\n");
-    printf("Content-Length: value\r\n");
+    if (bin!=bin64_t(0,0)) // need the first packet
+        return;
     swift::RemoveProgressCallback(transfer,&HttpGwFirstProgressCallback);
     swift::AddProgressCallback(transfer,&HttpGwSwiftProgressCallback);
+    for (int httpc=0; httpc<http_gw_reqs_open; httpc++) {
+        http_gw_t * req = http_requests + httpc;
+        if (req->transfer==transfer) {
+            uint64_t file_size = swift::Size(transfer);
+            char response[1024];
+            sprintf(response,
+                "HTTP/1.1 200 OK\r\n"\
+                "Connection: close\r\n"\
+                "Content-Type: text/plain; charset=iso-8859-1\r\n"\
+                "Content-Length: %lli\r\n"\
+                "\r\n",
+                file_size);
+            send(req->sink,response,strlen(response),0);
+            req->tosend = file_size;
+        }
+    }
     HttpGwSwiftProgressCallback(transfer,bin);
 }
 
 
 void HttpGwNewRequestCallback (SOCKET http_conn){
     http_gw_t* req = http_requests + http_gw_reqs_open++;
+    req->id = ++http_gw_reqs_count;
     req->sink = http_conn;
+    req->offset = 0;
+    req->tosend = 0;
     // read headers - the thrilling part
     // we surely do not support pipelining => one request at a time
     #define HTTPGW_MAX_REQ_SIZE 1024
@@ -115,7 +137,7 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
     // HTTP request line
     char* reqline = strtok(buf,"\r\n");
     char method[16], url[512], version[16], crlf[5];
-    if (4!=sscanf(reqline,"%16s %512s %16s%4[\n\r]",method,url,version,crlf)) {
+    if (3!=sscanf(reqline,"%16s %512s %16s",method,url,version)) {
         HttpGwCloseConnection(http_conn);
         return;
     }
@@ -123,7 +145,7 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
     char* headerline;
     while (headerline=strtok(NULL,"\n\r")) {
         char header[128], value[256];
-        if (3!=sscanf(headerline,"%120[^: \r\n]: %250[^\r\n]%4[\r\n]",header,value,crlf)) {
+        if (2!=sscanf(headerline,"%120[^: ]: %250[^\r\n]",header,value)) {
             HttpGwCloseConnection(http_conn);
             return;
         }
@@ -140,15 +162,15 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
         return;
     }
     // initiate transmission
-    int file = swift::Open(hash,hash);
-    // find/create transfer
-    swift::AddProgressCallback(file,&HttpGwFirstProgressCallback);
-    // write response header
-    req->offset = 0;
-    req->tosend = 10000;
+    int file = swift::Open(hash,Sha1Hash(true,hash));
     req->transfer = file;
-    socket_callbacks_t install (http_conn,NULL,NULL,HttpGwCloseConnection);
-    swift::Listen3rdPartySocket(install);
+    if (swift::Size(file)) {
+        HttpGwFirstProgressCallback(file,bin64_t(0,0));
+    } else {
+        swift::AddProgressCallback(file,&HttpGwFirstProgressCallback);
+        socket_callbacks_t install (http_conn,NULL,NULL,HttpGwCloseConnection); // FIXME: if conn is closed / no data arrives
+        swift::Listen3rdPartySocket(install);
+    }
 }
 
 
@@ -156,8 +178,7 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
 void HttpGwNewConnectionCallback (SOCKET serv) {
     Address client_address;
     socklen_t len;
-    SOCKET conn = accept 
-        (serv, (sockaddr*) & (client_address.addr), &len);
+    SOCKET conn = accept (serv, (sockaddr*) & (client_address.addr), &len);
     if (conn==INVALID_SOCKET) {
         print_error("client conn fails");
         return;
@@ -171,7 +192,10 @@ void HttpGwNewConnectionCallback (SOCKET serv) {
 
 
 void HttpGwError (SOCKET s) {
-    print_error("everything fucked up");
+    print_error("httpgw is dead");
+    dprintf("%s @0 closed http gateway\n",tintstr());
+    close_socket(s);
+    swift::Listen3rdPartySocket(socket_callbacks_t(s));
 }
 
 
@@ -181,9 +205,12 @@ SOCKET InstallHTTPGateway (Address bind_to) {
     print_error("http binding fails"); close_socket(fd); \
     return INVALID_SOCKET; } }
     gw_ensure ( (fd=socket(AF_INET, SOCK_STREAM, 0)) != INVALID_SOCKET );
+    int enable = true;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (setsockoptptr_t)&enable, sizeof(int));
     gw_ensure ( 0==bind(fd, (sockaddr*)&(bind_to.addr), sizeof(struct sockaddr_in)) );
     gw_ensure (make_socket_nonblocking(fd));
     gw_ensure ( 0==listen(fd,8) );
-    socket_callbacks_t install(fd,HttpGwNewConnectionCallback,NULL,HttpGwError);
-    gw_ensure (swift::Listen3rdPartySocket(install));
+    socket_callbacks_t install_http(fd,HttpGwNewConnectionCallback,NULL,HttpGwError);
+    gw_ensure (swift::Listen3rdPartySocket(install_http));
+    dprintf("%s @0 installed http gateway on %s\n",tintstr(),bind_to.str());
 }

@@ -24,7 +24,6 @@ void    Channel::AddPeakHashes (Datagram& dgram) {
         dgram.Push8(SWIFT_HASH);
         dgram.Push32((uint32_t)peak);
         dgram.PushHash(file().peak_hash(i));
-        //DLOG(INFO)<<"#"<<id<<" +pHASH"<<file().peak(i);
         dprintf("%s #%u +phash %s\n",tintstr(),id_,peak.str());
     }
 }
@@ -38,7 +37,6 @@ void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
         dgram.Push8(SWIFT_HASH);
         dgram.Push32((uint32_t)uncle);
         dgram.PushHash( file().hash(uncle) );
-        //DLOG(INFO)<<"#"<<id<<" +uHASH"<<uncle;
         dprintf("%s #%u +hash %s\n",tintstr(),id_,uncle.str());
         pos = pos.parent();
     }
@@ -327,6 +325,8 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
     data_in_ = tintbin(NOW,bin64_t::NONE);
     if (!ok)
         return bin64_t::NONE;
+    for(int i=0; i<transfer().cb_installed; i++)
+        transfer().callbacks[i](transfer().fd(),pos);  // FIXME FIXME FIXME
     data_in_.bin = pos;
     if (pos!=bin64_t::NONE) {
         if (last_data_in_time_) {

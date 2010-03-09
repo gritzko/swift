@@ -118,6 +118,8 @@ bool    swift::Listen3rdPartySocket (socket_callbacks_t cb) {
         else
             Channel::socket_count++;
     Channel::sockets[i]=cb;
+    if (!cb.may_read && !cb.may_write && !cb.on_error)
+        Channel::sockets[i] = Channel::sockets[--Channel::socket_count];
     return true;
 }
 
