@@ -1,9 +1,24 @@
 swift: the multiparty transport protocol
+    (aka BitTorrent at the transport layer)
+    Differently from TCP, the protocol does not use the ordered data stream
+    abstraction. Effectively, it splits a file into 1KB packets and sends
+    them around. The secret sauce is Merkle hash trees and binmaps.
 
 see doc/index.html for marketing stuff, ideas and rants
     doc/swift.txt for protocol draft spec
     *.cpp for the actual code
     swift.cpp is the main exec file; may run as e.g.
+    
         ./swift -t node300.das2.ewi.tudelft.nl:20000 -h \
         d1502706c46779d361a1d562a10da0a45c4c40e5 -f \
         trailer.ogg
+        
+    ...to retrieve video and save it to a file, or...
+
+        ./swift -t mfold.libswift.org:20000 -h \
+        d1502706c46779d361a1d562a10da0a45c4c40e5 -r . \
+        -h 8080
+        
+    ...and then point your browser at
+    
+        http://localhost:8080/d1502706c46779d361a1d562a10da0a45c4c40e5
