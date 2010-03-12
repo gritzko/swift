@@ -74,6 +74,15 @@ FileTransfer* FileTransfer::Find (const Sha1Hash& root_hash) {
 }
 
 
+int       swift:: Find (Sha1Hash hash) {
+    FileTransfer* t = FileTransfer::Find(hash);
+    if (t)
+        return t->fd();
+    return -1;
+}
+
+
+
 void            FileTransfer::OnPexIn (const Address& addr) {
     for(int i=0; i<hs_in_.size(); i++) {
         Channel* c = Channel::channel(hs_in_[i]);

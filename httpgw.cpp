@@ -40,6 +40,7 @@ http_gw_t* HttpGwFindRequest (SOCKET sock) {
 void HttpGwCloseConnection (SOCKET sock) {
     http_gw_t* req = HttpGwFindRequest(sock);
     if (req) {
+        dprintf("%s @%i closed http connection %i\n",tintstr(),req->id,sock);
         for(int i=0; i<HTTPGW_MAX_HEADER; i++)
             if (req->headers[i]) {
                 free(req->headers[i]);
@@ -50,7 +51,7 @@ void HttpGwCloseConnection (SOCKET sock) {
     swift::close_socket(sock);
     swift::Listen3rdPartySocket(socket_callbacks_t(sock));
 }
- 
+
 
 void HttpGwMayWriteCallback (SOCKET sink) {
     http_gw_t* req = HttpGwFindRequest(sink);
@@ -63,18 +64,22 @@ void HttpGwMayWriteCallback (SOCKET sink) {
             HttpGwCloseConnection(sink);
             return;
         }
-        size_t wn = send(sink, buf, rd, 0);
+        int wn = send(sink, buf, rd, 0);
         if (wn<0) {
+            print_error("send fails");
             HttpGwCloseConnection(sink);
             return;
         }
+        dprintf("%s @%i sent %ib\n",tintstr(),req->id,(int)wn);
         req->offset += wn;
         req->tosend -= wn;
     } else {
-        if (swift::IsComplete(req->transfer)) { // done; wait for new request
+        if (req->tosend==0) { // done; wait for new request
+            dprintf("%s @%i done\n",tintstr(),req->id);
             socket_callbacks_t wait_new_req(req->sink,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
             swift::Listen3rdPartySocket (wait_new_req);
         } else { // wait for data
+            dprintf("%s @%i waiting for data\n",tintstr(),req->id);
             socket_callbacks_t wait_swift_data(req->sink,NULL,NULL,HttpGwCloseConnection);
             swift::Listen3rdPartySocket(wait_swift_data);
         }
@@ -86,6 +91,7 @@ void HttpGwSwiftProgressCallback (int transfer, bin64_t bin) {
     for (int httpc=0; httpc<http_gw_reqs_open; httpc++)
         if (http_requests[httpc].transfer==transfer)
             if ( (bin.offset()<<10) == http_requests[httpc].offset ) {
+                dprintf("%s @%i progress: %s\n",tintstr(),http_requests[httpc].id,bin.str());
                 socket_callbacks_t maywrite_callbacks
                         (http_requests[httpc].sink,NULL,HttpGwMayWriteCallback,HttpGwCloseConnection);
                 Listen3rdPartySocket (maywrite_callbacks);
@@ -100,18 +106,21 @@ void HttpGwFirstProgressCallback (int transfer, bin64_t bin) {
     swift::AddProgressCallback(transfer,&HttpGwSwiftProgressCallback);
     for (int httpc=0; httpc<http_gw_reqs_open; httpc++) {
         http_gw_t * req = http_requests + httpc;
-        if (req->transfer==transfer) {
+        if (req->transfer==transfer && req->tosend==0) { // FIXME states
             uint64_t file_size = swift::Size(transfer);
             char response[1024];
             sprintf(response,
                 "HTTP/1.1 200 OK\r\n"\
-                "Connection: close\r\n"\
-                "Content-Type: text/plain; charset=iso-8859-1\r\n"\
+                "Connection: keep-alive\r\n"\
+                "Content-Type: video/ogg\r\n"\
+                "X-Content-Duration: 32\r\n"\
                 "Content-Length: %lli\r\n"\
+                "Accept-Ranges: bytes\r\n"\
                 "\r\n",
                 file_size);
             send(req->sink,response,strlen(response),0);
             req->tosend = file_size;
+            dprintf("%s @%i headers_sent size %lli\n",tintstr(),req->id,file_size);
         }
     }
     HttpGwSwiftProgressCallback(transfer,bin);
@@ -124,6 +133,7 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
     req->sink = http_conn;
     req->offset = 0;
     req->tosend = 0;
+    dprintf("%s @%i new http request\n",tintstr(),req->id);
     // read headers - the thrilling part
     // we surely do not support pipelining => one request at a time
     #define HTTPGW_MAX_REQ_SIZE 1024
@@ -161,14 +171,18 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
         HttpGwCloseConnection(http_conn);
         return;
     }
+    dprintf("%s @%i demands %s\n",tintstr(),req->id,hash);
     // initiate transmission
-    int file = swift::Open(hash,Sha1Hash(true,hash));
+    Sha1Hash root_hash = Sha1Hash(true,hash);
+    int file = swift::Find(root_hash);
+    if (file==-1)
+        file = swift::Open(hash,root_hash);
     req->transfer = file;
     if (swift::Size(file)) {
         HttpGwFirstProgressCallback(file,bin64_t(0,0));
     } else {
         swift::AddProgressCallback(file,&HttpGwFirstProgressCallback);
-        socket_callbacks_t install (http_conn,NULL,NULL,HttpGwCloseConnection); // FIXME: if conn is closed / no data arrives
+        socket_callbacks_t install (http_conn,NULL,NULL,HttpGwCloseConnection);
         swift::Listen3rdPartySocket(install);
     }
 }
@@ -199,6 +213,7 @@ void HttpGwError (SOCKET s) {
 }
 
 
+#include <signal.h>
 SOCKET InstallHTTPGateway (Address bind_to) {
     SOCKET fd;
     #define gw_ensure(x) { if (!(x)) { \
@@ -207,6 +222,12 @@ SOCKET InstallHTTPGateway (Address bind_to) {
     gw_ensure ( (fd=socket(AF_INET, SOCK_STREAM, 0)) != INVALID_SOCKET );
     int enable = true;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (setsockoptptr_t)&enable, sizeof(int));
+    //setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (setsockoptptr_t)&enable, sizeof(int));
+    //struct sigaction act;
+    //memset(&act,0,sizeof(struct sigaction));
+    //act.sa_handler = SIG_IGN;
+    //sigaction (SIGPIPE, &act, NULL); // FIXME
+    signal( SIGPIPE, SIG_IGN );
     gw_ensure ( 0==bind(fd, (sockaddr*)&(bind_to.addr), sizeof(struct sockaddr_in)) );
     gw_ensure (make_socket_nonblocking(fd));
     gw_ensure ( 0==listen(fd,8) );

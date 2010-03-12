@@ -439,7 +439,7 @@ void        binmap_t::copy_range (binmap_t& origin, bin64_t range) {
 }
 
 uint64_t    binmap_t::seq_length () {
-    iterator i(this);
+    iterator i(this,bin64_t(height,0));
     if (!i.deep() && *i==FILLED)
         return i.pos.width();
     while (!i.pos.is_base()) {

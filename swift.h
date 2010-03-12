@@ -456,6 +456,8 @@ namespace swift {
     /** Returns the number of bytes that are complete sequentially, starting from the
         beginning, till the first not-yet-retrieved packet. */
     uint64_t  SeqComplete (int fdes);
+    /***/
+    int       Find (Sha1Hash hash);
 
     void AddProgressCallback (int transfer,TransferProgressCallback cb);
     void RemoveProgressCallback (int transfer,TransferProgressCallback cb);

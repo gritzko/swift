@@ -137,12 +137,13 @@ void Datagram::Wait (int sockcnt, socket_callbacks_t* sockets, tint usec) {
     Time();
     if (sel>0) {
         for (int i=0; i<=sockcnt; i++) {
-            if (FD_ISSET(sockets[i].sock,&rdfd))
-                (*(sockets[i].may_read))(sockets[i].sock);
-            if (FD_ISSET(sockets[i].sock,&wrfd))
-                (*(sockets[i].may_write))(sockets[i].sock);
-            if (FD_ISSET(sockets[i].sock,&errfd))
-                (*(sockets[i].on_error))(sockets[i].sock);
+            socket_callbacks_t& sct = sockets[i];
+            if (sct.may_read && FD_ISSET(sct.sock,&rdfd))
+                (*(sct.may_read))(sct.sock);
+            if (sct.may_write && FD_ISSET(sockets[i].sock,&wrfd))
+                (*(sct.may_write))(sct.sock);
+            if (sct.on_error && FD_ISSET(sockets[i].sock,&errfd))
+                (*(sct.on_error))(sct.sock);
         }
     } else if (sel<0) {
         print_error("select fails");
