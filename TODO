@@ -1,0 +1,43 @@
+    TRIAL TODO
+
+STATE MACHINE
+* imposed HINTs are terribly broken, resend the same data over and over again
+* check ACK/HAVE redundancy
+* small-progress update problem (aka peer nap)
+  guarantee size of updates < x% of data, on both ends
+* HAVE ALL / HAVE NONE
+* aggregate ACKS (schedule for +x ms)
+
+PERFORMANCE
+* move to the.zett's binmaps
+* optimize redundant HASH messages
+* move to rotated ACK queue
+* 32 bit time field
+* ?empty/full binmaps
+
+CACHING/FILES
+* connection rotation
+* file rotation
+* real LRU/LFU
+* file/hash-file re-open in read-only mode
+* no cache recheck, failure-resistant
+* completion mark
+* unified events/callbacks
+* move to 64-bit IO
+* Transfer(fd) constructor
+* think of sliding window(s)
+
+MANIFOLD
+* all-swarm performance stats
+* run chained setups (cmd line protocol subsetting)
+* implement: multiple swift instances per server
+* run thousand-daemon caching tests (use httpgw)
+* use a dedicated tracker
+* add NATs to the setup
+* recover mfold.libswift.org
+* integrate Windowses
+
+OTHER
+* Sha1Hash constructor ambiguity
+* don't #include .cpp
+* think of using HTTP (?) as a fallback
