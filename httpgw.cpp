@@ -90,7 +90,7 @@ void HttpGwMayWriteCallback (SOCKET sink) {
 void HttpGwSwiftProgressCallback (int transfer, bin64_t bin) {
     for (int httpc=0; httpc<http_gw_reqs_open; httpc++)
         if (http_requests[httpc].transfer==transfer)
-            if ( (bin.offset()<<10) == http_requests[httpc].offset ) {
+            if ( (bin.base_offset()<<10) == http_requests[httpc].offset ) {
                 dprintf("%s @%i progress: %s\n",tintstr(),http_requests[httpc].id,bin.str());
                 socket_callbacks_t maywrite_callbacks
                         (http_requests[httpc].sink,NULL,HttpGwMayWriteCallback,HttpGwCloseConnection);
