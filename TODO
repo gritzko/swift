@@ -1,12 +1,19 @@
     TRIAL TODO
 
 STATE MACHINE
-* imposed HINTs are terribly broken, resend the same data over and over again
+* imposed HINTs are terribly broken, resent for the data in flight 
 * check ACK/HAVE redundancy
+* HAVE overuses find_filtered
+* set priorities on ranges
 * small-progress update problem (aka peer nap)
   guarantee size of updates < x% of data, on both ends
+* SWIFT_MSGTYPE_RCVD SWIFT_MSGTYPE_SENT
 * HAVE ALL / HAVE NONE
 * aggregate ACKS (schedule for +x ms)
+* channel close msg (hs 0)
+* connection rotation / pex / pex_del
+* misterious bug: Rdata (NONE)
+* ?amend MAX_REORDER depending on rtt_dev
 
 PERFORMANCE
 * move to the.zett's binmaps
@@ -14,6 +21,9 @@ PERFORMANCE
 * move to rotated ACK queue
 * 32 bit time field
 * ?empty/full binmaps
+* initiate RTT with prev RTT to host:port
+* fractional cwnd
+* ack_out rolling queue
 
 CACHING/FILES
 * connection rotation
@@ -36,8 +46,28 @@ MANIFOLD
 * add NATs to the setup
 * recover mfold.libswift.org
 * integrate Windowses
+* add WiFi nodes
+
+API
+* notification if data is retrieved by an external code
+* events on data retrieval
+* pluggable storage
+
+NAT
+* NAT type detection => need peer identifiers (x100 amplification)
+
+MFOLD
+* integrate multi-peer changes by Jori
+* do global swarm stats
 
 OTHER
+* httpgw or nginx?
 * Sha1Hash constructor ambiguity
 * don't #include .cpp
 * think of using HTTP (?) as a fallback
+* sync the draft (hash goes first, ACK/HAVE)
+* Gertjan: separate peer from channel? cng ctrl per peer ?
+* packing hashes into a single datagram (tracking 1000s)
+* partial channels / lightweight channels
+* socket array is misplaced
+* the invalid-hash bug
