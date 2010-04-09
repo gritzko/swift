@@ -184,7 +184,7 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         }
     } else
         dprintf("%s #%u sendctrl wait cwnd %f data_out %i next %s\n",
-                tintstr(),id_,cwnd_,data_out_.size(),tintstr(last_data_out_time_+NOW-send_interval_));
+                tintstr(),id_,cwnd_,(int)data_out_.size(),tintstr(last_data_out_time_+NOW-send_interval_));
 
     if (tosend==bin64_t::NONE)// && (last_data_out_time_>NOW-TINT_SEC || data_out_.empty()))
         return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
@@ -366,7 +366,7 @@ void    Channel::OnAck (Datagram& dgram) {
             // round trip time calculations
         tint rtt = NOW-data_out_[di].time;
         rtt_avg_ = (rtt_avg_*7 + rtt) >> 3;
-        dev_avg_ = ( dev_avg_*3 + abs(rtt-rtt_avg_) ) >> 2;
+        dev_avg_ = ( dev_avg_*3 + ::abs(rtt-rtt_avg_) ) >> 2;
         assert(data_out_[di].time!=TINT_NEVER);
             // one-way delay calculations
         tint owd = peer_time - data_out_[di].time;
