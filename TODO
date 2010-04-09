@@ -18,12 +18,11 @@ STATE MACHINE
 PERFORMANCE
 * move to the.zett's binmaps
 * optimize redundant HASH messages
-* move to rotated ACK queue
+* move to rolling HAVE queue
 * 32 bit time field
 * ?empty/full binmaps
 * initiate RTT with prev RTT to host:port
 * fractional cwnd
-* ack_out rolling queue
 
 CACHING/FILES
 * connection rotation
@@ -65,7 +64,7 @@ OTHER
 * Sha1Hash constructor ambiguity
 * don't #include .cpp
 * think of using HTTP (?) as a fallback
-* sync the draft (hash goes first, ACK/HAVE)
+* add header/footer, better abstract to the draft
 * Gertjan: separate peer from channel? cng ctrl per peer ?
 * packing hashes into a single datagram (tracking 1000s)
 * partial channels / lightweight channels

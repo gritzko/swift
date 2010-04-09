@@ -231,16 +231,17 @@ Table of Contents
    (3) root hash of the content (see Sec. 4.5).
    The handshake is made by a HANDSHAKE message, whose only payload is
    a channel number. HANDSHAKE message type is 0. The initiating
-   handshake must be followed by the transfer's root hash.
+   handshake is sent to channel #0. Datagrams to that pseudo-channel
+   MUST start with the root hash of the transfer.
    
    Initiator sends an initiating datagram to a peer:
-      00000000  00 00000011  04 7FFFFFFF
-      1234123412341234123412341234123412341234
+      00000000  04 7FFFFFFF 1234123412341234123412341234123412341234
+      00 00000011
    (to unknown channel, handshake from channel 0x11, initiating a
    transfer of a file with a root hash 123...1234)
    
    Peer's response datagram:
-      00000011  00 00000022  02 00000003
+      00000011  00 00000022  03 00000003
    (peer to the initiator: use channel number 0x22 for this transfer;
    I also have first 4 kilobytes of the file, see Sec. 4.3)
    
@@ -249,7 +250,7 @@ Table of Contents
    guessing. So, the third datagram of a handshake MAY already contain
    some heavy payload. To minimize the number of initialization
    roundtrips, the first two datagrams MAY also contain some minor
-   payload, e.g. a couple of ACK messages roughly indicating the
+   payload, e.g. a couple of HAVE messages roughly indicating the
    current progress of a peer or a HINT (see Sec. 4.7).
       00000022
    (this is a simple zero-payload keepalive datagram; consisting of
@@ -326,11 +327,11 @@ Table of Contents
    in many cases. As a minor convenience, it also allows to use one
    integer instead of two to denote an interval.
    
-   Back to the acknowledgement message. An ACK message (type 2) states
+   Back to the acknowledgement message. A HAVE message (type 3) states
    that the sending peer obtained the specified bin and successfully
    checked its integrity:
 
-   02 00000003
+   03 00000003
    (got/checked first four kilobytes of a file/stream)
    
    The data is acknowledged in terms of bins; as a result, every
@@ -341,6 +342,13 @@ Table of Contents
    For keeping the state information, an implementation MAY use the
    "binmap" datastructure, which is a hybrid of a bitmap and a binary
    tree, discussed in detail in [BINMAP].
+   An ACK message (type 2) acknowledges data that was received from
+   its addressee; to facilitate delay-based congestion control, an
+   ACK message contains a timestamp:
+
+   02 00000002 12345678
+   (got the second kilobyte of the file from you; my microsecond
+   timer was showing 0x12345678 at that moment)
 
 
 4.4.  Data integrity and on-demand Merkle hashes
@@ -457,7 +465,7 @@ Table of Contents
    root hash is too high in the sky). A newcomer peer MAY signal it
    already has peak hashes by acknowledging any bin, even empty one:
 
-   02 FFFFFFFF
+   03 FFFFFFFF
 
    Otherwise, the first of the senders SHOULD bootstrap him with all
    the peak hashes.
@@ -534,8 +542,8 @@ Table of Contents
    on some other reason. To emphasize that, request messages are named
    HINTs; their only purpose is to coordinate peers and to avoid
    unnecessary data retransmission. A peer is supposed to process
-   HINTs sequentially. HINT message type is 3.
-   03 00000009
+   HINTs sequentially. HINT message type is 8.
+   08 00000009
    (a peer requests fifth and sixth packets)
 
 
@@ -544,13 +552,13 @@ Table of Contents
    As the same protocol is supposed to serve diverse usecases,
    different peers may support different subsets of messages. The
    supported subset SHOULD be signalled in the handshake packets.
-   Messages SWIFT_MSGTYPE_SENT (type 8) and SWIFT_MSGTYPE_RCVD (type
-   9) serve exactly this purpose. They are followed with 32-bit
-   big-endian numbers with bits set to 1 at offsets corresponding
-   to supported message type ids. E.g. for a tracker peer which
-   receives only handshakes and (root) hashes, sends out handshakes
-   and PEX_ADD messages, those two messages will look like:
-   08 00000021 09 00000011
+   The SWIFT_MSGTYPE_RCVD message (type 9) serves exactly this
+   purpose. It contains a 32-bit big-endian number with bits set
+   to 1 at offsets corresponding to supported message type ids.
+   E.g. for a tracker peer which receives only handshakes and
+   (root) hashes, sends out handshakes and PEX_ADD messages, that
+   message will look like:
+   09 00000011
 
 
 5. Security Considerations
