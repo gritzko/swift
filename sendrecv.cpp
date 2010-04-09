@@ -486,7 +486,7 @@ void    Channel::RecvDatagram (SOCKET socket) {
     uint32_t mych = data.Pull32();
     Sha1Hash hash;
     Channel* channel = NULL;
-    if (!mych) { // handshake initiated
+    if (mych==0) { // handshake initiated
         if (data.size()<1+4+1+4+Sha1Hash::SIZE)
             return_log ("%s #0 incorrect size %i initial handshake packet %s\n",
                         tintstr(),data.size(),addr.str());
