@@ -21,10 +21,10 @@ Abstract
    incompatible approaches to resolve that discrepancy above/below the
    transport layer: peer-to-peer, CDN, caches, mirrors, multicast, etc.
    The swift aims at creating a single unified content-centric transport
-   protocol serving as a lingua-franca of content distribution.
-   To implement that ultimate data cloud model, the protocol has to
-   unify use cases of data download, video-on-demand and live streaming.
-   It must work in the settings of client-server, peer-to-peer, CDN or
+   protocol serving as a lingua-franca of content distribution. To
+   implement that ultimate data cloud model, the protocol has to unify
+   use cases of data download, video-on-demand and live streaming. It
+   must work in the settings of client-server, peer-to-peer, CDN or
    peer-assisted networks, effectively blending those architectures.
 
 
@@ -79,18 +79,19 @@ Table of Contents
    4.  swift subsystems and design choices
      4.1.  The atomic datagram principle
      4.2.  Handshake and multiplexing
-     4.3.  Data integrity and on-demand Merkle hashes
-     4.4.  Generic acknowledgments
+     4.3.  Generic acknowledgments
+     4.4.  Data integrity and on-demand Merkle hashes
      4.5.  Peer exchange and NAT hole punching
-     4.6.  Congestion control
-     4.7.  Hints and piece picking
+     4.6.  Data requests (HINTs)
+     4.7.  Subsetting of the protocol
+     4.8.  Directory lists
    5. Enveloping
      5.1.  IP
      5.2.  UDP
      5.3.  TCP
    6. Security Considerations
-   7. Pending issues
-   8. Normative References
+   7. Extensibility
+   References
    Author's address
 
 
@@ -105,7 +106,6 @@ Table of Contents
 
    Historically, the Internet was based on end-to-end unicast
    and, considering the failure of multicast, was addressed by
-   different technologies, which ultimately boiled down to maintaining
  
 
 
@@ -114,6 +114,7 @@ Grishchenko             Expires October 12, 2010                [Page 2]
 Internet-Draft                   swift                        April 2010
 
 
+   different technologies, which ultimately boiled down to maintaining
    and coordinating distributed replicas. On one hand, downloading
    from a nearby well-provisioned replica is somewhat faster and/or
    cheaper; on the other hand, it requires to coordinate multiple
@@ -132,7 +133,7 @@ Internet-Draft                   swift                        April 2010
    data  | SunSITE        CacheLogic VelociX   BitTorrent
    VoD   | YouTube        Azureus(+seedboxes)  SwarmPlayer
    live  | Akamai Str.    Octoshape, Joost     PPlive
-                    TABLE 1. Usecases.
+                       TABLE 1. Usecases.
 
    The protocol must be designed for maximum genericity, thus focusing
    on the very core of the mission, contain no magic constants and no
@@ -148,20 +149,19 @@ Internet-Draft                   swift                        April 2010
    The technical focus of the swift protocol is to find the simplest
    solution involving the minimum set of primitives, still being
    sufficient to implement all the targeted usecases (see Table 1),
-   suitable for use in general-purpose software and hardware (i.e. a
-   web browser or a set-top box).
-   The five design goals for the protocol are:
+   suitable for use in general-purpose software and hardware (i.e. a web
+   browser or a set-top box). The five design goals for the protocol
+   are:
 
    1. Embeddable kernel-ready protocol.
    2. Embrace real-time streaming, in- and out-of-order download.
    3. Have short warm-up times.
    4. Traverse NATs transparently.
-   5. Pluggability/extensibility.
+   5. Be extensible, allow for multitude of implementation over
+      diverse mediums, allow for drop-in pluggability.
 
    Later in the draft, the objectives are referenced as (1)-(5).
 
-   device, a browser or even in the kernel space. Thus, the protocol
-   must have light footprint, preferably less than TCP, in spite
  
 
 
@@ -170,22 +170,26 @@ Grishchenko             Expires October 12, 2010                [Page 3]
 Internet-Draft                   swift                        April 2010
 
 
-   the necessity to support numerous ongoing connections as well as to
+   The goal of embedding (1) means that the protocol must be ready to
+   function as a regular transport protocol inside a set-top box, mobile
+   device, a browser and/or in the kernel space. Thus, the protocol must
+   have light footprint, preferably less than TCP, in spite the
+   necessity to support numerous ongoing connections as well as to
    constantly probe the network for new possibilities. The practical
    overhead for TCP is estimated at 10KB per connection [HTTP1MLN]. We
-   aim at <1KB per peer connected. Also, the amount of code necessary
-   to make a basic implementation must be limited to 10KLoC of C.
+   aim at <1KB per peer connected. Also, the amount of code necessary to
+   make a basic implementation must be limited to 10KLoC of C.
    Otherwise, besides the resource considerations, maintaining and
    auditing the code might become prohibitively expensive.
 
    The support for all three basic usecases of real-time streaming,
-   in-order download and out-of-order download (2) is necessary for
-   the manifested goal of THE multiparty transport protocol as no
-   single usecase dominates over the others.
+   in-order download and out-of-order download (2) is necessary for the
+   manifested goal of THE multiparty transport protocol as no single
+   usecase dominates over the others.
 
    The objective of short warm-up times (3) is the matter of end-user
-   experience; the playback must start as soon as possible. Thus
-   any unnecessary initialization roundtrips and warm-up cycles must be
+   experience; the playback must start as soon as possible. Thus any
+   unnecessary initialization roundtrips and warm-up cycles must be
    eliminated from the transport layer.
 
    Transparent NAT traversal (4) is absolutely necessary as at least 60%
@@ -206,18 +210,14 @@ Internet-Draft                   swift                        April 2010
 4.  swift subsystems and design choices
 
    To large extent, swift design is defined by the cornerstone decision
-   to get rid of TCP and not to reinvent any TCP-like transports on
-   top of UDP or otherwise. The requirements (1), (4), (5) make TCP a
-   bad choice due to its high per-connection footprint, complex and
-   less reliable NAT traversal and fixed predefined congestion control
-   algorithms. Besides that, an important consideration is that no
-   block of TCP functionality turns out to be useful for the general
-   case of swarming downloads. Namely,
+   to get rid of TCP and not to reinvent any TCP-like transports on top
+   of UDP or otherwise. The requirements (1), (4), (5) make TCP a bad
+   choice due to its high per-connection footprint, complex and less
+   reliable NAT traversal and fixed predefined congestion control
+   algorithms. Besides that, an important consideration is that no block
+   of TCP functionality turns out to be useful for the general case of
+   swarming downloads. Namely,
      1. in-order delivery is less useful as peer-to-peer protocols
-     often employ out-of-order delivery themselves and in either case
-     out-of-order data can still be stored;
-     in-order delivery is not necessary, packet losses might be
-     patched up lazily, without stopping the flow of data;
  
 
 
@@ -226,11 +226,17 @@ Grishchenko             Expires October 12, 2010                [Page 4]
 Internet-Draft                   swift                        April 2010
 
 
+     often employ out-of-order delivery themselves and in either case
+     out-of-order data can still be stored;
+     2. reliable delivery/retransmissions are less useful because
+     the same data might be requested from different sources; as
+     in-order delivery is not required, packet losses might be
+     patched up lazily, without stopping the flow of data;
      3. flow control is not necessary as the receiver is much less
      likely to be saturated with the data and even if so, that
-     situation is perfectly detected by the congestion control
+     situation is perfectly detected by the congestion control;
      4. TCP congestion control is less useful as custom congestion
-     control is often needed.
+     control is often needed [LEDBAT].
    In general, TCP is built and optimized for a different usecase than
    we have with swarmed downloads. The abstraction of a "data pipe"
    orderly delivering some stream of bytes from one peer to another
@@ -240,16 +246,16 @@ Internet-Draft                   swift                        April 2010
    of participants disseminating the same _data_ in any way and order
    that is convenient to them.
 
-   Thus, the choice is to design the protocol that runs on top of
-   unreliable datagrams. Instead of reimplementing TCP we create a
+   Thus, the choice is to design a protocol that runs on top of
+   unreliable datagrams. Instead of reimplementing TCP, we create a
    datagram-based protocol, completely dropping the sequential data
-   stream abstraction. Ripping off unnecessary features of TCP makes it
-   easier both to implement the protocol, and to check/verify it; e.g.
-   numerous TCP vulnerabilities were caused by complexity of the
-   protocol's state machine. Still, we reserve the possibility to run
-   swift on top of TCP or HTTP. The draft itself assumes swift-over-UDP
-   implementation; the necessary adjustments to run the protocol over IP
-   or TCP a listed in Sec. 5.
+   stream abstraction. Removing unnecessary features of TCP makes it
+   easier both to implement the protocol and to verify it; numerous TCP
+   vulnerabilities were caused by complexity of the protocol's state
+   machine. Still, we reserve the possibility to run swift on top of TCP
+   or HTTP. The draft itself assumes swift-over-UDP implementation; the
+   necessary adjustments to run the protocol over IP or TCP are listed
+   in Sec. 5.
 
    Pursuing the maxim of making things as simple as possible but not
    simpler, we fit the protocol into the constraints of the transport
@@ -264,16 +270,10 @@ Internet-Draft                   swift                        April 2010
    mechanisms we introduce a scale-invariant acknowledgment system (see
    Sec 4.4). The system allows for aggregation and variable level of
    detail in requesting, announcing and acknowledging data, serves
-   in-order and out-of-order retrieval with equal ease.
-   Besides the protocol's footprint, we also aim at lowering the size of
-   a minimal useful interaction. Once a single datagram is received,
-   it must be checked for data integrity, and then either dropped or
-   accepted, consumed and relayed.
-
-4.1.  The atomic datagram principle
-
-   loss of one datagram MUST NOT disrupt the flow. Thus, a datagram
-   carries zero or more messages, and neither messages nor message
+   in-order and out-of-order retrieval with equal ease. Besides the
+   protocol's footprint, we also aim at lowering the size of a minimal
+   useful interaction. Once a single datagram is received, it must be
+   checked for data integrity, and then either dropped or accepted,
  
 
 
@@ -282,32 +282,38 @@ Grishchenko             Expires October 12, 2010                [Page 5]
 Internet-Draft                   swift                        April 2010
 
 
-   interdependencies should span over multiple datagrams. In particular,
-   any data piece is verified using uncle hash chains; all hashes
-   necessary for verifying data integrity are put into the same datagram
-   as the data (Sec. 4.3). As a general rule, if some additional data is
-   still missing to process a message within a datagram, the message
-   SHOULD be dropped.
+   consumed and relayed.
+
+4.1.  The atomic datagram principle
+
+   Ideally, every datagram sent must be independent of other datagrams,
+   so each datagram SHOULD be processed separately and a loss of one
+   datagram MUST NOT disrupt the flow. Thus, a datagram carries zero or
+   more messages, and neither messages nor message interdependencies
+   should span over multiple datagrams. In particular, any data piece is
+   verified using uncle hash chains; all hashes necessary for verifying
+   data integrity are put into the same datagram as the data (Sec. 4.3).
+   As a general rule, if some additional data is still missing to
+   process a message within a datagram, the message SHOULD be dropped.
 
    Each datagram starts with four bytes corresponding to the receiving
-   channel number (Sec. 4.2). The rest of a datagram is a
-   concatenation of messages. Each message within a datagram has fixed
-   length, depending on the type of the message. The first byte of a
-   message denotes its type. Integers are serialized in the network
-   (big-endian) byte order. Variable-length messages, free-form text
-   or JSON/bencoded objects are not allowed.
-   Consider an example of an acknowledgment message (Sec 4.4). It has
-   message type of 2 and a payload of a four-byte integer (say, 1); it
-   might be written in hex as: "02 00000001". Later in the document, a
-   hex-like two char per byte notation is used to represent message
-   formats.
+   channel number (Sec. 4.2). The rest of a datagram is a concatenation
+   of messages. Each message within a datagram has fixed length,
+   depending on the type of the message. The first byte of a message
+   denotes its type. Integers are serialized in the network (big-endian)
+   byte order. Variable-length messages, free-form text or JSON/bencoded
+   objects are not allowed. Consider an example of an acknowledgment
+   message (Sec 4.4). It has message type of 2 and a payload of a four-
+   byte integer (say, 1); it might be written in hex as: "02 00000001".
+   Later in the document, a hex-like two char per byte notation is used
+   to represent message formats.
 
-   In case a datagram has a piece of data, a sender MUST always put
-   the data message (type id 1) in the tail of a datagram. Such a
-   message consists of type id, bin number (see Sec. 4.3) and the
-   actual data. Normally there is 1 kilobyte of data, except the case
-   when file size is not a multiple of 1024 bytes, so the tail packet
-   is somewhat shorter. Example:
+   In case a datagram has a piece of data, a sender MUST always put the
+   data message (type id 1) in the tail of a datagram. Such a message
+   consists of type id, bin number (see Sec. 4.3) and the actual data.
+   Normally there is 1 kilobyte of data, except the case when file size
+   is not a multiple of 1024 bytes, so the tail packet is somewhat
+   shorter. Example:
    01 00000000 48656c6c6f20776f726c6421
    (This message accommodates an entire file: "Hello world!")
 
@@ -315,21 +321,15 @@ Internet-Draft                   swift                        April 2010
 4.2.  Handshake and multiplexing
 
    For the sake of simplicity, one transfer always deals with one file
-   only. Retrieval of large collections of files is done by retrieving
-   a directory list file and then recursively retrieving files, which
+   only. Retrieval of large collections of files is done by retrieving a
+   directory list file and then recursively retrieving files, which
    might also turn to be directory lists (see Sec. 4.9). To distinguish
    different transfers between the same pair of peers, the protocol
    introduces an additional layer of multiplexing, the channels.
    "Channels" loosely correspond to TCP connections; "content" of a
    single "channel" is a single file. A channel is established with a
-   handshake. To start a handshake, the initiating peer needs to know
+   handshake. To start a handshake, the initiating peer needs to know:
    (1) the IP address of a peer
-   (2) peer's UDP port and
-   (3) the root hash of the content (see Sec. 4.5).
-   The handshake is made by a HANDSHAKE message, whose only payload is
-   a channel number. HANDSHAKE message type is 0. The initiating
-   Initiator sends an initiating datagram to a peer:
-      00000000  04 7FFFFFFF 1234123412341234123412341234123412341234
  
 
 
@@ -338,6 +338,14 @@ Grishchenko             Expires October 12, 2010                [Page 6]
 Internet-Draft                   swift                        April 2010
 
 
+   (2) peer's UDP port and
+   (3) the root hash of the content (see Sec. 4.5).
+   The handshake is made by a HANDSHAKE message, whose only payload is a
+   channel number. HANDSHAKE message type is 0. The initiating handshake
+   must be followed by the transfer's root hash.
+
+   The initiator sends first datagram to its peer:
+      00000000  04 7FFFFFFF 1234123412341234123412341234123412341234
       00 00000011
    (to unknown channel, handshake from channel 0x11, initiating a
    transfer of a file with a root hash 123...1234)
@@ -347,8 +355,8 @@ Internet-Draft                   swift                        April 2010
    (peer to the initiator: use channel number 0x22 for this transfer;
    I also have first 4 kilobytes of the file, see Sec. 4.3)
 
-   At this point, the initiator knows that the peer really responds;
-   for that purpose channel ids MUST be random enough to prevent easy
+   At this point, the initiator knows that the peer really responds; for
+   that purpose channel ids MUST be random enough to prevent easy
    guessing. So, the third datagram of a handshake MAY already contain
    some heavy payload. To minimize the number of initialization
    roundtrips, the first two datagrams MAY also contain some minor
@@ -378,14 +386,6 @@ Internet-Draft                   swift                        April 2010
 
    Generic acknowledgments came out of the need to simplify the
    data addressing/requesting/acknowledging mechanics, which tends
-   to become overly complex and multilayered with the conventional
-   approach. Take BitTorrent+TCP tandem for example:
-
-   1. The basic data unit is of course a byte of content in a file.
-   2. BitTorrent's highest-level unit is a "torrent", physically a
-   2. A torrent is divided into "pieces", typically about a thousand
-   of them. Pieces are used to communicate own progress to other
-   peers. Pieces are also basic data integrity units, as the torrent's
  
 
 
@@ -394,12 +394,21 @@ Grishchenko             Expires October 12, 2010                [Page 7]
 Internet-Draft                   swift                        April 2010
 
 
+   to become overly complex and multilayered with the conventional
+   approach. Take BitTorrent+TCP tandem for example:
+
+   1. The basic data unit is of course a byte of content in a file.
+   2. BitTorrent's highest-level unit is a "torrent", physically a
+   byte range resulting from concatenation of content files.
+   3. A torrent is divided into "pieces", typically about a thousand
+   of them. Pieces are used to communicate own progress to other
+   peers. Pieces are also basic data integrity units, as the torrent's
    metadata includes SHA1 hash for every piece.
-   3. The actual data transfers are requested and made in 16KByte
+   4. The actual data transfers are requested and made in 16KByte
    units, named "blocks" or chunks.
    5. Still, one layer lower, TCP also operates with bytes and byte
    offsets which are totally different from the torrent's bytes and
-   offsets as TCP considers cumulative byte offsets for all content
+   offsets, as TCP considers cumulative byte offsets for all content
    sent by a connection, be it data, metadata or commands.
    6. Finally, another layer lower, IP transfers independent datagrams
    (typically around a kilobyte), which TCP then reassembles into
@@ -415,7 +424,7 @@ Internet-Draft                   swift                        April 2010
    To simplify this aspect, we employ a generic content addressing
    scheme based on binary intervals (shortcutted "bins"). The base
    interval is 1KB "packet", the top interval is the complete 2**63
-   range.  Till Sec. 4.4.1 any file is considered to be 2**k bytes long.
+   range.  Till Sec. 4.4.1, any file is considered to be 2**k bytes long.
    The binary tree of intervals is simple, well-understood, correlates
    well with machine representation of integers and the structure of
    Merkle hashes (Sec. 4.4). A novel addition to the classical scheme
@@ -423,25 +432,16 @@ Internet-Draft                   swift                        April 2010
    lays them out into a vector nicely. Bin numbering is done in the
    order of interval's "center", ascending, namely:
 
-               7
-         3          11
-      1     5     9    13
-    0  2  4  6   8 10 12 14
+              7
+        3          11
+     1     5     9    13
+   0  2  4  6   8 10 12 14
 
-   The number 0xFFFFFFFF (32-bit) or 0xFFFFFFFFFFFFFFFF (64-bit)
-   stands for an empty interval; 0x7FFF...FFF stands for "everything".
-   In general, this numbering system allows to work with
-   simpler data structures, e.g. to use arrays instead of binary trees
-   in many cases. As a minor convenience, it also allows to use one
-   integer instead of two to denote an interval. By requiring every
-   message to use bin numbers, we enforce genericity.
-
-   Back to the acknowledgment message. A HAVE message (type 3) states
-   that the sending peer obtained the specified bin and successfully
-   checked its integrity:
-   (got/checked first four kilobytes of a file/stream)
-
-   The data is acknowledged in terms of bins; as a result, every
+   The number 0xFFFFFFFF (32-bit) or 0xFFFFFFFFFFFFFFFF (64-bit) stands
+   for an empty interval; 0x7FFF...FFF stands for "everything". In
+   general, this numbering system allows to work with simpler data
+   structures, e.g. to use arrays instead of binary trees in many cases.
+   As a minor convenience, it also allows to use one integer instead of
  
 
 
@@ -450,6 +450,16 @@ Grishchenko             Expires October 12, 2010                [Page 8]
 Internet-Draft                   swift                        April 2010
 
 
+   two to denote an interval. By requiring that every message uses bin
+   numbers, we enforce genericity.
+
+   Back to the acknowledgment message. A HAVE message (type 3) states
+   that the sending peer obtained the specified bin and successfully
+   checked its integrity:
+   02 00000003
+   (got/checked first four kilobytes of a file/stream)
+
+   The data is acknowledged in terms of bins; as a result, every
    single packet is acknowledged logarithmic number of times. That
    provides some necessary redundancy of acknowledgments and
    sufficiently compensates unreliability of datagrams. Compare that
@@ -468,36 +478,26 @@ Internet-Draft                   swift                        April 2010
 
 4.4.  Data integrity and on-demand Merkle hashes
 
-   The integrity checking scheme is unified for two usecases of
-   download and streaming. Also, it works down to the level of a
-   single datagram by employing Merkle hash trees [MERKLE]. Peers
-   receive chains of uncle hashes just in time to check the incoming
-   data. As metadata is restricted to just a single root hash,
-   newcomer peers derive the size of a file from hashes. That
-   functionalities heavily depend on the concept of peak hashes,
-   discussed in Sec. 4.4.1. Any specifics related to the cases of file
-   download and streaming is discussed in Sec. 4.4.2, 4.4.3
-   respectively.
+   The integrity checking scheme is unified for two usecases of download
+   and streaming. Also, it works down to the level of a single datagram
+   by employing Merkle hash trees [MERKLE]. Peers receive chains of
+   uncle hashes just in time to check the incoming data. As metadata is
+   restricted to just a single root hash, newcomer peers derive the size
+   of a file from hashes. That functionality heavily depends on the
+   concept of peak hashes, discussed in Sec. 4.4.1. Any specifics
+   related to the cases of file download and streaming is discussed in
+   Sec. 4.4.2 and 4.4.3, respectively.
 
-   Here, we discuss the common part of the workflow. As a general
-   rule, the sender SHOULD prepend data with hashes which are
-   necessary for verifying that data, no more, no less. While some
-   optimistic optimizations are definitely possible, the receiver
-   SHOULD drop data if it is impossible to verify it. Before sending a
-   packet of data to the receiver, the sender inspects the receiver's
-   previous acknowledgments to derive which hashes the receiver
-   already has for sure.
-   Suppose, the receiver had acknowledged bin 1 (first two kilobytes
-   of the file), then it must already have uncle hashes 5, 11 and so
-   on. That is because those hashes are necessary to check packets of
-   bin 1 against the root hash. Then, hashes 3, 7 and so on must be
-   also known as they are calculated in the process of checking the
-   uncle hash chain. Hence, to send bin 12 (i.e. the 7th kilobyte of
-   data), the sender needs to prepend hashes for bins 14 and 9, which
-   let the data be checked against hash 11 which is already known to
-   message itself, i.e.:
-
-   04 00000009 F01234567890ABCDEF1234567890ABCDEF123456
+   Here, we discuss the common part of the workflow. As a general rule,
+   the sender SHOULD prepend data with hashes which are necessary for
+   verifying that data, no more, no less. While some optimistic
+   optimizations are definitely possible, the receiver SHOULD drop data
+   if it is impossible to verify it. Before sending a packet of data to
+   the receiver, the sender inspects the receiver's previous
+   acknowledgments to derive which hashes the receiver already has for
+   sure. Suppose, the receiver had acknowledged bin 1 (first two
+   kilobytes of the file), then it must already have uncle hashes 5, 11
+   and so on. That is because those hashes are necessary to check
  
 
 
@@ -506,6 +506,16 @@ Grishchenko             Expires October 12, 2010                [Page 9]
 Internet-Draft                   swift                        April 2010
 
 
+   packets of bin 1 against the root hash. Then, hashes 3, 7 and so on
+   must be also known as they are calculated in the process of checking
+   the uncle hash chain. Hence, to send bin 12 (i.e. the 7th kilobyte of
+   data), the sender needs to prepend hashes for bins 14 and 9, which
+   let the data be checked against hash 11 which is already known to the
+   receiver. The sender MUST put into the datagram the chain of uncle
+   hashes necessary for verification of the packet, always before the
+   data message itself, i.e.:
+
+   04 00000009 F01234567890ABCDEF1234567890ABCDEF123456
    04 0000000E 01234567890ABCDEF1234567890ABCDEF1234567
    (uncle hashes for the packet 12)
    01 0000000C DA1ADA1ADA1A...
@@ -515,45 +525,35 @@ Internet-Draft                   swift                        April 2010
    previous (still unacknowledged) datagrams. It is an optimization
    tradeoff between redundant hash transmission and possibility of
    collateral data loss in the case some necessary hashes were lost in
-   the network so some delivered data cannot be verified and thus
-   has to be dropped.
-   In either way, the receiver builds the Merkle tree on-demand,
-   incrementally, starting from the root hash, and uses it for data
-   validation.
+   the network so some delivered data cannot be verified and thus has to
+   be dropped. In either case, the receiver builds the Merkle tree on-
+   demand, incrementally, starting from the root hash, and uses it for
+   data validation.
 
 
 4.4.1. Peak hashes
 
    The concept of peak hashes enables two cornerstone features of swift:
-   download/streaming unification and file size proving. Formally,
-   peak hashes are hashes defined over filled bins, whose parent
-   hashes are defined over incomplete (not filled) bins. Filled bin is
-   a bin which does not extend past the end of the file, or, more
-   precisely, contains no empty packets. Practically, we use peak
-   hashes to cover the data range with logarithmic number of hashes,
-   so each hash is defined over a "round" aligned 2^k interval.
-   As an example, suppose a file is 7162 bytes long. That fits into
-   7 packets, the tail packet being 1018 bytes long. The binary
-   representation for 7 is 111. Here we might note that in general,
-   every "1" in binary representation of the file's packet length
-   corresponds to a peak hash. Namely, for this particular file we'll
-   have three peaks, bin numbers 3, 9, 12.
-   Thus, once a newcomer joins a swarm, the first peer sending him
-   data prepends it with peak hashes; the newcomer checks them against
-   the root hash (see Sec 4.4.2).
+   download/streaming unification and file size proving. Formally, peak
+   hashes are hashes defined over filled bins, whose parent hashes are
+   defined over incomplete (not filled) bins. Filled bin is a bin which
+   does not extend past the end of the file, or, more precisely,
+   contains no empty packets. Practically, we use peaks to cover the
+   data range with logarithmic number of hashes, so each hash is defined
+   over a "round" aligned 2^k interval. As an example, suppose a file is
+   7162 bytes long. That fits into 7 packets, the tail packet being 1018
+   bytes long. The binary representation for 7 is 111. Here we might
+   note that in general, every "1" in binary representation of the
+   file's packet length corresponds to a peak hash. Namely, for this
+   particular file we'll have three peaks, bin numbers 3, 9, 12. Thus,
+   once a newcomer joins a swarm, the first peer who sends him data
+   prepends it with peak hashes. The newcomer checks them against the
+   root hash (see Sec 4.4.2).
 
    04 00000003 1234567890ABCDEF1234567890ABCDEF12345678
    04 00000009 234567890ABCDEF1234567890ABCDEF123456789
    04 0000000C 34567890ABCDEF1234567890ABCDEF1234567890
    (this sequence of peak hashes proves that a file is 7KB long)
-
-
-4.4.2. Hash trees for files
-
-   the entire data range (2**63 bytes). Every hash in the tree is
-   defined in the usual way, as a SHA1 hash of a concatenation of two
-   lower-level SHA1 hashes, corresponding to left and right data
-   half-ranges respectively. For example,
  
 
 
@@ -562,10 +562,16 @@ Grishchenko             Expires October 12, 2010               [Page 10]
 Internet-Draft                   swift                        April 2010
 
 
+4.4.2. Hash trees for files
+
+   the entire data range (2**63 bytes). Every hash in the tree is
+   defined in the usual way, as a SHA1 hash of a concatenation of two
+   lower-level SHA1 hashes, which correspond to left and right data
+   half-ranges respectively. For example,
                 hash_1 = SHA1 (hash_0+hash_2)
    where + stands for concatenation and hash_i stands for Merkle hash
    of the bin number i. Obviously, that does not hold for the
-   base-layer hashes, which are normal SHA1 hashes over 1KB data
+   base-layer hashes. Those are normal SHA1 hashes over 1KB data
    ranges ("packets"), except probably for the tail packet, which
    might have less than 1KB of data. The normal recursive formula does
    not apply to empty bins, i.e. bins that have no data absolutely;
@@ -602,14 +608,8 @@ Internet-Draft                   swift                        April 2010
 4.4.3. Hash trees for streams
 
    In the case of live streaming a transfer is bootstrapped with a
-   public key instead of a root hash, as the root hash is undefined
-   or, more precisely, transient, as long as new data keeps coming.
-   Stream/download unification is achieved by sending signed peak
-   hashes on-demand, ahead of the actual data. Similarly to the
-   hashes with the necessary (signed) peak hashes.
-   Except for the fact that the set of peak hashes changes with the
-   time, other parts of the algorithm work as described in 4.4.2 As we
-   see, in both cases data length is not known on advance, but derived
+   public key instead of a root hash, as the root hash is undefined or,
+   more precisely, transient, as long as new data keeps coming.
  
 
 
@@ -618,54 +618,54 @@ Grishchenko             Expires October 12, 2010               [Page 11]
 Internet-Draft                   swift                        April 2010
 
 
-   on-the-go from the peak hashes. Suppose, our 7KB stream extended to
-   another kilobyte. Thus, now hash 7 becomes the only peak hash,
-   eating hashes 3, 9 and 12, so the source sends out a signed peak hash
-   message (type 7) to announce the fact:
+   Streaming/download unification is achieved by sending signed peak
+   hashes on-demand, ahead of the actual data. Similarly to the previous
+   case, the sender mightuse acknowledgements to derive which data range
+   the receiver has peak hashes for and to prepend the data hashes with
+   the necessary (signed) peak hashes. Except for the fact that the set
+   of peak hashes changes with the time, other parts of the algorithm
+   work as described in 4.4.2. As we see, in both cases data length is
+   not known on advance, but derived on-the-go from the peak hashes.
+   Suppose, our 7KB stream extended to another kilobyte. Thus, now hash
+   7 becomes the only peak hash, eating hashes 3, 9 and 12. So, the
+   source sends out a signed peak hash message (type 7) to announce the
+   fact:
 
    07 00000007 1234567890ABCDEF1234567890ABCDEF12345678 SOME-SIGN-HERE
 
 
 4.5.  Peer exchange and NAT hole punching
 
-   Peer exchange messages are common for many peer-to-peer protocols.
-   By exchanging peer IP addresses in gossip fashion, the central
-   coordinating entities (trackers) might be relieved of unnecessary
-   work. Following the example of BitTorrent, swift features two types
-   of PEX messages: "peer connected" (type 5) and "peer disconnected"
-   (type 6). Peers are represented as IPv4 address-port pairs:
+   Peer exchange messages are common for many peer-to-peer protocols. By exchanging peer IP addresses in gossip fashion, peers relieve central coordinating entities (the trackers) from unnecessary work. Following the example of BitTorrent, swift features two types of PEX messages: "peer connected" (type 5) and "peer disconnected" (type 6). Peers are represented as IPv4 address-port pairs:
    05 7F000000 1F40
    (connected to 127.0.0.1:8000)
 
    To unify peer exchange and NAT hole punching functionality, the
-   sending pattern of PEX messages is restricted. As swift handshake
-   is able to do simple NAT hole punching [SNP] transparently, PEX
-   messages must be emitted in the way to facilitate that. Namely,
-   once peer A introduces peer B to peer C by sending a PEX message to
-   C, it SHOULD also send a message to B introducing C. The messages
-   SHOULD be within 2 seconds from each other, but MAY and better not be
-   simultaneous, leaving a gap of twice the "typical" RTT, i.e.
-   300-600ms. The peers are supposed to initiate handshakes to each
-   other thus forming a simple NAT hole punching pattern where the
-   introducing peer effectively acts as a STUN server. Still, peers
-   MAY ignore PEX messages if uninterested in obtaining new peers or
-   because of security considerations (rate limiting) or any other
-   reason.
+   sending pattern of PEX messages is restricted. As swift handshake is
+   able to do simple NAT hole punching [SNP] transparently, PEX messages
+   must be emitted in the way to facilitate that. Namely, once peer A
+   introduces peer B to peer C by sending a PEX message to C, it SHOULD
+   also send a message to B introducing C. The messages SHOULD be within
+   2 seconds from each other, but MAY and better not be simultaneous,
+   leaving a gap of twice the "typical" RTT, i.e. 300-600ms. The peers
+   are supposed to initiate handshakes to each other thus forming a
+   simple NAT hole punching pattern where the introducing peer
+   effectively acts as a STUN server. Still, peers MAY ignore PEX
+   messages if uninterested in obtaining new peers or because of
+   security considerations (rate limiting) or any other reason.
 
 
-4.6.  Congestion control
-
-   swift employs pluggable congestion control. In general, it is
-   expected that servers would use TCP-like congestion control schemes
-   such as classic AIMD or CUBIC [CUBIC]. End-user peers are expected to
-   use weaker-than-TCP (least than best effort) congestion control, such
-   as [LEDBAT] to minimize seeding counter-incentives.
-
+4.6.  Data requests (HINTs)
 
    While bulk download protocols normally do explicit requests for
    certain ranges of data (e.g. BitTorrent's REQUEST message), live
    streaming protocols quite often do without to save round trips.
    Explicit requests are often needed for security purposes; consider
+   that BitTorrent can only verify hashes of complete pieces that might
+   consist of multiple blocks requested from many peers. As swift has no
+   such implications, it is supposed to work both ways. Namely, a peer
+   SHOULD send out requested pieces, while it also may send some other
+   data in case it runs out of requests or on some other reason. To
  
 
 
@@ -674,40 +674,34 @@ Grishchenko             Expires October 12, 2010               [Page 12]
 Internet-Draft                   swift                        April 2010
 
 
-   that BitTorrent can only verify hashes of complete pieces that
-   might consist of multiple blocks requested from many peers.
-   As swift has no such implications, it is supposed to work both
-   ways. Namely, a peer SHOULD send out requested pieces, while it
-   also may send some other data in case it runs out of requests or
-   on some other reason. To emphasize that, request messages are named
-   HINTs; their only purpose is to coordinate peers and to avoid
-   unnecessary data retransmission. A peer is supposed to process
-   HINTs sequentially. HINT message type is 8.
+   emphasize that, request messages are named HINTs; their only purpose
+   is to coordinate peers and to avoid unnecessary data retransmission.
+   A peer SHOULD to process HINTs sequentially. HINT message type is 8.
    08 00000009
    (a peer requests fifth and sixth packets)
 
 
-4.8.  Subsetting of the protocol
+4.7.  Subsetting of the protocol
 
-   As the same protocol is supposed to serve diverse usecases,
-   different peers may support different subsets of messages. The
-   supported subset SHOULD be signaled in the handshake packets.
-   The SWIFT_MSGTYPE_RCVD message (type 9) serves exactly this
-   purpose. It contains a 32-bit big-endian number with bits set
-   to 1 at offsets corresponding to supported message type ids.
-   E.g. for a tracker peer which receives only handshakes and
-   (root) hashes, sends out handshakes and PEX_ADD messages, that
-   message will look like:
-   09 00000011
-   Peers running over TCP may not accept ACK messages, etc etc.
+   As the same protocol is supposed to serve diverse usecases, different
+   peers may support different subsets of messages. The supported subset
+   SHOULD be signaled in the handshake packets. The SWIFT_MSGTYPE_RCVD
+   message (type 9) serves exactly this purpose. It contains a 32-bit
+   big-endian number with bits set to 1 at offsets corresponding to
+   supported message type ids. E.g. for a tracker peer which receives
+   only handshakes and (root) hashes, sends out handshakes and PEX_ADD
+   messages, that message will look like: 09 00000011 Peers running over
+   TCP may not accept ACK messages, etc etc.
 
 
-4.9.  Directory lists
+4.8.  Directory lists
 
    Directory list files MUST start with magic bytes ".\n..\n\n". The
    rest of the file is a newline-separated list of hashes and file names
    for the content of the directory. An example:
 
+   .
+   ..
    1234567890ABCDEF1234567890ABCDEF12345678  readme.txt
    01234567890ABCDEF1234567890ABCDEF1234567  big_file.dat
 
@@ -716,30 +710,24 @@ Internet-Draft                   swift                        April 2010
 
 5.1.  IP
 
-   albeit it has downsides: first NAT/firewall compatibility problems,
-   and second the necessity of in-kernel implementation on both ends.
+   The most theoretically correct way is to run swift on top of IP, as
+   another transport protocol like TCP or UDP. Albeit, that option has
+   significant downsides. First, that is inevitable NAT/firewall
+   compatibility problems. Second, that necessitates in-kernel
+   implementation for all peers.
 
 
 5.2.  UDP
 
+   Currently, swift-over-UDP is the default deployment option. Effectively, UDP allows to use IP with minimal overhead, it also allows userspace implementations.
+   Besides the classic 1KB packet scenario, the bin numbering allows to use swift over Jumbo frames/datagrams. Both data and acknowledgments may use e.g. 8KB packets instead of "standard" 1KB. Hashing scheme stays the same.
+   Using swift with 512 or 256-byte packets is theoretically possible with 64-bit byte-precise bin numbers, but IP fragmentation might be a better method to achieve the same result.
  
 
 
 Grishchenko             Expires October 12, 2010               [Page 13]
 
 Internet-Draft                   swift                        April 2010
-
-
-   Currently, swift-over-UDP is the default deployment option.
-   Effectively, UDP allows to use IP with minimal overhead, it also
-   allows userspace implementations.
-   Besides the classic 1KB packet scenario, the bin numbering allows
-   to use swift over Jumbo frames/datagrams. Both data and
-   acknowledgments may use e.g. 8KB packets instead of "standard"
-   1KB. Hashing scheme stays the same.
-   Using swift with 512 or 256-byte packets is theoretically possible
-   with 64-bit byte-precise bin numbers, but IP fragmentation might be
-   a better method to achieve the same result.
 
 
 5.3.  TCP
@@ -778,6 +766,18 @@ Internet-Draft                   swift                        April 2010
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
  
 
 
@@ -796,7 +796,11 @@ Internet-Draft                   swift                        April 2010
    Congestion control algorithm is left to the implementation and may
    even vary from peer to peer. Congestion control is entirely
    implemented by the sending peer, the receiver only provides clues,
-   such as hints, acknowledgments and timestamps.
+   such as hints, acknowledgments and timestamps. In general, it is
+   expected that servers would use TCP-like congestion control schemes
+   such as classic AIMD or CUBIC [CUBIC]. End-user peers are expected to
+   use weaker-than-TCP (least than best effort) congestion control, such
+   as [LEDBAT] to minimize seeding counter-incentives.
 
 
 7.4. Piece picking algorithms
@@ -820,8 +824,8 @@ Internet-Draft                   swift                        April 2010
    (e.g. SHA-256), a message should be allocated for that. As the root
    hash is supplied in the handshake message, the crypto scheme in use
    will be known from the very beginning. As the root hash is the
-   content's identifier, different schemes of crypto cannot be mixed
-   in the same swarm; different swarms may distribute the same content
+   content's identifier, different schemes of crypto cannot be mixed in
+   the same swarm; different swarms may distribute the same content
    using different crypto.
 
 
@@ -830,10 +834,6 @@ References
 [RFC2119] Key words for use in RFCs to Indicate Requirement Levels
 [HTTP1MLN] Richard Jones. "A Million-user Comet Application with
     Mochiweb", Part 3. http://www.metabrew.com/article/
-    a-million-user-comet-application-with-mochiweb-part-3
-[MOLNAT] J.J.D. Mol, J.A. Pouwelse, D.H.J. Epema and H.J. Sips:
-    "Free-riding, Fairness, and Firewalls in P2P File-Sharing"
-[LUCNAT] submitted
  
 
 
@@ -842,6 +842,10 @@ Grishchenko             Expires October 12, 2010               [Page 15]
 Internet-Draft                   swift                        April 2010
 
 
+    a-million-user-comet-application-with-mochiweb-part-3
+[MOLNAT] J.J.D. Mol, J.A. Pouwelse, D.H.J. Epema and H.J. Sips:
+    "Free-riding, Fairness, and Firewalls in P2P File-Sharing"
+[LUCNAT] submitted
 [BINMAP] V. Grishchenko, J. Pouwelse: "Binmaps: hybridizing bitmaps
     and binary trees" http://bouillon.math.usu.ru/articles/
     binmaps-alenex.pdf
@@ -864,16 +868,12 @@ Internet-Draft                   swift                        April 2010
 Author's address
 
    Victor Grishchenko
-   TU Delft
+   TU Delft, EWI PDS
+   Mekelweg 4, HB 9.240
+   2628CD Delft
+   The Netherlands
 
    Email: victor.grishchenko@gmail.com
-
-
-
-
-
-
-
 
 
 
