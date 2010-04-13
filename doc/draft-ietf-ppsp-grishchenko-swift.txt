@@ -636,7 +636,12 @@ Internet-Draft                   swift                        April 2010
 
 4.5.  Peer exchange and NAT hole punching
 
-   Peer exchange messages are common for many peer-to-peer protocols. By exchanging peer IP addresses in gossip fashion, peers relieve central coordinating entities (the trackers) from unnecessary work. Following the example of BitTorrent, swift features two types of PEX messages: "peer connected" (type 5) and "peer disconnected" (type 6). Peers are represented as IPv4 address-port pairs:
+   Peer exchange messages are common for many peer-to-peer protocols. By
+   exchanging peer IP addresses in gossip fashion, peers relieve central
+   coordinating entities (the trackers) from unnecessary work. Following
+   the example of BitTorrent, swift features two types of PEX messages:
+   "peer connected" (type 5) and "peer disconnected" (type 6). Peers are
+   represented as IPv4 address-port pairs:
    05 7F000000 1F40
    (connected to 127.0.0.1:8000)
 
@@ -661,11 +666,6 @@ Internet-Draft                   swift                        April 2010
    certain ranges of data (e.g. BitTorrent's REQUEST message), live
    streaming protocols quite often do without to save round trips.
    Explicit requests are often needed for security purposes; consider
-   that BitTorrent can only verify hashes of complete pieces that might
-   consist of multiple blocks requested from many peers. As swift has no
-   such implications, it is supposed to work both ways. Namely, a peer
-   SHOULD send out requested pieces, while it also may send some other
-   data in case it runs out of requests or on some other reason. To
  
 
 
@@ -674,6 +674,11 @@ Grishchenko             Expires October 12, 2010               [Page 12]
 Internet-Draft                   swift                        April 2010
 
 
+   that BitTorrent can only verify hashes of complete pieces that might
+   consist of multiple blocks requested from many peers. As swift has no
+   such implications, it is supposed to work both ways. Namely, a peer
+   SHOULD send out requested pieces, while it also may send some other
+   data in case it runs out of requests or on some other reason. To
    emphasize that, request messages are named HINTs; their only purpose
    is to coordinate peers and to avoid unnecessary data retransmission.
    A peer SHOULD to process HINTs sequentially. HINT message type is 8.
@@ -717,17 +722,25 @@ Internet-Draft                   swift                        April 2010
    implementation for all peers.
 
 
-5.2.  UDP
-
-   Currently, swift-over-UDP is the default deployment option. Effectively, UDP allows to use IP with minimal overhead, it also allows userspace implementations.
-   Besides the classic 1KB packet scenario, the bin numbering allows to use swift over Jumbo frames/datagrams. Both data and acknowledgments may use e.g. 8KB packets instead of "standard" 1KB. Hashing scheme stays the same.
-   Using swift with 512 or 256-byte packets is theoretically possible with 64-bit byte-precise bin numbers, but IP fragmentation might be a better method to achieve the same result.
  
 
 
 Grishchenko             Expires October 12, 2010               [Page 13]
 
 Internet-Draft                   swift                        April 2010
+
+
+5.2.  UDP
+
+   Currently, swift-over-UDP is the default deployment option.
+   Effectively, UDP allows to use IP with minimal overhead, it also
+   allows userspace implementations. Besides the classic 1KB packet
+   scenario, the bin numbering allows to use swift over Jumbo
+   frames/datagrams. Both data and acknowledgments may use e.g. 8KB
+   packets instead of "standard" 1KB. Hashing scheme stays the same.
+   Using swift with 512 or 256-byte packets is theoretically possible
+   with 64-bit byte-precise bin numbers, but IP fragmentation might be a
+   better method to achieve the same result.
 
 
 5.3.  TCP
@@ -760,19 +773,6 @@ Internet-Draft                   swift                        April 2010
    64-bit hash message:
    44 000000000000000E 01234567890ABCDEF1234567890ABCDEF1234567
    Once 32-bit message is supported, its 64-bit version MUST be
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -476,6 +476,7 @@ message (type 7) to announce the fact:
 .ti 0
 4.5.  Peer exchange and NAT hole punching
 
+.fi
 Peer exchange messages are common for many peer-to-peer protocols. By exchanging peer IP addresses in gossip fashion, peers relieve central coordinating entities (the trackers) from unnecessary work. Following the example of BitTorrent, swift features two types of PEX messages: "peer connected" (type 5) and "peer disconnected" (type 6). Peers are represented as IPv4 address-port pairs:
 .nf
 05 7F000000 1F40
@@ -563,7 +564,7 @@ The most theoretically correct way is to run swift on top of IP, as another tran
 .ti 0
 5.2.  UDP
 
-.nf
+.fi
 Currently, swift-over-UDP is the default deployment option. Effectively, UDP allows to use IP with minimal overhead, it also allows userspace implementations.
 Besides the classic 1KB packet scenario, the bin numbering allows to use swift over Jumbo frames/datagrams. Both data and acknowledgments may use e.g. 8KB packets instead of "standard" 1KB. Hashing scheme stays the same.
 Using swift with 512 or 256-byte packets is theoretically possible with 64-bit byte-precise bin numbers, but IP fragmentation might be a better method to achieve the same result.
