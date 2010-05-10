@@ -10,6 +10,8 @@
 #define BINS_H
 #include "bin64.h"
 
+class iterator; // FIXME shame
+
 /** A binmap covering 2^64 range. Binmap is a hybrid of a bitmap (aka
     bit vector) and a binary tree. The key ability of a binmap is
     the aggregation of solid (all-0 or all-1) ranges. */
@@ -39,8 +41,23 @@ public:
     /** Set value for the bin. */
     void        set (bin64_t bin, fill_t val=FILLED); 
     
+    typedef enum {
+        OR_OP,
+        AND_OP,
+        REMOVE_OP,
+        COPY_OP
+    } bin_op_t;
+    
     /** Copy a range from another binmap. */
-    void        copy_range (binmap_t& origin, bin64_t range);
+    void        range_op (binmap_t& mask, bin64_t range, bin_op_t op);
+    void        range_copy (binmap_t& mask, bin64_t range)
+        {   range_op(mask, range, COPY_OP);   }
+    void        range_remove (binmap_t& mask, bin64_t range)
+        {   range_op(mask, range, REMOVE_OP);   }
+    void        range_or (binmap_t& mask, bin64_t range)
+        {   range_op(mask, range, OR_OP);   }
+    void        range_and (binmap_t& mask, bin64_t range)
+        {   range_op(mask, range, AND_OP);   }
     
     /** Find the leftmost bin within the specified range which is
         either filled or empty. */
@@ -96,6 +113,8 @@ public:
         right change places. Twisting is mostly needed for randomization.  */
     void        twist (uint64_t mask);
     
+    void        to_coarse_bitmap (void* bits, bin64_t range, uint8_t height);
+    
 private:
     
     /** Every 16th uint32 is a flag field denoting whether
@@ -143,6 +162,8 @@ private:
     
     static uint32_t split16to32(uint16_t half);
     static int join32to16(uint32_t cell);
+
+    void        map16 (uint16_t* target, bin64_t range, iterator& lead);
     
     friend class iterator;
 #ifdef FRIEND_TEST
@@ -177,7 +198,7 @@ public:
     void right() {to(1);}
     /** Move to the next defined (non-deep, flat) cell.
         If solid==true, move to a solid (0xffff/0x0) cell. */
-    bin64_t next (bool solid=false);
+    bin64_t next (bool solid=false, uint8_t min_layer=0);
     bin64_t bin() { return pos; }
     void towards(bin64_t bin) {
         bin64_t next = pos.towards(bin);

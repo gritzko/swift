@@ -179,15 +179,15 @@ uint16_t    binmap_t::alloc_cell () {
 }
 
 
-bin64_t iterator::next (bool need_solid) {
-    assert(!deep());
+bin64_t iterator::next (bool need_solid, uint8_t min_layer) {
+    assert( (!deep()) || (layer()==min_layer));
     while (pos.is_right())
         parent();
     //parent();
     //if (need_solid ? !solid() : deep())
     //    right();
     sibling();
-    while (need_solid ? !solid() : deep())
+    while ( (need_solid ? !solid() : deep()) && layer()>min_layer )
         left();
     return pos;
 }
@@ -403,7 +403,8 @@ bin64_t     binmap_t::find_filtered
         while ( 
                 fi.deep() ?
                 (ti.deep() || *ti!=stop)  :
-                (ti.deep() ? *fi!=FILLED : ( ((*ti^stop)&~*fi) && (*ti!=seek || *fi!=EMPTY) ) ) 
+                (ti.deep() ? *fi!=FILLED : 
+                    ( ((*ti^stop)&~*fi) && (*ti!=seek || *fi!=EMPTY) ) ) 
               ) 
         {
             ti.left(); fi.left();                
@@ -419,17 +420,28 @@ bin64_t     binmap_t::find_filtered
     return bin64_t::NONE;    
 }
 
-// FIXME unite with remove(); do bitwise()
-void        binmap_t::copy_range (binmap_t& origin, bin64_t range) { 
+void        binmap_t::range_op (binmap_t& mask, bin64_t range, bin_op_t op) {
     if (range==bin64_t::ALL)
-        range = bin64_t ( height>origin.height ? height : origin.height, 0 );
-    iterator zis(this,range,true), zat(&origin,range,true);
+        range = bin64_t ( height>mask.height ? height : mask.height, 0 );
+    iterator zis(this,range,true), zat(&mask,range,true);
     while (zis.pos.within(range)) {
         while (zis.deep() || zat.deep()) {
             zis.left(); zat.left();
         }
-        
-        *zis = *zat;
+
+        switch (op) {
+            case REMOVE_OP:
+                *zis &= ~*zat;
+                break;
+            case AND_OP:
+                *zis &= *zat;
+                break;
+            case COPY_OP:
+                *zis = *zat;
+                break;
+            case OR_OP:
+                *zis |= *zat;
+        }
         
         while (zis.pos.is_right()) {
             zis.parent(); zat.parent();
@@ -459,6 +471,40 @@ bool        binmap_t::is_solid (bin64_t range, fill_t val)  {
     while ( i.pos!=range && (i.deep() || !i.solid()) )
         i.towards(range);
     return i.solid() && (is_mixed(val) || *i==val);
+}
+
+
+void    binmap_t::map16 (uint16_t* target, bin64_t range, iterator& lead) {
+    while (!range.within(lead.pos))
+        lead.parent();
+    while (lead.pos!=range)
+        lead.towards(range);
+    if (!lead.deep()) {
+        *target = *lead;
+        return;
+    }
+    lead.left();
+    lead.left();
+    lead.left();
+    lead.left();
+    uint16_t shift = 1;
+    for(int i=0; i<16; i++) {
+        if (!lead.deep() && *lead==FILLED)
+            *target |= shift;
+        shift<<=1;
+        lead.next(false,range.layer()-4);
+    }
+}
+
+
+void    binmap_t::to_coarse_bitmap (void* bits, bin64_t range, uint8_t height) {
+    uint16_t* bits16 = (uint16_t*) bits;
+    iterator iter(this,range,true);
+    int height16 = range.layer()-height-4;
+    int wordwidth = 1 << height16;
+    int offset = range.offset() << height16;
+    for(int i=offset; i<offset+wordwidth; i++) 
+        map16(bits16+i,bin64_t(height+4,i),iter);
 }
 
 
@@ -517,3 +563,4 @@ void    binheap::push(bin64_t val) {
 binheap::~binheap() {
     free(heap_);
 }
+
