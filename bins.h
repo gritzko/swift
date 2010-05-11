@@ -163,7 +163,7 @@ private:
     static uint32_t split16to32(uint16_t half);
     static int join32to16(uint32_t cell);
 
-    void        map16 (uint16_t* target, bin64_t range, iterator& lead);
+    void        map16 (uint16_t* target, bin64_t range);
     
     friend class iterator;
 #ifdef FRIEND_TEST
@@ -198,7 +198,8 @@ public:
     void right() {to(1);}
     /** Move to the next defined (non-deep, flat) cell.
         If solid==true, move to a solid (0xffff/0x0) cell. */
-    bin64_t next (bool solid=false, uint8_t min_layer=0);
+    bin64_t next (bool stop_undeep=true, bool stop_solid=false, uint8_t stop_layer=0);
+    bin64_t next_solid () { return next(false, true,0); }
     bin64_t bin() { return pos; }
     void towards(bin64_t bin) {
         bin64_t next = pos.towards(bin);

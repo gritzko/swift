@@ -416,6 +416,18 @@ TEST(BinsTest,CoarseBitmap) {
     i32=0;
     rough.to_coarse_bitmap(&i32,bin64_t(6,0),1);
     EXPECT_EQ(1,i32);
+    
+    binmap_t ladder;
+    ladder.set(bin64_t(6,2));
+    ladder.set(bin64_t(5,2));
+    ladder.set(bin64_t(4,2));
+    ladder.set(bin64_t(3,2));
+    ladder.set(bin64_t(2,2));
+    ladder.set(bin64_t(1,2));
+    ladder.set(bin64_t(0,2));
+    i32=0;
+    ladder.to_coarse_bitmap(&i32,bin64_t(8,0),3);
+    EXPECT_EQ(0x00ff0f34,i32);
 }
 
 /*TEST(BinsTest,AddSub) {

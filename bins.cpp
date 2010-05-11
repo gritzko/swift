@@ -179,15 +179,17 @@ uint16_t    binmap_t::alloc_cell () {
 }
 
 
-bin64_t iterator::next (bool need_solid, uint8_t min_layer) {
-    assert( (!deep()) || (layer()==min_layer));
+bin64_t iterator::next (bool stop_undeep, bool stop_solid, uint8_t stop_layer) {
+    //assert( (!deep()) || (layer()==min_layer));
     while (pos.is_right())
         parent();
     //parent();
     //if (need_solid ? !solid() : deep())
     //    right();
     sibling();
-    while ( (need_solid ? !solid() : deep()) && layer()>min_layer )
+    while (     (!stop_undeep || deep()) && 
+                (!stop_solid || (deep() || !solid()) ) && 
+                (layer()>stop_layer)      )
         left();
     return pos;
 }
@@ -304,7 +306,7 @@ uint64_t binmap_t::mass () {
     while (!i.end()) {
         if (*i==binmap_t::FILLED)
             ret += i.pos.width();
-        i.next(true);
+        i.next_solid();
     }
     return ret;
 }
@@ -350,7 +352,7 @@ uint64_t*   binmap_t::get_stripes (int& count) {
             }
         }
 
-        i.next(true);
+        i.next_solid();
 
     }
 
@@ -474,11 +476,8 @@ bool        binmap_t::is_solid (bin64_t range, fill_t val)  {
 }
 
 
-void    binmap_t::map16 (uint16_t* target, bin64_t range, iterator& lead) {
-    while (!range.within(lead.pos))
-        lead.parent();
-    while (lead.pos!=range)
-        lead.towards(range);
+void    binmap_t::map16 (uint16_t* target, bin64_t range) {
+    iterator lead(this,range,true);
     if (!lead.deep()) {
         *target = *lead;
         return;
@@ -492,19 +491,18 @@ void    binmap_t::map16 (uint16_t* target, bin64_t range, iterator& lead) {
         if (!lead.deep() && *lead==FILLED)
             *target |= shift;
         shift<<=1;
-        lead.next(false,range.layer()-4);
+        lead.next(false,false,range.layer()-4);
     }
 }
 
 
 void    binmap_t::to_coarse_bitmap (void* bits, bin64_t range, uint8_t height) {
     uint16_t* bits16 = (uint16_t*) bits;
-    iterator iter(this,range,true);
     int height16 = range.layer()-height-4;
     int wordwidth = 1 << height16;
     int offset = range.offset() << height16;
-    for(int i=offset; i<offset+wordwidth; i++) 
-        map16(bits16+i,bin64_t(height+4,i),iter);
+    for(int i=0; i<wordwidth; i++) 
+        map16(bits16+i,bin64_t(height+4,offset+i));
 }
 
 
