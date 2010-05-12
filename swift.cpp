@@ -111,7 +111,7 @@ int main (int argc, char** argv) {
             quit("cant listen to %s\n",bindaddr.str())
     } else if (tracker!=Address() || http_gw!=Address()) { // leeching
         for (int i=0; i<=10; i++) {
-            bindaddr = Address((uint32_t)INADDR_ANY,1024+rand()%10000);
+            bindaddr = Address((uint32_t)INADDR_ANY,0);
             if (Listen(bindaddr)>0)
                 break;
             if (i==10)
