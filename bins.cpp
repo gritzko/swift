@@ -180,12 +180,8 @@ uint16_t    binmap_t::alloc_cell () {
 
 
 bin64_t iterator::next (bool stop_undeep, bool stop_solid, uint8_t stop_layer) {
-    //assert( (!deep()) || (layer()==min_layer));
     while (pos.is_right())
         parent();
-    //parent();
-    //if (need_solid ? !solid() : deep())
-    //    right();
     sibling();
     while (     (!stop_undeep || deep()) && 
                 (!stop_solid || (deep() || !solid()) ) && 

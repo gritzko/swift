@@ -7,7 +7,9 @@ STATE MACHINE
 * set priorities on ranges
 * small-progress update problem (aka peer nap)
   guarantee size of updates < x% of data, on both ends
-* SWIFT_MSGTYPE_RCVD SWIFT_MSGTYPE_SENT
+* pex is affected by peer nap
+* how will tracker aggregate pexes?
+* SWIFT_MSGTYPE_RCVD
 * HAVE ALL / HAVE NONE
 * aggregate ACKS (schedule for +x ms)
 * channel close msg (hs 0)
@@ -35,6 +37,7 @@ CACHING/FILES
 * move to 64-bit IO
 * Transfer(fd) constructor
 * think of sliding window(s)
+* the ability to sniff file without downloading
 
 MANIFOLD
 * all-swarm performance stats
@@ -69,4 +72,3 @@ OTHER
 * packing hashes into a single datagram (tracking 1000s)
 * partial channels / lightweight channels
 * socket array is misplaced
-* the invalid-hash bug

@@ -542,7 +542,7 @@ Peers running over TCP may not accept ACK messages, etc etc.
 4.8.  Directory lists
 
 .fi
-Directory list files MUST start with magic bytes ".\n..\n\n". The rest of the file is a newline-separated list of hashes and file names for the content of the directory. An example:
+Directory list files MUST start with magic bytes ".\n..\n". The rest of the file is a newline-separated list of hashes and file names for the content of the directory. An example:
 
 .nf
 \&.
