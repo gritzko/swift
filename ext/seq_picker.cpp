@@ -16,7 +16,7 @@ using namespace swift;
     is introduced to prevent synchronization among multiple channels. */
 class SeqPiecePicker : public PiecePicker {
     
-    binmap_t            ack_hint_out_;
+    binmap_t        ack_hint_out_;
     tbqueue         hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
@@ -25,7 +25,7 @@ public:
     
     SeqPiecePicker (FileTransfer* file_to_pick_from) : 
     transfer_(file_to_pick_from), ack_hint_out_(), twist_(0) {
-        ack_hint_out_.copy_range(file().ack_out(),bin64_t::ALL);
+        ack_hint_out_.range_copy(file().ack_out(),bin64_t::ALL);
     }
     virtual ~SeqPiecePicker() {}
     
@@ -39,7 +39,7 @@ public:
     
     virtual bin64_t Pick (binmap_t& offer, uint64_t max_width, tint expires) {
         while (hint_out_.size() && hint_out_.front().time<NOW-TINT_SEC*3/2) { // FIXME sec
-            ack_hint_out_.copy_range(file().ack_out(), hint_out_.front().bin);
+            ack_hint_out_.range_copy(file().ack_out(), hint_out_.front().bin);
             hint_out_.pop_front();
         }
         if (!file().size()) {
@@ -61,7 +61,7 @@ public:
             return hint; // TODO: end-game mode
         }
         if (!file().ack_out().is_empty(hint)) { // unhinted/late data
-            ack_hint_out_.copy_range(file().ack_out(), hint);
+            ack_hint_out_.range_copy(file().ack_out(), hint);
             goto retry;
         }
         while (hint.width()>max_width)
