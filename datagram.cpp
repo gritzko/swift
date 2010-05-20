@@ -27,6 +27,8 @@ tint Datagram::epoch = now/360000000LL*360000000LL; // make logs mergeable
 uint32_t Address::LOCALHOST = INADDR_LOOPBACK;
 uint64_t Datagram::dgrams_up=0, Datagram::dgrams_down=0,
          Datagram::bytes_up=0, Datagram::bytes_down=0;
+sckrwecb_t Datagram::sock_open[] = {};
+int Datagram::sock_count = 0;
 
 const char* tintstr (tint time) {
     if (time==0)
@@ -84,6 +86,27 @@ Address::Address(const char* ip_port) {
     }
 }
 
+    
+bool    Datagram::Listen3rdPartySocket (sckrwecb_t cb) {
+    int i=0;
+    while (i<sock_count && sock_open[i].sock!=cb.sock) i++;
+    if (i==sock_count)
+        if (i==DGRAM_MAX_SOCK_OPEN)
+            return false;
+        else
+            sock_count++;
+    sock_open[i]=cb;
+    //if (!cb.may_read && !cb.may_write && !cb.on_error)
+    //    sock_open[i] = sock_open[--sock_count];
+    return true;
+}
+
+    
+void Datagram::Shutdown () {
+    while (sock_count--)
+        Close(sock_open[sock_count].sock);
+}
+    
 
 int Datagram::Send () {
     int r = sendto(sock,(const char *)buf+offset,length-offset,0,
@@ -114,7 +137,7 @@ int Datagram::Recv () {
 }
 
 
-void Datagram::Wait (int sockcnt, socket_callbacks_t* sockets, tint usec) {
+SOCKET Datagram::Wait (tint usec) {
     struct timeval timeout;
     timeout.tv_sec = usec/TINT_SEC;
     timeout.tv_usec = usec%TINT_SEC;
@@ -123,31 +146,32 @@ void Datagram::Wait (int sockcnt, socket_callbacks_t* sockets, tint usec) {
     FD_ZERO(&rdfd);
     FD_ZERO(&wrfd);
     FD_ZERO(&errfd);
-    for(int i=0; i<sockcnt; i++) {
-        if (sockets[i].may_read!=0)
-            FD_SET(sockets[i].sock,&rdfd);
-        if (sockets[i].may_write!=0)
-            FD_SET(sockets[i].sock,&wrfd);
-        if (sockets[i].on_error!=0)
-            FD_SET(sockets[i].sock,&errfd);
-        if (sockets[i].sock>max_sock_fd)
-            max_sock_fd = sockets[i].sock;
+    for(int i=0; i<sock_count; i++) {
+        if (sock_open[i].may_read!=0)
+            FD_SET(sock_open[i].sock,&rdfd);
+        if (sock_open[i].may_write!=0)
+            FD_SET(sock_open[i].sock,&wrfd);
+        if (sock_open[i].on_error!=0)
+            FD_SET(sock_open[i].sock,&errfd);
+        if (sock_open[i].sock>max_sock_fd)
+            max_sock_fd = sock_open[i].sock;
     }
-    int sel = select(max_sock_fd+1, &rdfd, &wrfd, &errfd, &timeout);
+    SOCKET sel = select(max_sock_fd+1, &rdfd, &wrfd, &errfd, &timeout);
     Time();
     if (sel>0) {
-        for (int i=0; i<=sockcnt; i++) {
-            socket_callbacks_t& sct = sockets[i];
+        for (int i=0; i<=sock_count; i++) {
+            sckrwecb_t& sct = sock_open[i];
             if (sct.may_read && FD_ISSET(sct.sock,&rdfd))
                 (*(sct.may_read))(sct.sock);
-            if (sct.may_write && FD_ISSET(sockets[i].sock,&wrfd))
+            if (sct.may_write && FD_ISSET(sct.sock,&wrfd))
                 (*(sct.may_write))(sct.sock);
-            if (sct.on_error && FD_ISSET(sockets[i].sock,&errfd))
+            if (sct.on_error && FD_ISSET(sct.sock,&errfd))
                 (*(sct.on_error))(sct.sock);
         }
     } else if (sel<0) {
         print_error("select fails");
     }
+    return sel;
 }
 
 tint Datagram::Time () {
@@ -157,22 +181,30 @@ tint Datagram::Time () {
     return now = usec_time();
 }
 
-SOCKET Datagram::Bind (Address addr_) {
-    struct sockaddr_in addr = addr_;
+SOCKET Datagram::Bind (Address address, sckrwecb_t callbacks) {
+    struct sockaddr_in addr = address;
     SOCKET fd;
     int len = sizeof(struct sockaddr_in), sndbuf=1<<20, rcvbuf=1<<20;
-    #define dbnd_ensure(x) { if (!(x)) { print_error("binding fails"); close_socket(fd); return INVALID_SOCKET; } }
+    #define dbnd_ensure(x) { if (!(x)) { \
+        print_error("binding fails"); close_socket(fd); return INVALID_SOCKET; } }
     dbnd_ensure ( (fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0 );
     dbnd_ensure( make_socket_nonblocking(fd) );  // FIXME may remove this
     int enable = true;
-    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (setsockoptptr_t)&sndbuf, sizeof(int)) == 0 );
-    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (setsockoptptr_t)&rcvbuf, sizeof(int)) == 0 );
+    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_SNDBUF, 
+                             (setsockoptptr_t)&sndbuf, sizeof(int)) == 0 );
+    dbnd_ensure ( setsockopt(fd, SOL_SOCKET, SO_RCVBUF, 
+                             (setsockoptptr_t)&rcvbuf, sizeof(int)) == 0 );
     //setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (setsockoptptr_t)&enable, sizeof(int));
     dbnd_ensure ( ::bind(fd, (sockaddr*)&addr, len) == 0 );
+    callbacks.sock = fd;
+    Datagram::sock_open[Datagram::sock_count++] = callbacks;
     return fd;
 }
 
 void Datagram::Close (SOCKET sock) {
+    for(int i=0; i<Datagram::sock_count; i++)
+        if (Datagram::sock_open[i].sock==sock)
+            Datagram::sock_open[i] = Datagram::sock_open[--Datagram::sock_count];
     if (!close_socket(sock))
         print_error("on closing a socket");
 }

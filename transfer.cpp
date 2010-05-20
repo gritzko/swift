@@ -90,7 +90,7 @@ void            FileTransfer::OnPexIn (const Address& addr) {
             return; // already connected
     }
     if (hs_in_.size()<20) {
-        new Channel(this,Channel::default_socket(),addr);
+        new Channel(this,Datagram::default_socket(),addr);
     } else {
         pex_in_.push_back(addr);
         if (pex_in_.size()>1000)

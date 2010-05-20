@@ -551,7 +551,7 @@ void    Channel::Loop (tint howlong) {
 
             tint towait = min(limit,send_time) - NOW;
             dprintf("%s #0 waiting %lliusec\n",tintstr(),towait);
-            Datagram::Wait(socket_count,sockets,towait);
+            Datagram::Wait(towait);
             if (sender)  // get back to that later
                 send_queue.push(tintbin(send_time,sender->id()));
 

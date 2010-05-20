@@ -84,14 +84,14 @@ struct Address {
 };
 
 
-typedef void (*sock_cb_t) (SOCKET);
-struct socket_callbacks_t {
-    socket_callbacks_t (SOCKET s=0, sock_cb_t mr=NULL, sock_cb_t mw=NULL, sock_cb_t oe=NULL) :
+typedef void (*sockcb_t) (SOCKET);
+struct sckrwecb_t {
+    sckrwecb_t (SOCKET s=0, sockcb_t mr=NULL, sockcb_t mw=NULL, sockcb_t oe=NULL) :
         sock(s), may_read(mr), may_write(mw), on_error(oe) {}
     SOCKET sock;
-    sock_cb_t   may_read;
-    sock_cb_t   may_write;
-    sock_cb_t   on_error;
+    sockcb_t   may_read;
+    sockcb_t   may_write;
+    sockcb_t   on_error;
 };
 
 
@@ -106,19 +106,30 @@ class Datagram {
     int offset, length;
     uint8_t    buf[MAXDGRAMSZ*2];
 
+#define DGRAM_MAX_SOCK_OPEN 128
+    static int sock_count;
+    static sckrwecb_t sock_open[DGRAM_MAX_SOCK_OPEN];
+    
 public:
 
     /** bind to the address */
-    static SOCKET Bind(Address address);
+    static SOCKET Bind(Address address, sckrwecb_t callbacks=sckrwecb_t());
 
     /** close the port */
-    static void Close(int port);
+    static void Close(SOCKET sock);
 
     /** the current time */
     static tint Time();
 
     /** wait till one of the sockets has some io to do; usec is the timeout */
-    static void Wait (int sockcnt, socket_callbacks_t* sockets, tint usec=0);
+    static SOCKET Wait (tint usec);
+    
+    static bool Listen3rdPartySocket (sckrwecb_t cb) ;
+    
+    static void Shutdown ();
+    
+    static SOCKET default_socket() 
+        { return sock_count ? sock_open[0].sock : INVALID_SOCKET; }
 
     static tint now, epoch, start;
     static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;

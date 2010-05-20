@@ -323,7 +323,6 @@ namespace swift {
             return i<channels.size()?channels[i]:NULL;
         }
         static void CloseTransfer (FileTransfer* trans);
-        static SOCKET default_socket() { return sockets[0].sock; }
 
     protected:
         /** Channel id: index in the channel array. */
@@ -403,9 +402,6 @@ namespace swift {
 
         static PeerSelector* peer_selector;
 
-        #define SWFT_MAX_SOCK_OPEN 128
-        static socket_callbacks_t sockets[SWFT_MAX_SOCK_OPEN];
-        static int      socket_count;
         static tint     last_tick;
         static tbheap   send_queue;
 
@@ -417,7 +413,6 @@ namespace swift {
         friend void     AddPeer (Address address, const Sha1Hash& root);
         friend void     SetTracker(const Address& tracker);
         friend int      Open (const char*, const Sha1Hash&) ; // FIXME
-        friend bool     Listen3rdPartySocket (socket_callbacks_t);
 
     };
 
@@ -428,7 +423,7 @@ namespace swift {
     int     Listen (Address addr);
     /** Run send/receive loop for the specified amount of time. */
     void    Loop (tint till);
-    bool    Listen3rdPartySocket (socket_callbacks_t);
+    bool    Listen3rdPartySocket (sckrwecb_t);
     /** Stop listening to a port. */
     void    Shutdown (int sock_des=-1);
 

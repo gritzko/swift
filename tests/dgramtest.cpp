@@ -52,7 +52,7 @@ TEST(Datagram, BinaryTest) {
 	ASSERT_EQ(datalen,d.Send());
     SOCKET socks[1] = {socket};
     // Arno: timeout 0 gives undeterministic behaviour on win32
-	SOCKET waitsocket = Datagram::Wait(1,socks,1000000);
+	SOCKET waitsocket = Datagram::Wait(1000000);
 	ASSERT_EQ(socket,waitsocket);
 	Datagram rcv(waitsocket);
 	ASSERT_EQ(datalen,rcv.Recv());
@@ -91,7 +91,7 @@ TEST(Datagram,TwoPortTest) {
 
     SOCKET socks[2] = {sock1,sock2};
     // Arno: timeout 0 gives undeterministic behaviour on win32
-	EXPECT_EQ(sock2,Datagram::Wait(2,socks,1000000));
+	EXPECT_EQ(sock2,Datagram::Wait(1000000));
 	Datagram recv(sock2);
 	recv.Recv();
 	uint32_t test = recv.Pull32();

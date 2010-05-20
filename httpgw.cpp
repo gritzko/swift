@@ -49,7 +49,7 @@ void HttpGwCloseConnection (SOCKET sock) {
         *req = http_requests[--http_gw_reqs_open];
     }
     swift::close_socket(sock);
-    swift::Listen3rdPartySocket(socket_callbacks_t(sock));
+    swift::Datagram::Listen3rdPartySocket(sckrwecb_t(sock));
 }
 
 
@@ -76,12 +76,12 @@ void HttpGwMayWriteCallback (SOCKET sink) {
     } else {
         if (req->tosend==0) { // done; wait for new request
             dprintf("%s @%i done\n",tintstr(),req->id);
-            socket_callbacks_t wait_new_req(req->sink,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
-            swift::Listen3rdPartySocket (wait_new_req);
+            sckrwecb_t wait_new_req(req->sink,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
+            swift::Datagram::Listen3rdPartySocket (wait_new_req);
         } else { // wait for data
             dprintf("%s @%i waiting for data\n",tintstr(),req->id);
-            socket_callbacks_t wait_swift_data(req->sink,NULL,NULL,HttpGwCloseConnection);
-            swift::Listen3rdPartySocket(wait_swift_data);
+            sckrwecb_t wait_swift_data(req->sink,NULL,NULL,HttpGwCloseConnection);
+            swift::Datagram::Listen3rdPartySocket(wait_swift_data);
         }
     }
 }
@@ -92,9 +92,9 @@ void HttpGwSwiftProgressCallback (int transfer, bin64_t bin) {
         if (http_requests[httpc].transfer==transfer)
             if ( (bin.base_offset()<<10) == http_requests[httpc].offset ) {
                 dprintf("%s @%i progress: %s\n",tintstr(),http_requests[httpc].id,bin.str());
-                socket_callbacks_t maywrite_callbacks
+                sckrwecb_t maywrite_callbacks
                         (http_requests[httpc].sink,NULL,HttpGwMayWriteCallback,HttpGwCloseConnection);
-                Listen3rdPartySocket (maywrite_callbacks);
+                Datagram::Listen3rdPartySocket (maywrite_callbacks);
             }
 }
 
@@ -182,8 +182,8 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
         HttpGwFirstProgressCallback(file,bin64_t(0,0));
     } else {
         swift::AddProgressCallback(file,&HttpGwFirstProgressCallback);
-        socket_callbacks_t install (http_conn,NULL,NULL,HttpGwCloseConnection);
-        swift::Listen3rdPartySocket(install);
+        sckrwecb_t install (http_conn,NULL,NULL,HttpGwCloseConnection);
+        swift::Datagram::Listen3rdPartySocket(install);
     }
 }
 
@@ -199,9 +199,9 @@ void HttpGwNewConnectionCallback (SOCKET serv) {
     }
     make_socket_nonblocking(conn);
     // submit 3rd party socket to the swift loop
-    socket_callbacks_t install
+    sckrwecb_t install
         (conn,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
-    swift::Listen3rdPartySocket(install);
+    swift::Datagram::Listen3rdPartySocket(install);
 }
 
 
@@ -209,7 +209,7 @@ void HttpGwError (SOCKET s) {
     print_error("httpgw is dead");
     dprintf("%s @0 closed http gateway\n",tintstr());
     close_socket(s);
-    swift::Listen3rdPartySocket(socket_callbacks_t(s));
+    swift::Datagram::Listen3rdPartySocket(sckrwecb_t(s));
 }
 
 
@@ -231,7 +231,8 @@ SOCKET InstallHTTPGateway (Address bind_to) {
     gw_ensure ( 0==bind(fd, (sockaddr*)&(bind_to.addr), sizeof(struct sockaddr_in)) );
     gw_ensure (make_socket_nonblocking(fd));
     gw_ensure ( 0==listen(fd,8) );
-    socket_callbacks_t install_http(fd,HttpGwNewConnectionCallback,NULL,HttpGwError);
-    gw_ensure (swift::Listen3rdPartySocket(install_http));
+    sckrwecb_t install_http(fd,HttpGwNewConnectionCallback,NULL,HttpGwError);
+    gw_ensure (swift::Datagram::Listen3rdPartySocket(install_http));
     dprintf("%s @0 installed http gateway on %s\n",tintstr(),bind_to.str());
+    return fd;
 }
