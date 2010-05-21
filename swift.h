@@ -204,6 +204,7 @@ namespace swift {
         friend void    Close (int fd) ;
         friend void AddProgressCallback (int transfer,TransferProgressCallback cb);
         friend void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
+        friend void ExternallyRetrieved (int transfer,bin64_t piece);
     };
 
 
@@ -220,6 +221,7 @@ namespace swift {
          *  @param  expires     (not used currently) when to consider request expired
          *  @return             the bin number to request */
         virtual bin64_t Pick (binmap_t& offered, uint64_t max_width, tint expires) = 0;
+        virtual void LimitRange (bin64_t range) = 0;
         virtual ~PiecePicker() {}
     };
 
@@ -456,6 +458,7 @@ namespace swift {
 
     void AddProgressCallback (int transfer,TransferProgressCallback cb);
     void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
+    void ExternallyRetrieved (int transfer,bin64_t piece);
 
     //uint32_t Width (const tbinvec& v);
 

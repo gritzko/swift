@@ -20,10 +20,11 @@ class SeqPiecePicker : public PiecePicker {
     tbqueue         hint_out_;
     FileTransfer*   transfer_;
     uint64_t        twist_;
+    bin64_t         range_;
     
 public:
     
-    SeqPiecePicker (FileTransfer* file_to_pick_from) : 
+    SeqPiecePicker (FileTransfer* file_to_pick_from) : range_(bin64_t::ALL),
     transfer_(file_to_pick_from), ack_hint_out_(), twist_(0) {
         ack_hint_out_.range_copy(file().ack_out(),bin64_t::ALL);
     }
@@ -35,6 +36,10 @@ public:
     
     virtual void Randomize (uint64_t twist) {
         twist_ = twist;
+    }
+
+    virtual void LimitRange (bin64_t range) {
+        range_ = range;
     }
     
     virtual bin64_t Pick (binmap_t& offer, uint64_t max_width, tint expires) {
@@ -51,7 +56,7 @@ public:
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
         }
-        bin64_t hint = offer.find_filtered (ack_hint_out_,bin64_t::ALL,binmap_t::FILLED);
+        bin64_t hint = offer.find_filtered (ack_hint_out_,range_,binmap_t::FILLED);
         if (twist_) {
             hint = hint.twisted(twist_);
             offer.twist(0);

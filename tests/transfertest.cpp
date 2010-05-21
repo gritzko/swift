@@ -102,6 +102,7 @@ TEST(TransferTest,TransferFile) {
         uint8_t memo = *buf;
         *buf = 'z';
         EXPECT_FALSE(leech->OfferData(next, (char*)buf, len));
+        fprintf(stderr,"kidding\n");
         *buf = memo;
         EXPECT_TRUE(leech->OfferData(next, (char*)buf, len));
     }

@@ -48,6 +48,14 @@ void swift::AddProgressCallback (int transfer, TransferProgressCallback cb) {
 }
 
 
+void swift::ExternallyRetrieved (int transfer,bin64_t piece) {
+    FileTransfer* trans = FileTransfer::file(transfer);
+    if (!trans)
+        return;
+    trans->ack_out().set(piece); // that easy
+}
+
+
 void swift::RemoveProgressCallback (int transfer, TransferProgressCallback cb) {
     FileTransfer* trans = FileTransfer::file(transfer);
     if (!trans)
