@@ -440,6 +440,14 @@ TEST(BinsTest,CoarseBitmap) {
     bin.to_coarse_bitmap(i16,bin64_t(7,0),3);
     EXPECT_EQ(1,i32);
     
+    i32 = 0;
+    bin.to_coarse_bitmap(i16,bin64_t(4,0),3);
+    EXPECT_EQ(1,i32);
+    
+    i32 = 0;
+    bin.to_coarse_bitmap(i16,bin64_t(2,0),1);
+    EXPECT_EQ(3,i32&3);
+    
 }
 
 /*TEST(BinsTest,AddSub) {

@@ -114,7 +114,7 @@ public:
     void        twist (uint64_t mask);
     
     /** Convert binmap to a conventional flat bitmap; only bits corresponding
-        to solid filled bins are set to 1. Won't work for ranges < 16 bit.
+        to solid filled bins are set to 1.
         @param range  the bin (the range) to cover
         @param height aggregation level; use 2**height bins (2**height base
                 layer bits per one bitmap bit). 
