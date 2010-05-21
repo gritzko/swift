@@ -401,20 +401,20 @@ TEST(BinsTest,RangeOpTest) {
 TEST(BinsTest,CoarseBitmap) {
     binmap_t b;
     b.set(bin64_t(4,0));
-    uint32_t i32;
-    b.to_coarse_bitmap(&i32,bin64_t(5,0),0);
+    union {uint16_t i16[2]; uint32_t i32;};
+    b.to_coarse_bitmap(i16,bin64_t(5,0),0);
     EXPECT_EQ((1<<16)-1,i32);
     
     b.set(bin64_t(14,0));
     i32=0;
-    b.to_coarse_bitmap(&i32,bin64_t(15,0),10);
+    b.to_coarse_bitmap(i16,bin64_t(15,0),10);
     EXPECT_EQ((1<<16)-1,i32);
     
     binmap_t rough;
     rough.set(bin64_t(1,0));
     rough.set(bin64_t(0,2));
     i32=0;
-    rough.to_coarse_bitmap(&i32,bin64_t(6,0),1);
+    rough.to_coarse_bitmap(i16,bin64_t(6,0),1);
     EXPECT_EQ(1,i32);
     
     binmap_t ladder;
@@ -426,8 +426,20 @@ TEST(BinsTest,CoarseBitmap) {
     ladder.set(bin64_t(1,2));
     ladder.set(bin64_t(0,2));
     i32=0;
-    ladder.to_coarse_bitmap(&i32,bin64_t(8,0),3);
+    ladder.to_coarse_bitmap(i16,bin64_t(8,0),3);
     EXPECT_EQ(0x00ff0f34,i32);
+    
+    binmap_t bin;
+    bin.set(bin64_t(3,0));
+    bin.set(bin64_t(0,8));
+    i32 = 0;
+    bin.to_coarse_bitmap(i16,bin64_t(4,0),0);
+    EXPECT_EQ((1<<9)-1,i32);
+    
+    i32 = 0;
+    bin.to_coarse_bitmap(i16,bin64_t(7,0),3);
+    EXPECT_EQ(1,i32);
+    
 }
 
 /*TEST(BinsTest,AddSub) {

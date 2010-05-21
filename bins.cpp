@@ -492,13 +492,13 @@ void    binmap_t::map16 (uint16_t* target, bin64_t range) {
 }
 
 
-void    binmap_t::to_coarse_bitmap (void* bits, bin64_t range, uint8_t height) {
-    uint16_t* bits16 = (uint16_t*) bits;
+void    binmap_t::to_coarse_bitmap (uint16_t* bits, bin64_t range, uint8_t height) {
+    assert(range.layer()-height>=4);
     int height16 = range.layer()-height-4;
-    int wordwidth = 1 << height16;
+    int wordwidth = height16 > 0 ? (1 << height16) : 1;
     int offset = range.offset() << height16;
     for(int i=0; i<wordwidth; i++) 
-        map16(bits16+i,bin64_t(height+4,offset+i));
+        map16(bits+i,bin64_t(height+4,offset+i));
 }
 
 

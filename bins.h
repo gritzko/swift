@@ -113,7 +113,14 @@ public:
         right change places. Twisting is mostly needed for randomization.  */
     void        twist (uint64_t mask);
     
-    void        to_coarse_bitmap (void* bits, bin64_t range, uint8_t height);
+    /** Convert binmap to a conventional flat bitmap; only bits corresponding
+        to solid filled bins are set to 1. Won't work for ranges < 16 bit.
+        @param range  the bin (the range) to cover
+        @param height aggregation level; use 2**height bins (2**height base
+                layer bits per one bitmap bit). 
+        @param bits   uint16_t array to put bitmap into; must have enough
+                      of space, i.e. 2**(range.layer()-height-4) cells.  */
+    void        to_coarse_bitmap (uint16_t* bits, bin64_t range, uint8_t height);
     
 private:
     
