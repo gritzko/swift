@@ -123,7 +123,15 @@ namespace swift {
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
-    typedef void (*TransferProgressCallback) (int transfer, bin64_t bin);
+    struct TransferProgressCallback {
+        typedef void (*callback_t) (int transfer, bin64_t bin);
+        /** The function to invoke. */
+        callback_t  cb;
+        /** aggregation level (do not report smaller events). */
+        uint8_t     agg;
+        TransferProgressCallback(callback_t callback) : cb(callback), agg(0) {}
+        TransferProgressCallback() : cb(NULL), agg(0) {}
+    };
 
 
     /** A class representing single file transfer. */

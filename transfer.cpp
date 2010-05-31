@@ -61,7 +61,7 @@ void swift::RemoveProgressCallback (int transfer, TransferProgressCallback cb) {
     if (!trans)
         return;
     for(int i=0; i<trans->cb_installed; i++)
-        if (trans->callbacks[i]==cb)
+        if (trans->callbacks[i].cb==cb.cb)
             trans->callbacks[i]=trans->callbacks[--trans->cb_installed];
 }
 
