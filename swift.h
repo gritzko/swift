@@ -129,7 +129,8 @@ namespace swift {
         callback_t  cb;
         /** aggregation level (do not report smaller events). */
         uint8_t     agg;
-        TransferProgressCallback(callback_t callback) : cb(callback), agg(0) {}
+        TransferProgressCallback(callback_t callback, uint8_t aggregate=0) 
+            : cb(callback), agg(aggregate) {}
         TransferProgressCallback() : cb(NULL), agg(0) {}
     };
 
