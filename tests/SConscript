@@ -45,22 +45,22 @@ env.Program(
     LIBS=libs,
     LIBPATH=libpath )
 
-env.Program( 
-    target='ledbattest',
-    source=['ledbattest.cpp'],
-    CPPPATH=cpppath,
-    LIBS=libs,
-    LIBPATH=libpath )
+#env.Program( 
+#    target='ledbattest',
+#    source=['ledbattest.cpp'],
+#    CPPPATH=cpppath,
+#    LIBS=libs,
+#    LIBPATH=libpath )
 
 
-if sys.platform != "win32":
-    # Arno: Needs getopt
-    env.Program( 
-        target='ledbattest2',
-        source=['ledbattest2.cpp'],
-        CPPPATH=cpppath,
-        LIBS=libs,
-        LIBPATH=libpath )
+#if sys.platform != "win32":
+#    # Arno: Needs getopt
+#    env.Program( 
+#        target='ledbattest2',
+#        source=['ledbattest2.cpp'],
+#        CPPPATH=cpppath,
+#        LIBS=libs,
+#        LIBPATH=libpath )
 
 env.Program( 
     target='freemap',

@@ -56,7 +56,11 @@ public:
             offer.twist(twist_);
             ack_hint_out_.twist(twist_);
         }
-        bin64_t hint = offer.find_filtered (ack_hint_out_,range_,binmap_t::FILLED);
+        bin64_t range_tw = bin64_t::ALL;
+        if (range_!=bin64_t::ALL)
+            range_tw = range_.twisted(twist_);
+        bin64_t hint = offer.find_filtered
+            (ack_hint_out_,range_tw,binmap_t::FILLED);
         if (twist_) {
             hint = hint.twisted(twist_);
             offer.twist(0);
