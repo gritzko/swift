@@ -103,7 +103,7 @@ void HttpGwFirstProgressCallback (int transfer, bin64_t bin) {
     if (bin!=bin64_t(0,0)) // need the first packet
         return;
     swift::RemoveProgressCallback(transfer,&HttpGwFirstProgressCallback);
-    swift::AddProgressCallback(transfer,&HttpGwSwiftProgressCallback);
+    swift::AddProgressCallback(transfer,&HttpGwSwiftProgressCallback,0);
     for (int httpc=0; httpc<http_gw_reqs_open; httpc++) {
         http_gw_t * req = http_requests + httpc;
         if (req->transfer==transfer && req->tosend==0) { // FIXME states
@@ -181,7 +181,7 @@ void HttpGwNewRequestCallback (SOCKET http_conn){
     if (swift::Size(file)) {
         HttpGwFirstProgressCallback(file,bin64_t(0,0));
     } else {
-        swift::AddProgressCallback(file,&HttpGwFirstProgressCallback);
+        swift::AddProgressCallback(file,&HttpGwFirstProgressCallback,0);
         sckrwecb_t install (http_conn,NULL,NULL,HttpGwCloseConnection);
         swift::Datagram::Listen3rdPartySocket(install);
     }

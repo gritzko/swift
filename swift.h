@@ -123,16 +123,7 @@ namespace swift {
     class PiecePicker;
     class CongestionController;
     class PeerSelector;
-    struct TransferProgressCallback {
-        typedef void (*callback_t) (int transfer, bin64_t bin);
-        /** The function to invoke. */
-        callback_t  cb;
-        /** aggregation level (do not report smaller events). */
-        uint8_t     agg;
-        TransferProgressCallback(callback_t callback, uint8_t aggregate=0) 
-            : cb(callback), agg(aggregate) {}
-        TransferProgressCallback() : cb(NULL), agg(0) {}
-    };
+    typedef void (*ProgressCallback) (int transfer, bin64_t bin);
 
 
     /** A class representing single file transfer. */
@@ -197,7 +188,8 @@ namespace swift {
         tint            init_time_;
 
         #define SWFT_MAX_TRANSFER_CB 8
-        TransferProgressCallback    callbacks[SWFT_MAX_TRANSFER_CB];
+        ProgressCallback callbacks[SWFT_MAX_TRANSFER_CB];
+        uint8_t         cb_agg[SWFT_MAX_TRANSFER_CB];
         int             cb_installed;
 
     public:
@@ -211,8 +203,8 @@ namespace swift {
         friend uint64_t  SeqComplete (int fdes);
         friend int     Open (const char* filename, const Sha1Hash& hash) ;
         friend void    Close (int fd) ;
-        friend void AddProgressCallback (int transfer,TransferProgressCallback cb);
-        friend void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
+        friend void AddProgressCallback (int transfer,ProgressCallback cb,uint8_t agg);
+        friend void RemoveProgressCallback (int transfer,ProgressCallback cb);
         friend void ExternallyRetrieved (int transfer,bin64_t piece);
     };
 
@@ -465,8 +457,8 @@ namespace swift {
     /***/
     int       Find (Sha1Hash hash);
 
-    void AddProgressCallback (int transfer,TransferProgressCallback cb);
-    void RemoveProgressCallback (int transfer,TransferProgressCallback cb);
+    void AddProgressCallback (int transfer,ProgressCallback cb,uint8_t agg);
+    void RemoveProgressCallback (int transfer,ProgressCallback cb);
     void ExternallyRetrieved (int transfer,bin64_t piece);
 
     //uint32_t Width (const tbinvec& v);

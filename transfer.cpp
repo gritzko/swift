@@ -40,10 +40,11 @@ void    Channel::CloseTransfer (FileTransfer* trans) {
 }
 
 
-void swift::AddProgressCallback (int transfer, TransferProgressCallback cb) {
+void swift::AddProgressCallback (int transfer,ProgressCallback cb,uint8_t agg) {
     FileTransfer* trans = FileTransfer::file(transfer);
     if (!trans)
         return;
+    trans->cb_agg[trans->cb_installed] = agg;
     trans->callbacks[trans->cb_installed++] = cb;
 }
 
@@ -56,12 +57,12 @@ void swift::ExternallyRetrieved (int transfer,bin64_t piece) {
 }
 
 
-void swift::RemoveProgressCallback (int transfer, TransferProgressCallback cb) {
+void swift::RemoveProgressCallback (int transfer, ProgressCallback cb) {
     FileTransfer* trans = FileTransfer::file(transfer);
     if (!trans)
         return;
     for(int i=0; i<trans->cb_installed; i++)
-        if (trans->callbacks[i].cb==cb.cb)
+        if (trans->callbacks[i]==cb)
             trans->callbacks[i]=trans->callbacks[--trans->cb_installed];
 }
 

@@ -447,6 +447,13 @@ TEST(BinsTest,CoarseBitmap) {
     i32 = 0;
     bin.to_coarse_bitmap(i16,bin64_t(2,0),1);
     EXPECT_EQ(3,i32&3);
+
+    uint64_t bigint;
+    bigint = 0;
+    binmap_t bm;
+    bm.set(bin64_t(6,0));
+    bm.to_coarse_bitmap((uint16_t*)&bigint,bin64_t(6,0),0);
+    EXPECT_EQ( 0xffffffffffffffffULL, bigint );
     
 }
 
