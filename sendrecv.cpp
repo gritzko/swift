@@ -328,7 +328,7 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
     bin64_t cover = transfer().ack_out().cover(pos);
     for(int i=0; i<transfer().cb_installed; i++)
         if (cover.layer()>=transfer().cb_agg[i])
-            transfer().callbacks[i](transfer().fd(),pos);  // FIXME
+            transfer().callbacks[i](transfer().fd(),cover);  // FIXME
     data_in_.bin = pos;
     if (pos!=bin64_t::NONE) {
         if (last_data_in_time_) {
