@@ -13,12 +13,21 @@ see doc/index.html for marketing stuff, ideas and rants
         d1502706c46779d361a1d562a10da0a45c4c40e5 -f \
         trailer.ogg
         
-    ...to retrieve video and save it to a file, or...
+    ...to retrieve video and save it to a file.
 
-        ./swift -t mfold.libswift.org:20000 -h \
-        d1502706c46779d361a1d562a10da0a45c4c40e5 -r . \
-        -h 8080
-        
-    ...and then point your browser at
-    
-        http://localhost:8080/d1502706c46779d361a1d562a10da0a45c4c40e5
+    Alternatively, you might play with the HTTP gateway, the preliminary
+    version. First, run the seeder-tracker: 
+
+        $ ./swift -f ~/Downloads/big_buck_bunny_480p_stereo.ogg -l 0.0.0.0:20000
+        Root hash: 7c462ad1d980ba44ab4b819e29004eb0bf6e6d5f
+
+    ...then you may try running the swift-HTTP gateway...
+
+        ./swift -t localhost:20000 -g 0.0.0.0:8080 -w
+
+    ...and finally you may point your browser at the gateway...
+
+        http://localhost:8080/7c462ad1d980ba44ab4b819e29004eb0bf6e6d5f
+
+    If you use an HTML5 browser (Chrome preferred), you are likely to see
+    the bunny trailer at this point...

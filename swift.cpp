@@ -39,7 +39,7 @@ int main (int argc, char** argv) {
     Address bindaddr;
     Address tracker;
     Address http_gw;
-    tint wait_time = -1;
+    tint wait_time = 0;
     
     LibraryInit();
     
@@ -64,8 +64,7 @@ int main (int argc, char** argv) {
                 bindaddr = Address(optarg);
                 if (bindaddr==Address())
                     quit("address must be hostname:port, ip:port or just port\n");
-                if (wait_time==-1)
-                    wait_time = TINT_NEVER; // seed
+                wait_time = TINT_NEVER;
                 break;
             case 't':
                 tracker = Address(optarg);
@@ -85,7 +84,6 @@ int main (int argc, char** argv) {
                     wait_time = TINT_NEVER; // seed
                 break;
             case 'w':
-                wait_time = TINT_NEVER;
                 if (optarg) {
                     char unit = 'u';
                     if (sscanf(optarg,"%lli%c",&wait_time,&unit)!=2)
@@ -99,7 +97,8 @@ int main (int argc, char** argv) {
                         case 'u': break;
                         default:  quit("time format: 1234[umsMHD], e.g. 1D = one day\n");
                     }
-                }
+                } else
+                    wait_time = TINT_NEVER;
                 break;
         }
 
@@ -136,7 +135,7 @@ int main (int argc, char** argv) {
         printf("Root hash: %s\n", RootMerkleHash(file).hex().c_str());
     }
 
-    if (bindaddr==Address() && file==-1) {
+    if (bindaddr==Address() && file==-1 && http_gw==Address()) {
         fprintf(stderr,"Usage:\n");
         fprintf(stderr,"  -h, --hash\troot Merkle hash for the transmission\n");
         fprintf(stderr,"  -f, --file\tname of file to use (root hash by default)\n");
@@ -146,13 +145,13 @@ int main (int argc, char** argv) {
         fprintf(stderr,"  -p, --progress\treport transfer progress\n");
         fprintf(stderr,"  -g, --http\t[ip:|host:]port to bind HTTP gateway to (default localhost:8080)\n");
         fprintf(stderr,"  -w, --wait\tlimit running time, e.g. 1[DHMs] (default: infinite with -l, -g)\n");
+        return 1;
     }
 
     tint start_time = NOW;
     
-    while ( bindaddr!=Address() &&
-            ( ( file>=0 && !IsComplete(file) ) ||
-              ( start_time+wait_time > NOW ) )   ) {
+    while ( (file>=0 && !IsComplete(file)) ||
+            (start_time+wait_time>NOW)   ) {
         swift::Loop(TINT_SEC);
         if (report_progress && file>=0) {
             fprintf(stderr,

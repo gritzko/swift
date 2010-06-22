@@ -76,7 +76,8 @@ void HttpGwMayWriteCallback (SOCKET sink) {
     } else {
         if (req->tosend==0) { // done; wait for new request
             dprintf("%s @%i done\n",tintstr(),req->id);
-            sckrwecb_t wait_new_req(req->sink,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
+            sckrwecb_t wait_new_req
+              (req->sink,HttpGwNewRequestCallback,NULL,HttpGwCloseConnection);
             swift::Datagram::Listen3rdPartySocket (wait_new_req);
         } else { // wait for data
             dprintf("%s @%i waiting for data\n",tintstr(),req->id);
@@ -93,7 +94,8 @@ void HttpGwSwiftProgressCallback (int transfer, bin64_t bin) {
             if ( (bin.base_offset()<<10) == http_requests[httpc].offset ) {
                 dprintf("%s @%i progress: %s\n",tintstr(),http_requests[httpc].id,bin.str());
                 sckrwecb_t maywrite_callbacks
-                        (http_requests[httpc].sink,NULL,HttpGwMayWriteCallback,HttpGwCloseConnection);
+                        (http_requests[httpc].sink,NULL,
+                         HttpGwMayWriteCallback,HttpGwCloseConnection);
                 Datagram::Listen3rdPartySocket (maywrite_callbacks);
             }
 }
@@ -113,7 +115,7 @@ void HttpGwFirstProgressCallback (int transfer, bin64_t bin) {
                 "HTTP/1.1 200 OK\r\n"\
                 "Connection: keep-alive\r\n"\
                 "Content-Type: video/ogg\r\n"\
-                "X-Content-Duration: 32\r\n"\
+                /*"X-Content-Duration: 32\r\n"*/\
                 "Content-Length: %lli\r\n"\
                 "Accept-Ranges: bytes\r\n"\
                 "\r\n",
