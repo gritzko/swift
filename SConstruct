@@ -89,14 +89,20 @@ if DEBUG:
 	env.Append(CXXFLAGS="-DDEBUG")
 
 env.StaticLibrary (
-    target= target,
+    target='libswift',
     source = source,
     LIBS=libs,
     LIBPATH=libpath )
+
+env.Program(
+   target='swift',
+   source=['swift.cpp','httpgw.cpp'],
+   CPPPATH=cpppath,
+   LIBS=[libs,'libswift'],
+   LIBPATH=libpath+':.' )
 
 Export("env")
 Export("libs")
 Export("libpath")
 Export("DEBUG")
 SConscript('tests/SConscript')
-SConscript('exec/SConscript')

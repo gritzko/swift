@@ -48,11 +48,8 @@ MANIFOLD
 * add NATs to the setup
 * recover mfold.libswift.org
 * integrate Windowses
-* add WiFi nodes
 
 API
-* notification if data is retrieved by an external code
-* events on data retrieval
 * pluggable storage
 
 NAT
@@ -71,4 +68,8 @@ OTHER
 * Gertjan: separate peer from channel? cng ctrl per peer ?
 * packing hashes into a single datagram (tracking 1000s)
 * partial channels / lightweight channels
-* socket array is misplaced
+
+THOUGHTS
+* 6 degrees of sep = 3-hop TorrentSmell
+* 60% immediately not connectable
+* support traffic

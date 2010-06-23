@@ -40,7 +40,7 @@ tint    Channel::SwitchSendControl (int control_mode) {
             SEND_CONTROL_MODES[send_control_],SEND_CONTROL_MODES[control_mode]);
     switch (control_mode) {
         case KEEP_ALIVE_CONTROL:
-            send_interval_ = max(TINT_SEC/10,rtt_avg_);
+            send_interval_ = rtt_avg_; //max(TINT_SEC/10,rtt_avg_);
             dev_avg_ = max(TINT_SEC,rtt_avg_);
             data_out_cap_ = bin64_t::ALL;
             cwnd_ = 1;
