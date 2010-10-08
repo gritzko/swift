@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 $SERVER=shift;
+%PORTS = ();
 %HOSTS = ();
 %CHANN = ( "#0" => "none" );
 %EVENTS = ( "#0" => {"+hs"=>0} );
@@ -13,13 +14,24 @@ $SERVER=shift;
 %OWDLOG = ();
 %TDATALOG = ();
 %RDATALOG = ();
+%INDATALOG = ();
 $SENTB = 0;
 $RCVDB = 0;
 
+open(SRVP,$ENV{"HOME"}."/swift/mfold/servers.txt") or die;
+while (<SRVP>) {
+    /(\S+):(\d+)/ or next;
+    $PORTS{$1} = $2;
+}
+close SRVP;
+
 open(SRV,$ENV{"HOME"}."/.ssh/config") or die;
 while (<SRV>) {
-    $srvname=$1 if /Host (\S+)/;
-    $HOSTS{$1}=$srvname if /HostName (\S+)/;
+    if (/Host (\S+)/) {
+	$srvname=$1;
+	$port = $PORTS{$srvname};
+    }
+    $HOSTS{$1}{$port}=$srvname if /HostName (\S+)/ && $port;
 }
 close SRV;
 
@@ -34,9 +46,10 @@ while (<>) {
     $time =~ /^(\d+)_(\d+)_(\d+)_(\d+)/;
     my $ms=$1*60; $ms=($ms+$2)*60; $ms=($ms+$3)*1000; $ms+=$4;
     if ($event eq "sent") {
-        $rest =~ /(\d+)b ([\d\.]+):/;
+        $rest =~ /(\d+)b ([\d\.]+):(\d+):/;
         $ip = $2;
-        $host = $HOSTS{$ip};
+	$port = $3;
+	$host = $HOSTS{$ip}{$port};
         #$SENT{$h} = 0 if not exists $SENT{$h};
         $SENT{$host} += $1;
         $SENTB += $1;
@@ -51,35 +64,42 @@ while (<>) {
     } elsif ($event eq "sendctrl") {
         if ($rest =~ /cwnd (\d+\.\d+).*data_out (\d+)/) {
             if (not exists $CWNDLOG{$host}) {
-                open(my $handle, '>', "harvest/$SERVER-$host-cwnd.log") or die;
+                open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-cwnd.log") or die;
                 $CWNDLOG{$host} = $handle;
             }
             print {$CWNDLOG{$host}} "$ms\t$1\t$2\n";
         } elsif ($rest =~ /ledbat (\-?\d+)\-(\-?\d+)/) {
             if (not exists $OWDLOG{$host}) {
-                open(my $handle, '>', "harvest/$SERVER-$host-owd.log") or die;
+                open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-owd.log") or die;
                 $OWDLOG{$host} = $handle;
             }
             print {$OWDLOG{$host}} "$ms\t$1\t$2\n";
         } elsif ($rest =~ /rtt (\d+) dev (\d+)/) {
             if (not exists $RTTLOG{$host}) {
-                open(my $handle, '>', "harvest/$SERVER-$host-rtt.log") or die;
+                open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-rtt.log") or die;
                 $RTTLOG{$host} = $handle;
             }
             print {$RTTLOG{$host}} "$ms\t$1\t$2\n";
         }
     } elsif ($event eq "Tdata") {
         if (not exists $TDATALOG{$host}) {
-            open(my $handle, '>', "harvest/$SERVER-$host-tdata.log") or die;
+            open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-tdata.log") or die;
             $TDATALOG{$host} = $handle;
         }
         print {$TDATALOG{$host}} "$ms\n";
     } elsif ($event eq "Rdata") {
         if (not exists $RDATALOG{$host}) {
-            open(my $handle, '>', "harvest/$SERVER-$host-rdata.log") or die;
+            open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-rdata.log") or die;
             $RDATALOG{$host} = $handle;
         }
         print {$RDATALOG{$host}} "$ms\n";
+    } elsif ($event eq "-data" && $rest =~ /\(0,(\d+)\)/) {
+	my $bin = $1;
+	if (not exists $INDATALOG{$host}) {
+            open(my $handle, '>', "$SERVER-harvest/$SERVER-$host-indata.log") or die;
+            $INDATALOG{$host} = $handle;
+	}
+	print {$INDATALOG{$host}} "$bin\t$ms\n";
     }
     $EVENTS{"$host"} = { "+hs"=>0 } if not exists $EVENTS{"$host"};
     
@@ -106,19 +126,22 @@ for $host (keys %TDATALOG) {
 for $host (keys %RDATALOG) {
     close ($RDATALOG{$host});
 }
+for $host (keys %INDATALOG) {
+    close ($INDATALOG{$host});
+}
 
-open(LEGEND,"> harvest/$SERVER-legend.txt") or die;
+open(LEGEND,"> $SERVER-harvest/$SERVER-legend.txt") or die;
 
 for $channel (keys %CHANN) {
     my $host = $CHANN{"$channel"};
     print LEGEND "$channel\t$host\n";
-    open(STATS,"> harvest/$SERVER-$host.stat") or die;
+    open(STATS,"> $SERVER-harvest/$SERVER-$host.stat") or die;
     my %events = %{ $EVENTS{"$host"} };
     for $event ( keys %events ) {
         print STATS "$event\t".($events{"$event"})."\n";
     }
     close STATS;
-    open(HTML,"> harvest/$SERVER-$host.html") or die;
+    open(HTML,"> $SERVER-harvest/$SERVER-$host.html") or die;
     print HTML "<table class='channel'><th><td>sent</td><td>rcvd</td></th>\n";
     my $rcvd = $RCVD{$host};
     my $sent = $SENT{$host};

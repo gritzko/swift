@@ -2,6 +2,7 @@
 
 HOST=$1
 CMD=$2
+PORT=$3
 ENV=env.default.sh
 
 if [ -e env.$HOST.sh ]; then
@@ -14,13 +15,19 @@ else
     SHSC=$CMD.default.sh ;
 fi
 
+ENVSTR="HOST=$HOST"
+
+if [ $PORT ]; then
+    ENVSTR=$ENVSTR"; export SWFTPORT=$PORT"
+fi
+
 if [ ! -d logs ]; then mkdir logs; fi
 if [ ! -e $SHSC ]; then
     echo $HOST  $CMD    EMPTY
     exit 0
 fi
 
-if ( (echo "HOST=$HOST"; cat $ENV $SHSC) | ssh $HOST ) > \
+if ( (cat $ENV; echo $ENVSTR; cat $SHSC) | ssh -T $HOST ) > \
     logs/$HOST.$CMD.out 2> logs/$HOST.$CMD.err; then
     echo $HOST  $CMD    OK
     exit 0

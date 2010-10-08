@@ -13,9 +13,16 @@ if [ -z "$SERVERS" ]; then
     SERVERS="servers.txt"
 fi
 
-for srv in `grep -v '^#' $SERVERS`; do
+
+# Line format in $SERVERS: <hostname>:<port number>
+for srvstr in `grep -v '^#' $SERVERS`; do
     (
-        if ! ./docmd $srv $1; then
+	srv=${srvstr%:*}
+	port=${srvstr#*:}
+	if [[ $port  &&  $srv == $port ]]; then
+	    port=
+	fi
+        if ! ./docmd $srv $1 $port; then
             echo $srv >> FAILURES
             echo $srv FAILED
             break

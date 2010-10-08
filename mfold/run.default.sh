@@ -5,7 +5,7 @@
 ulimit -c 1024000
 cd swift || exit 1
 rm -f core
-rm -f chunk
+rm -f $HOST-chunk
 sleep $(( $RANDOM % 5 ))
-bin/swift-o2 -w -h $HASH -f chunk -t $SEEDER:$SWFTPORT \
-    -l 0.0.0.0:$RUNPORT -p -D 2>lerr | gzip > lout.gz || exit 2
+bin/swift-o2 -w -h $HASH -f $HOST-chunk -t $SEEDER:$SEEDERPORT \
+    -l 0.0.0.0:$SWFTPORT -p -D 2>$HOST-lerr | gzip > $HOST-lout.gz || exit 2

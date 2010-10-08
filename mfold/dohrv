@@ -8,41 +8,110 @@ if [ ! $SERVERS ]; then
     export SERVERS="servers.txt"
 fi
 
+. env.default.sh
+
+if [ ! $TMPDIR ]; then
+    TMPDIR=/tmp
+fi
+
+if [ ! $MAXHARVEST ]; then
+    MAXHARVEST=100
+fi
+
 mv harvest .hrv-old
 rm -rf .hrv-old &
 mkdir harvest
 
-for s in `grep -v '#' $SERVERS`; do
-    mkfifo harvest/$s.fifo
+i=0
+j=1
+for sstr in `grep -v '#' $SERVERS`; do
+    s=${sstr%:*}
+    mkfifo harvest/$s-$j.fifo
     # yas, yes, yes
-    ( scp ~/.ssh/config $s:.ssh/config > /dev/null ) &
+    (
+	if ssh $s \
+	    "if [ -e ~/.dohrv_copying ]; then exit 1; \
+            else touch ~/.dohrv_copying; fi" ; then
+	    scp ~/.ssh/config $s:.ssh/config > /dev/null 
+	    scp $SERVERS $s:swift/mfold/servers.txt > /dev/null
+	    ssh $s "rm -f ~/.dohrv_copying"
+	fi
+    ) &
+    let i++
+    if [ $i == $MAXHARVEST ]; then
+	wait
+	i=0
+	mkfifo harvest/swpart$j.fifo
+	let j++
+    fi
 done
-wait
+if [[ $i>0 ]]; then
+    wait
+    mkfifo harvest/swpart$j.fifo
+fi
 
-for s in `grep -v '#' $SERVERS`; do
-    (if ssh $s \
-        "cd swift/  && \
-        rm -rf harvest && mkdir harvest && \
-        ( zcat lout.gz | ./mfold/logparse $s | gzip )" \
-        | gunzip > harvest/$s.fifo ; then
+echo 'Done making fifos and copying configs.'
 
-        ssh $s "cd swift/; tar cz harvest" | tar xz
-        echo $s harvest OK
+i=0
+j=1
+for sstr in `grep -v '#' $SERVERS`; do
+    s=${sstr%:*}
+    (
+	if ssh $s \
+            "cd swift/  && \
+        rm -rf $s-harvest && mkdir $s-harvest && \
+        ( zcat $s-lout.gz | ./mfold/logparse $s | gzip )" \
+            | gunzip > harvest/$s-$j.fifo ; then
 
-    else
-        echo $s harvest FAIL
-    fi) &
+            ssh $s "cd swift/; tar cz $s-harvest" | tar xz
+	    mv $s-harvest/* harvest/
+	    rmdir $s-harvest
+            echo $s harvest OK
+	    
+	else
+            echo $s harvest FAIL
+	fi
+    ) &
+    let i++
+    if [ $i == $MAXHARVEST ]; then
+	# Ensure your version of sort is recent enough
+	# batch-size is critical for performance
+	LC_ALL=C sort -m -s -T $TMPDIR --batch-size=64 --compress-program=gzip \
+	    harvest/*-$j.fifo | gzip > harvest/swpart$j.log.gz &
+	wait
+	i=0
+	let j++
+    fi
 done  
+if [[ $i>0 ]]; then
+    LC_ALL=C sort -m -s -T $TMPDIR --batch-size=64 --compress-program=gzip \
+	harvest/*-$j.fifo | gzip > harvest/swpart$j.log.gz &
+    wait
+    let j++
+fi
 
-# Ensure your version of sort is recent enough
-# batch-size is critical for performance
-LC_ALL=C sort -m -s --batch-size=64 harvest/*.fifo | gzip > harvest/swarm.log.gz &
-wait
-./loggraphs
-./logreport > harvest/index.html
+echo 'Done sorting of swarm parts.'
+
+if [[ $j>2 ]]; then
+    for (( i=1; i<j; i++ )); do
+	(zcat harvest/swpart$i.log.gz > harvest/swpart$i.fifo) &
+    done
+    LC_ALL=C sort -m -s -T $TMPDIR --batch-size=64 --compress-program=gzip \
+	harvest/swpart*.fifo | gzip > harvest/swarm.log.gz &
+    wait
+else
+    mv harvest/swpart1.log.gz harvest/swarm.log.gz
+fi
+
+echo 'Done sorting of whole swarm.'
 
 rm harvest/*.fifo
+rm harvest/swpart*.log.gz
+./loggraphs
+./logreport > harvest/index.html
+#./logdistr
+
 cp report.css harvest
-scp -rq harvest mfold.libswift.org:/storage/mfold-granary/`date +%d%b_%H:%M`_`whoami` &
+# scp -rq harvest mfold.libswift.org:/storage/mfold-granary/`date +%d%b_%H:%M`_`whoami` &
 
 echo DONE

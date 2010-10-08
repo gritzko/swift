@@ -4,15 +4,24 @@ if [ -z "$SERVERS" ]; then
     SERVERS="servers.txt"
 fi
 
+. env.default.sh
+
+if [ ! $MAXGNUPLOTS ]; then
+    MAXGNUPLOTS=200
+fi
+
 VERSION=`date`,`git log --summary | head -1`
 
 cd harvest
 
-HEAD=`head -1 *.log | grep -v '^$' | cut -f1 | sort | head -1`
-TAIL=`tail -n1 -q *.log | grep -v '^$' | cut -f1 | sort | tail -n1 -q`
+# HEAD=`head -1 *.log | grep -v '^$' | cut -f1 | sort | head -1`
+# TAIL=`tail -n1 -q *.log | grep -v '^$' | cut -f1 | sort | tail -n1 -q`
 
-for from in `grep -v '^#' ../$SERVERS`; do
-    for to in `grep -v '^#' ../$SERVERS`; do
+i=0
+for fromstr in `grep -v '^#' ../$SERVERS`; do
+    from=${fromstr%:*}
+    for tostr in `grep -v '^#' ../$SERVERS`; do
+	to=${tostr%:*}
         CWNDLOG="$from-$to-cwnd.log"
         if [ ! -e $CWNDLOG ]; then
             continue
@@ -78,6 +87,11 @@ for from in `grep -v '^#' ../$SERVERS`; do
         echo "replot" >> $GP
 
         ( cat $GP | gnuplot ) &
+	let i++
+	if [ $i == $MAXGNUPLOTS ]; then
+	    wait
+	    i=0
+	fi
     done
 done
 

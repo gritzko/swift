@@ -7,5 +7,5 @@ if [ ! -e ScottKim_2008P.mp4 ]; then
 fi
 
 bin/swift-o2 -w -f ScottKim_2008P.mp4 -p -D \
-    -l 0.0.0.0:$SWFTPORT 2>lerr | gzip > lout.gz || exit 2
+    -l 0.0.0.0:$SEEDERPORT 2>$HOST-lerr | gzip > $HOST-lout.gz || exit 2
 exit
