@@ -16,6 +16,8 @@ using namespace swift;
 #define quit(...) {fprintf(stderr,__VA_ARGS__); exit(1); }
 SOCKET InstallHTTPGateway (Address addr);
 
+struct event evreport, evend;
+int file = -1;
 
 int main (int argc, char** argv) {
     
@@ -42,7 +44,8 @@ int main (int argc, char** argv) {
     tint wait_time = 0;
     
     LibraryInit();
-    
+    event_init();
+
     int c;
     while ( -1 != (c = getopt_long (argc, argv, ":h:f:dl:t:Dpg::w::", long_options, 0)) ) {
         
@@ -105,13 +108,14 @@ int main (int argc, char** argv) {
     }   // arguments parsed
     
 
+    int sock = -1;
     if (bindaddr!=Address()) { // seeding
-        if (Listen(bindaddr)<=0)
+        if ((sock = Listen(bindaddr))<=0)
             quit("cant listen to %s\n",bindaddr.str())
     } else if (tracker!=Address() || http_gw!=Address()) { // leeching
         for (int i=0; i<=10; i++) {
             bindaddr = Address((uint32_t)INADDR_ANY,0);
-            if (Listen(bindaddr)>0)
+            if ((sock = Listen(bindaddr))>0)
                 break;
             if (i==10)
                 quit("cant listen on %s\n",bindaddr.str());
@@ -127,7 +131,6 @@ int main (int argc, char** argv) {
     if (root_hash!=Sha1Hash::ZERO && !filename)
         filename = strdup(root_hash.hex().c_str());
 
-    int file = -1;
     if (filename) {
         file = Open(filename,root_hash);
         if (file<=0)
@@ -149,21 +152,48 @@ int main (int argc, char** argv) {
     }
 
     tint start_time = NOW;
-    
-    while ( (file>=0 && !IsComplete(file)) ||
-            (start_time+wait_time>NOW)   ) {
-        swift::Loop(TINT_SEC);
-        if (report_progress && file>=0) {
-            fprintf(stderr,
-                    "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "\
-                    "%lli dgram %lli bytes down\n",
-                IsComplete(file) ? "DONE" : "done",
-                Complete(file), Size(file), SeqComplete(file),
-                Datagram::dgrams_up, Datagram::bytes_up,
-                Datagram::dgrams_down, Datagram::bytes_down );
-        }
+
+    struct timeval tv;
+
+    // End after wait_time
+    evtimer_set(&evend, EndCallback, NULL);
+    tv.tv_sec = wait_time/TINT_SEC;
+    tv.tv_usec = wait_time%TINT_SEC;
+    evtimer_add(&evend, &tv);
+
+    // swift UDP send
+    evtimer_set(&Channel::evsend, Channel::SendCallback, NULL);
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    evtimer_add(&Channel::evsend, &tv);
+
+    // swift UDP receive
+    event_set(&Channel::evrecv, sock, EV_READ, Channel::ReceiveCallback, NULL);
+    event_add(&Channel::evrecv, NULL);
+
+    if (report_progress) {
+	evtimer_set(&evreport, ReportCallback, NULL);
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	evtimer_add(&evreport, &tv);
     }
-    
+
+    event_dispatch();
+
+    // while ( (file>=0 && !IsComplete(file)) ||
+    //         (start_time+wait_time>NOW)   ) {
+    //     // swift::Loop(TINT_SEC);
+    //     if (report_progress && file>=0) {
+    //         fprintf(stderr,
+    //                 "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "\
+    //                 "%lli dgram %lli bytes down\n",
+    //             IsComplete(file) ? "DONE" : "done",
+    //             Complete(file), Size(file), SeqComplete(file),
+    //             Datagram::dgrams_up, Datagram::bytes_up,
+    //             Datagram::dgrams_down, Datagram::bytes_down );
+    //     }
+    // }
+
     if (file!=-1)
         Close(file);
     
@@ -173,6 +203,25 @@ int main (int argc, char** argv) {
     swift::Shutdown();
     
     return 0;
-    
+
 }
 
+void swift::ReportCallback(int fd, short event, void *arg) {
+    struct timeval tv;
+    fprintf(stderr,
+	    "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "	\
+	    "%lli dgram %lli bytes down\n",
+	    IsComplete(file) ? "DONE" : "done",
+	    Complete(file), Size(file), SeqComplete(file),
+	    Datagram::dgrams_up, Datagram::bytes_up,
+	    Datagram::dgrams_down, Datagram::bytes_down );
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    evtimer_add(&evreport, &tv);
+}
+
+void swift::EndCallback(int fd, short event, void *arg) {
+    evtimer_del(&Channel::evsend);
+    event_del(&Channel::evrecv);
+    evtimer_del(&evreport);
+}

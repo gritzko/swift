@@ -12,6 +12,9 @@
 using namespace swift;
 using namespace std;
 
+struct event Channel::evsend;
+struct event Channel::evrecv;
+
 /*
  TODO  25 Oct 18:55
  - range: ALL
@@ -580,4 +583,40 @@ void Channel::Reschedule () {
         dprintf("%s #%u closed\n",tintstr(),id_);
         delete this;
     }
+}
+
+ 
+void Channel::SendCallback(int fd, short event, void *arg) {
+    Datagram::Time();
+    // dprintf("%s SendCallback\n", tintstr());
+    tint send_time(TINT_NEVER);
+    Channel* sender(NULL);
+    while (!sender && !send_queue.is_empty()) { // dequeue
+	tintbin next = send_queue.pop();
+	sender = channel((int)next.bin);
+	send_time = next.time;
+	if (sender && sender->next_send_time_!=send_time &&
+	    sender->next_send_time_!=TINT_NEVER )
+	    sender = NULL; // it was a stale entry
+    }
+    if (sender) {
+	if (send_time<=NOW) { // it's time
+	    dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
+                    tintstr(send_time));
+	    sender->Send();
+	    
+	} else
+	    send_queue.push(tintbin(send_time,sender->id()));
+    }
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    evtimer_add(&evsend, &tv);
+}
+
+void Channel::ReceiveCallback(int fd, short event, void *arg) {
+    Datagram::Time();
+    // dprintf("%s ReceiveCallback\n", tintstr());
+    RecvDatagram(fd);
+    event_add(&evrecv, NULL);
 }

@@ -53,6 +53,7 @@ Messages
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <event.h>
 #include "bin64.h"
 #include "bins.h"
 #include "datagram.h"
@@ -261,10 +262,14 @@ namespace swift {
             CLOSE_CONTROL
         } send_control_t;
 
+
+	static struct event evsend, evrecv;
         static const char* SEND_CONTROL_MODES[];
 
         static void RecvDatagram (SOCKET socket);
         static void Loop (tint till);
+	static void SendCallback(int fd, short event, void *arg);
+	static void ReceiveCallback(int fd, short event, void *arg);
 
         void        Recv (Datagram& dgram);
         void        Send ();
@@ -467,6 +472,8 @@ namespace swift {
     /** Must be called by any client using the library */
     void LibraryInit(void);
 
+    void ReportCallback(int fd, short event, void *arg);
+    void EndCallback(int fd, short event, void *arg);
 
 } // namespace end
 
