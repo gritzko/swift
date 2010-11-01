@@ -20,15 +20,15 @@
 .nf
 .tl 'PPSP WG' 'V. Grishchenko'
 .tl 'Internet-Draft' 'TU Delft'
-.tl 'Intended status: Experimental''April 12, 2010'
-.tl 'Expires: October 12, 2010'''
+.tl 'Intended status: Experimental''July 27, 2010'
+.tl 'Expires: December 27, 2010'''
 
 
 .fi
 .in 3
 .in 12
 .ti 8
-The Generic Multiparty Transport Protocol (swift) \%<draft-ietf-ppsp-grishchenko-swift-00.txt>
+The Generic Multiparty Transport Protocol (swift) \%<draft-grishchenko-ppsp-swift-01.txt>
 
 .ti 0
 Abstract

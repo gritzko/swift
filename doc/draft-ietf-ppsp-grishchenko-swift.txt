@@ -4,12 +4,12 @@
 
 PPSP WG                                                   V. Grishchenko
 Internet-Draft                                                  TU Delft
-Intended status: Experimental                             April 12, 2010
-Expires: October 12, 2010                                               
+Intended status: Experimental                              July 27, 2010
+Expires: December 27, 2010                                              
 
 
         The Generic Multiparty Transport Protocol (swift)
-            <draft-ietf-ppsp-grishchenko-swift-00.txt>
+            <draft-grishchenko-ppsp-swift-01.txt>
 
 Abstract
 
@@ -701,9 +701,9 @@ Internet-Draft                   swift                        April 2010
 
 4.8.  Directory lists
 
-   Directory list files MUST start with magic bytes ".\n..\n\n". The
-   rest of the file is a newline-separated list of hashes and file names
-   for the content of the directory. An example:
+   Directory list files MUST start with magic bytes ".\n..\n". The rest
+   of the file is a newline-separated list of hashes and file names for
+   the content of the directory. An example:
 
    .
    ..

@@ -320,7 +320,8 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
     bin64_t pos = dgram.Pull32();
     uint8_t *data;
     int length = dgram.Pull(&data,1024);
-    bool ok = (pos==bin64_t::NONE) || file().OfferData(pos, (char*)data, length) ;
+    bool ok = (pos==bin64_t::NONE) || 
+        (!file().ack_out().get(pos) && file().OfferData(pos, (char*)data, length) );
     dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
     data_in_ = tintbin(NOW,bin64_t::NONE);
     if (!ok)

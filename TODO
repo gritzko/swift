@@ -16,6 +16,7 @@ STATE MACHINE
 * connection rotation / pex / pex_del
 * misterious bug: Rdata (NONE)
 * ?amend MAX_REORDER depending on rtt_dev
+* Tdata repetitions bug
 
 PERFORMANCE
 * move to the.zett's binmaps
