@@ -2,6 +2,8 @@
 # This script runs a leecher at some server;
 # env variables are set in env.default.sh
 
+export LD_LIBRARY_PATH=$HOME/lib
+
 ulimit -c 1024000
 cd swift || exit 1
 rm -f core

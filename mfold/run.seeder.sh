@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LD_LIBRARY_PATH=$HOME/lib
+
 ulimit -c 1024000
 cd swift || exit 2
 if [ ! -e ScottKim_2008P.mp4 ]; then
