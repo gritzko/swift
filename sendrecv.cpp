@@ -588,7 +588,6 @@ void Channel::Reschedule () {
  
 void Channel::SendCallback(int fd, short event, void *arg) {
     Datagram::Time();
-    // dprintf("%s SendCallback\n", tintstr());
     tint send_time(TINT_NEVER);
     Channel* sender(NULL);
     while (!sender && !send_queue.is_empty()) { // dequeue
@@ -608,15 +607,11 @@ void Channel::SendCallback(int fd, short event, void *arg) {
 	} else
 	    send_queue.push(tintbin(send_time,sender->id()));
     }
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    evtimer_add(&evsend, &tv);
+    event_add(&evsend, NULL);
 }
 
 void Channel::ReceiveCallback(int fd, short event, void *arg) {
     Datagram::Time();
-    // dprintf("%s ReceiveCallback\n", tintstr());
     RecvDatagram(fd);
     event_add(&evrecv, NULL);
 }

@@ -108,14 +108,13 @@ int main (int argc, char** argv) {
     }   // arguments parsed
     
 
-    int sock = -1;
     if (bindaddr!=Address()) { // seeding
-        if ((sock = Listen(bindaddr))<=0)
+        if (Listen(bindaddr)<=0)
             quit("cant listen to %s\n",bindaddr.str())
     } else if (tracker!=Address() || http_gw!=Address()) { // leeching
         for (int i=0; i<=10; i++) {
             bindaddr = Address((uint32_t)INADDR_ANY,0);
-            if ((sock = Listen(bindaddr))>0)
+            if (Listen(bindaddr)>0)
                 break;
             if (i==10)
                 quit("cant listen on %s\n",bindaddr.str());
@@ -161,16 +160,6 @@ int main (int argc, char** argv) {
     tv.tv_usec = wait_time%TINT_SEC;
     evtimer_add(&evend, &tv);
 
-    // swift UDP send
-    evtimer_set(&Channel::evsend, Channel::SendCallback, NULL);
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    evtimer_add(&Channel::evsend, &tv);
-
-    // swift UDP receive
-    event_set(&Channel::evrecv, sock, EV_READ, Channel::ReceiveCallback, NULL);
-    event_add(&Channel::evrecv, NULL);
-
     if (report_progress) {
 	evtimer_set(&evreport, ReportCallback, NULL);
 	tv.tv_sec = 1;
@@ -179,20 +168,6 @@ int main (int argc, char** argv) {
     }
 
     event_dispatch();
-
-    // while ( (file>=0 && !IsComplete(file)) ||
-    //         (start_time+wait_time>NOW)   ) {
-    //     // swift::Loop(TINT_SEC);
-    //     if (report_progress && file>=0) {
-    //         fprintf(stderr,
-    //                 "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "\
-    //                 "%lli dgram %lli bytes down\n",
-    //             IsComplete(file) ? "DONE" : "done",
-    //             Complete(file), Size(file), SeqComplete(file),
-    //             Datagram::dgrams_up, Datagram::bytes_up,
-    //             Datagram::dgrams_down, Datagram::bytes_down );
-    //     }
-    // }
 
     if (file!=-1)
         Close(file);
