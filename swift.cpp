@@ -155,10 +155,12 @@ int main (int argc, char** argv) {
     struct timeval tv;
 
     // End after wait_time
-    evtimer_set(&evend, EndCallback, NULL);
-    tv.tv_sec = wait_time/TINT_SEC;
-    tv.tv_usec = wait_time%TINT_SEC;
-    evtimer_add(&evend, &tv);
+    if (wait_time != TINT_NEVER && (long)wait_time > 0) {
+	tv.tv_sec = wait_time/TINT_SEC;
+	tv.tv_usec = wait_time%TINT_SEC;
+	evtimer_set(&evend, EndCallback, NULL);
+	evtimer_add(&evend, &tv);
+    }
 
     if (report_progress) {
 	evtimer_set(&evreport, ReportCallback, NULL);
