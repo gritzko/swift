@@ -78,7 +78,7 @@ else:
 	#	env.Append(CXXFLAGS="-g")
 
 	# Set libs to link to
-	libs = ['stdc++','pthread']
+	libs = ['stdc++','pthread','event']
 	if 'LIBPATH' in os.environ:
   	    libpath = os.environ['LIBPATH']
 	else:
