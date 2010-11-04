@@ -44,7 +44,7 @@ int main (int argc, char** argv) {
     tint wait_time = 0;
     
     LibraryInit();
-    event_init();
+    Channel::evbase = event_base_new();
 
     int c;
     while ( -1 != (c = getopt_long (argc, argv, ":h:f:dl:t:Dpg::w::", long_options, 0)) ) {
@@ -158,18 +158,18 @@ int main (int argc, char** argv) {
     if (wait_time != TINT_NEVER && (long)wait_time > 0) {
 	tv.tv_sec = wait_time/TINT_SEC;
 	tv.tv_usec = wait_time%TINT_SEC;
-	evtimer_set(&evend, EndCallback, NULL);
+	evtimer_assign(&evend, Channel::evbase, EndCallback, NULL);
 	evtimer_add(&evend, &tv);
     }
 
     if (report_progress) {
-	evtimer_set(&evreport, ReportCallback, NULL);
+	evtimer_assign(&evreport, Channel::evbase, ReportCallback, NULL);
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
 	evtimer_add(&evreport, &tv);
     }
 
-    event_dispatch();
+    event_base_dispatch(Channel::evbase);
 
     if (file!=-1)
         Close(file);

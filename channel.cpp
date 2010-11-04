@@ -87,11 +87,12 @@ int     swift::Listen (Address addr) {
     cb.may_read = &Channel::RecvDatagram;
     cb.sock = Datagram::Bind(addr,cb);
     // swift UDP send
-    event_set(&Channel::evsend, cb.sock, EV_WRITE, Channel::SendCallback, NULL);
+    event_assign(&Channel::evsend, Channel::evbase, cb.sock, EV_WRITE,
+		 Channel::SendCallback, NULL);
     event_add(&Channel::evsend, NULL);
     // swift UDP receive
-    event_set(&Channel::evrecv, cb.sock, EV_READ, Channel::ReceiveCallback,
-	      NULL);
+    event_assign(&Channel::evrecv, Channel::evbase, cb.sock, EV_READ,
+		 Channel::ReceiveCallback, NULL);
     event_add(&Channel::evrecv, NULL);
     return cb.sock;
 }

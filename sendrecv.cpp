@@ -12,6 +12,7 @@
 using namespace swift;
 using namespace std;
 
+struct event_base *Channel::evbase;
 struct event Channel::evsend;
 struct event Channel::evrecv;
 

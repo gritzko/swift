@@ -53,7 +53,8 @@ Messages
 #include <vector>
 #include <algorithm>
 #include <string>
-#include <event.h>
+#include <event2/event.h>
+#include <event2/event_struct.h>
 #include "bin64.h"
 #include "bins.h"
 #include "datagram.h"
@@ -263,6 +264,7 @@ namespace swift {
         } send_control_t;
 
 
+	static struct event_base *evbase;
 	static struct event evsend, evrecv;
         static const char* SEND_CONTROL_MODES[];
 
