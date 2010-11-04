@@ -32,7 +32,7 @@ bool Channel::SELF_CONN_OK = false;
 swift::tint Channel::TIMEOUT = TINT_SEC*60;
 std::vector<Channel*> Channel::channels(1);
 Address Channel::tracker;
-tbheap Channel::send_queue;
+//tbheap Channel::send_queue;
 FILE* Channel::debug_file = NULL;
 #include "ext/simple_selector.cpp"
 PeerSelector* Channel::peer_selector = new SimpleSelector();
@@ -59,13 +59,15 @@ Channel::Channel    (FileTransfer* transfer, int socket, Address peer_addr) :
         owd_min_bins_[i] = TINT_NEVER;
         owd_current_[i] = TINT_NEVER;
     }
-    Reschedule();
+    evtimer_assign(&evsend,evbase,&Channel::SendCallback,this);
+    evtimer_add(&evsend,tint2tv(next_send_time_));
     dprintf("%s #%u init %s\n",tintstr(),id_,peer_.str());
 }
 
 
 Channel::~Channel () {
     channels[id_] = NULL;
+    evtimer_del(&evsend);
 }
 
 
@@ -87,9 +89,9 @@ int     swift::Listen (Address addr) {
     cb.may_read = &Channel::RecvDatagram;
     cb.sock = Datagram::Bind(addr,cb);
     // swift UDP send
-    event_assign(&Channel::evsend, Channel::evbase, cb.sock, EV_WRITE,
-		 Channel::SendCallback, NULL);
-    event_add(&Channel::evsend, NULL);
+    //event_assign(&Channel::evsend, Channel::evbase, cb.sock, EV_WRITE,
+	//	 Channel::SendCallback, NULL);
+    //event_add(&Channel::evsend, NULL);
     // swift UDP receive
     event_assign(&Channel::evrecv, Channel::evbase, cb.sock, EV_READ,
 		 Channel::ReceiveCallback, NULL);
@@ -103,9 +105,9 @@ void    swift::Shutdown (int sock_des) {
 }
 
 
-void    swift::Loop (tint till) {
-    Channel::Loop(till);
-}
+//void    swift::Loop (tint till) {
+//    Channel::Loop(till);
+//}
 
 
 

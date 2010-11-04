@@ -211,5 +211,13 @@ bool    close_socket (SOCKET sock) {
 #endif
 }
 
+    
+struct timeval* tint2tv (tint t) {
+    static struct timeval tv;
+    tv.tv_usec = t%TINT_SEC;
+    tv.tv_sec = t/TINT_SEC;
+    return &tv;
+}
+
 
 }

@@ -264,14 +264,15 @@ namespace swift {
         } send_control_t;
 
 
-	static struct event_base *evbase;
-	static struct event evsend, evrecv;
+        static struct event_base *evbase;
+        static struct event evrecv;
+        struct event evsend;
         static const char* SEND_CONTROL_MODES[];
 
         static void RecvDatagram (SOCKET socket);
-        static void Loop (tint till);
-	static void SendCallback(int fd, short event, void *arg);
-	static void ReceiveCallback(int fd, short event, void *arg);
+        //static void Loop (tint till);
+        static void SendCallback(int fd, short event, void *arg);
+        static void ReceiveCallback(int fd, short event, void *arg);
 
         void        Recv (Datagram& dgram);
         void        Send ();
@@ -413,7 +414,7 @@ namespace swift {
         static PeerSelector* peer_selector;
 
         static tint     last_tick;
-        static tbheap   send_queue;
+        //static tbheap   send_queue;
 
         static Address  tracker;
         static std::vector<Channel*> channels;
@@ -432,7 +433,7 @@ namespace swift {
     /** Start listening a port. Returns socket descriptor. */
     int     Listen (Address addr);
     /** Run send/receive loop for the specified amount of time. */
-    void    Loop (tint till);
+    //void    Loop (tint till);
     bool    Listen3rdPartySocket (sckrwecb_t);
     /** Stop listening to a port. */
     void    Shutdown (int sock_des=-1);

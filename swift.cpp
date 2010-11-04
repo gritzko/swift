@@ -198,7 +198,7 @@ void swift::ReportCallback(int fd, short event, void *arg) {
 }
 
 void swift::EndCallback(int fd, short event, void *arg) {
-    evtimer_del(&Channel::evsend);
+    //evtimer_del(&Channel::evsend);
     event_del(&Channel::evrecv);
     evtimer_del(&evreport);
 }

@@ -13,7 +13,6 @@ using namespace swift;
 using namespace std;
 
 struct event_base *Channel::evbase;
-struct event Channel::evsend;
 struct event Channel::evrecv;
 
 /*
@@ -531,43 +530,6 @@ void    Channel::RecvDatagram (SOCKET socket) {
 }
 
 
-void    Channel::Loop (tint howlong) {
-
-    tint limit = Datagram::Time() + howlong;
-
-    do {
-
-        tint send_time(TINT_NEVER);
-        Channel* sender(NULL);
-        while (!sender && !send_queue.is_empty()) { // dequeue
-            tintbin next = send_queue.pop();
-            sender = channel((int)next.bin);
-            send_time = next.time;
-            if (sender && sender->next_send_time_!=send_time &&
-                     sender->next_send_time_!=TINT_NEVER )
-                sender = NULL; // it was a stale entry
-        }
-
-        if ( sender!=NULL && send_time<=NOW ) { // it's time
-
-            dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
-                    tintstr(send_time));
-            sender->Send();
-
-        } else {  // it's too early, wait
-
-            tint towait = min(limit,send_time) - NOW;
-            dprintf("%s #0 waiting %lliusec\n",tintstr(),towait);
-            Datagram::Wait(towait);
-            if (sender)  // get back to that later
-                send_queue.push(tintbin(send_time,sender->id()));
-
-        }
-
-    } while (NOW<limit);
-
-}
-
 
 void Channel::Close () {
     this->SwitchSendControl(CLOSE_CONTROL);
@@ -578,7 +540,9 @@ void Channel::Reschedule () {
     next_send_time_ = NextSendTime();
     if (next_send_time_!=TINT_NEVER) {
         assert(next_send_time_<NOW+TINT_MIN);
-        send_queue.push(tintbin(next_send_time_,id_));
+        //send_queue.push(tintbin(next_send_time_,id_));
+        evtimer_del(&evsend);
+        evtimer_add(&evsend,tint2tv(next_send_time_-NOW));
         dprintf("%s #%u requeue for %s\n",tintstr(),id_,tintstr(next_send_time_));
     } else {
         dprintf("%s #%u closed\n",tintstr(),id_);
@@ -588,30 +552,18 @@ void Channel::Reschedule () {
 
  
 void Channel::SendCallback(int fd, short event, void *arg) {
+    dprintf(">scb\n");
     Datagram::Time();
-    tint send_time(TINT_NEVER);
-    Channel* sender(NULL);
-    while (!sender && !send_queue.is_empty()) { // dequeue
-	tintbin next = send_queue.pop();
-	sender = channel((int)next.bin);
-	send_time = next.time;
-	if (sender && sender->next_send_time_!=send_time &&
-	    sender->next_send_time_!=TINT_NEVER )
-	    sender = NULL; // it was a stale entry
-    }
-    if (sender) {
-	if (send_time<=NOW) { // it's time
-	    dprintf("%s #%u sch_send %s\n",tintstr(),sender->id(),
-                    tintstr(send_time));
-	    sender->Send();
-	    
-	} else
-	    send_queue.push(tintbin(send_time,sender->id()));
-    }
-    event_add(&evsend, NULL);
+    Channel * sender = (Channel*) arg;
+    if (NOW<sender->next_send_time_-TINT_MSEC)
+        dprintf("%s #%u suspicious send %s<%s\n",tintstr(),
+                sender->id(),tintstr(NOW),tintstr(sender->next_send_time_));
+    sender->Send();
+    dprintf("<scb\n");
 }
 
 void Channel::ReceiveCallback(int fd, short event, void *arg) {
+    dprintf("rcb\n");
     Datagram::Time();
     RecvDatagram(fd);
     event_add(&evrecv, NULL);

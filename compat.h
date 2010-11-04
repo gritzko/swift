@@ -115,6 +115,8 @@ tint    usec_time ();
 bool    make_socket_nonblocking(SOCKET s);
 
 bool    close_socket (SOCKET sock);
+    
+struct timeval* tint2tv (tint t);
 
 
 };

@@ -18,6 +18,8 @@ using namespace swift;
 
 TEST(Connection,CwndTest) {
 
+    Channel::evbase = event_base_new();
+
     srand ( time(NULL) );
 
     unlink("doc/sofi-copy.jpg");
@@ -37,11 +39,12 @@ TEST(Connection,CwndTest) {
 
 	int copy = swift::Open("doc/sofi-copy.jpg",fileobj->root_hash());
 
-	swift::Loop(TINT_SEC);
+	//swift::Loop(TINT_SEC);
+    event_base_dispatch(Channel::evbase);
 
-    int count = 0;
-    while (swift::SeqComplete(copy)!=size && count++<600)
-        swift::Loop(TINT_SEC);
+    //int count = 0;
+    //while (swift::SeqComplete(copy)!=size && count++<600)
+    //    swift::Loop(TINT_SEC);
     ASSERT_EQ(size,swift::SeqComplete(copy));
 
 	swift::Close(file);
