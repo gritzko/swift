@@ -150,23 +150,15 @@ int main (int argc, char** argv) {
         return 1;
     }
 
-    tint start_time = NOW;
-
-    struct timeval tv;
-
     // End after wait_time
     if (wait_time != TINT_NEVER && (long)wait_time > 0) {
-	tv.tv_sec = wait_time/TINT_SEC;
-	tv.tv_usec = wait_time%TINT_SEC;
 	evtimer_assign(&evend, Channel::evbase, EndCallback, NULL);
-	evtimer_add(&evend, &tv);
+	evtimer_add(&evend, tint2tv(wait_time));
     }
 
     if (report_progress) {
 	evtimer_assign(&evreport, Channel::evbase, ReportCallback, NULL);
-	tv.tv_sec = 1;
-	tv.tv_usec = 0;
-	evtimer_add(&evreport, &tv);
+	evtimer_add(&evreport, tint2tv(TINT_SEC));
     }
 
     event_base_dispatch(Channel::evbase);
@@ -184,7 +176,6 @@ int main (int argc, char** argv) {
 }
 
 void swift::ReportCallback(int fd, short event, void *arg) {
-    struct timeval tv;
     fprintf(stderr,
 	    "%s %lli of %lli (seq %lli) %lli dgram %lli bytes up, "	\
 	    "%lli dgram %lli bytes down\n",
@@ -192,13 +183,9 @@ void swift::ReportCallback(int fd, short event, void *arg) {
 	    Complete(file), Size(file), SeqComplete(file),
 	    Datagram::dgrams_up, Datagram::bytes_up,
 	    Datagram::dgrams_down, Datagram::bytes_down );
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    evtimer_add(&evreport, &tv);
+    evtimer_add(&evreport, tint2tv(TINT_SEC));
 }
 
 void swift::EndCallback(int fd, short event, void *arg) {
-    //evtimer_del(&Channel::evsend);
-    event_del(&Channel::evrecv);
-    evtimer_del(&evreport);
+    event_base_loopexit(Channel::evbase, NULL);
 }
