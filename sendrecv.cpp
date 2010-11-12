@@ -21,25 +21,25 @@ struct event Channel::evrecv;
  - randomized testing of advanced ops (new testcase)
  */
 
-void    Channel::AddPeakHashes (Datagram& dgram) {
+void    Channel::AddPeakHashes (struct evbuffer *evb) {
     for(int i=0; i<file().peak_count(); i++) {
         bin64_t peak = file().peak(i);
-        dgram.Push8(SWIFT_HASH);
-        dgram.Push32((uint32_t)peak);
-        dgram.PushHash(file().peak_hash(i));
+        evbuffer_add_8(evb, SWIFT_HASH);
+        evbuffer_add_32be(evb, (uint32_t)peak);
+        evbuffer_add_hash(evb, file().peak_hash(i));
         dprintf("%s #%u +phash %s\n",tintstr(),id_,peak.str());
     }
 }
 
 
-void    Channel::AddUncleHashes (Datagram& dgram, bin64_t pos) {
+void    Channel::AddUncleHashes (struct evbuffer *evb, bin64_t pos) {
     bin64_t peak = file().peak_for(pos);
     while (pos!=peak && ((NOW&3)==3 || !data_out_cap_.within(pos.parent())) &&
             ack_in_.get(pos.parent())==binmap_t::EMPTY  ) {
         bin64_t uncle = pos.sibling();
-        dgram.Push8(SWIFT_HASH);
-        dgram.Push32((uint32_t)uncle);
-        dgram.PushHash( file().hash(uncle) );
+        evbuffer_add_8(evb, SWIFT_HASH);
+        evbuffer_add_32be(evb, (uint32_t)uncle);
+        evbuffer_add_hash(evb,  file().hash(uncle) );
         dprintf("%s #%u +hash %s\n",tintstr(),id_,uncle.str());
         pos = pos.parent();
     }
@@ -91,56 +91,59 @@ bin64_t        Channel::DequeueHint () {
 }
 
 
-void    Channel::AddHandshake (Datagram& dgram) {
+void    Channel::AddHandshake (struct evbuffer *evb) {
     if (!peer_channel_id_) { // initiating
-        dgram.Push8(SWIFT_HASH);
-        dgram.Push32(bin64_t::ALL32);
-        dgram.PushHash(file().root_hash());
+        evbuffer_add_8(evb, SWIFT_HASH);
+        evbuffer_add_32be(evb, bin64_t::ALL32);
+        evbuffer_add_hash(evb, file().root_hash());
         dprintf("%s #%u +hash ALL %s\n",
                 tintstr(),id_,file().root_hash().hex().c_str());
     }
-    dgram.Push8(SWIFT_HANDSHAKE);
+    evbuffer_add_8(evb, SWIFT_HANDSHAKE);
     int encoded = EncodeID(id_);
-    dgram.Push32(encoded);
+    evbuffer_add_32be(evb, encoded);
     dprintf("%s #%u +hs %x\n",tintstr(),id_,encoded);
     have_out_.clear();
-    AddHave(dgram);
+    AddHave(evb);
 }
 
 
 void    Channel::Send () {
-    Datagram dgram(socket_,peer());
-    dgram.Push32(peer_channel_id_);
+    // Datagram dgram(socket_,peer());
+    struct evbuffer *evb = evbuffer_new();
+    evbuffer_add_32be(evb, peer_channel_id_);
     bin64_t data = bin64_t::NONE;
     if ( is_established() ) {
         // FIXME: seeder check
-        AddHave(dgram);
-        AddAck(dgram);
+        AddHave(evb);
+        AddAck(evb);
         if (!file().is_complete())
-            AddHint(dgram);
-        AddPex(dgram);
+            AddHint(evb);
+        AddPex(evb);
         TimeoutDataOut();
-        data = AddData(dgram);
+	data = AddData(evb);
     } else {
-        AddHandshake(dgram);
-        AddHave(dgram);
-        AddAck(dgram);
+        AddHandshake(evb);
+        AddHave(evb);
+        AddAck(evb);
     }
     dprintf("%s #%u sent %ib %s:%x\n",
-            tintstr(),id_,dgram.size(),peer().str(),peer_channel_id_);
-    if (dgram.size()==4) {// only the channel id; bare keep-alive
+            tintstr(),id_,evbuffer_get_length(evb),peer().str(),
+	    peer_channel_id_);
+    if (evbuffer_get_length(evb)==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
     }
-    if (dgram.Send()==-1)
+    if (Channel::SendTo(socket_,peer(),evb)==-1)
         print_error("can't send datagram");
     last_send_time_ = NOW;
     sent_since_recv_++;
     dgrams_sent_++;
+    evbuffer_free(evb);
     Reschedule();
 }
 
 
-void    Channel::AddHint (Datagram& dgram) {
+void    Channel::AddHint (struct evbuffer *evb) {
 
     tint plan_for = max(TINT_SEC,rtt_avg_*4);
 
@@ -158,8 +161,8 @@ void    Channel::AddHint (Datagram& dgram) {
         bin64_t hint = transfer().picker().Pick(ack_in_,diff,NOW+plan_for*2);
 
         if (hint!=bin64_t::NONE) {
-            dgram.Push8(SWIFT_HINT);
-            dgram.Push32(hint);
+            evbuffer_add_8(evb, SWIFT_HINT);
+            evbuffer_add_32be(evb, hint);
             dprintf("%s #%u +hint %s [%lli]\n",tintstr(),id_,hint.str(),hint_out_size_);
             hint_out_.push_back(hint);
             hint_out_size_ += hint.width();
@@ -170,7 +173,7 @@ void    Channel::AddHint (Datagram& dgram) {
 }
 
 
-bin64_t        Channel::AddData (Datagram& dgram) {
+bin64_t        Channel::AddData (struct evbuffer *evb) {
 
     if (!file().size()) // know nothing
         return bin64_t::NONE;
@@ -193,18 +196,18 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         return bin64_t::NONE; // once in a while, empty data is sent just to check rtt FIXED
 
     if (ack_in_.is_empty() && file().size())
-        AddPeakHashes(dgram);
-    AddUncleHashes(dgram,tosend);
+        AddPeakHashes(evb);
+    AddUncleHashes(evb,tosend);
     if (!ack_in_.is_empty()) // TODO: cwnd_>1
         data_out_cap_ = tosend;
 
-    if (dgram.size()>254) {
-        dgram.Send(); // kind of fragmentation
-        dgram.Push32(peer_channel_id_);
+    if (evbuffer_get_length(evb)>254) {
+	Channel::SendTo(socket_,peer(),evb); // kind of fragmentation
+        evbuffer_add_32be(evb, peer_channel_id_);
     }
 
-    dgram.Push8(SWIFT_DATA);
-    dgram.Push32(tosend.to32());
+    evbuffer_add_8(evb, SWIFT_DATA);
+    evbuffer_add_32be(evb, tosend.to32());
 
     uint8_t buf[1024];
     size_t r = pread(file().file_descriptor(),buf,1024,tosend.base_offset()<<10);
@@ -213,8 +216,8 @@ bin64_t        Channel::AddData (Datagram& dgram) {
         print_error("error on reading");
         return bin64_t::NONE;
     }
-    assert(dgram.space()>=r+4+1);
-    dgram.Push(buf,r);
+    // assert(dgram.space()>=r+4+1);
+    evbuffer_add(evb, buf, r);
 
     last_data_out_time_ = NOW;
     data_out_.push_back(tosend);
@@ -224,12 +227,12 @@ bin64_t        Channel::AddData (Datagram& dgram) {
 }
 
 
-void    Channel::AddAck (Datagram& dgram) {
+void    Channel::AddAck (struct evbuffer *evb) {
     if (data_in_==tintbin())
         return;
-    dgram.Push8(SWIFT_ACK);
-    dgram.Push32(data_in_.bin.to32()); // FIXME not cover
-    dgram.Push64(data_in_.time); // FIXME 32
+    evbuffer_add_8(evb, SWIFT_ACK);
+    evbuffer_add_32be(evb, data_in_.bin.to32()); // FIXME not cover
+    evbuffer_add_64be(evb, data_in_.time); // FIXME 32
     have_out_.set(data_in_.bin);
     dprintf("%s #%u +ack %s %s\n",
         tintstr(),id_,data_in_.bin.str(),tintstr(data_in_.time));
@@ -239,10 +242,10 @@ void    Channel::AddAck (Datagram& dgram) {
 }
 
 
-void    Channel::AddHave (Datagram& dgram) {
+void    Channel::AddHave (struct evbuffer *evb) {
     if (data_in_dbl_!=bin64_t::NONE) { // TODO: do redundancy better
-        dgram.Push8(SWIFT_HAVE);
-        dgram.Push32(data_in_dbl_.to32());
+        evbuffer_add_8(evb, SWIFT_HAVE);
+        evbuffer_add_32be(evb, data_in_dbl_.to32());
         data_in_dbl_=bin64_t::NONE;
     }
     for(int count=0; count<4; count++) {
@@ -252,15 +255,15 @@ void    Channel::AddHave (Datagram& dgram) {
             break;
         ack = file().ack_out().cover(ack);
         have_out_.set(ack);
-        dgram.Push8(SWIFT_HAVE);
-        dgram.Push32(ack.to32());
+        evbuffer_add_8(evb, SWIFT_HAVE);
+        evbuffer_add_32be(evb, ack.to32());
         dprintf("%s #%u +have %s\n",tintstr(),id_,ack.str());
     }
 }
 
 
-void    Channel::Recv (Datagram& dgram) {
-    dprintf("%s #%u recvd %ib\n",tintstr(),id_,dgram.size()+4);
+void    Channel::Recv (struct evbuffer *evb) {
+    dprintf("%s #%u recvd %ib\n",tintstr(),id_,evbuffer_get_length(evb)+4);
     dgrams_rcvd_++;
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
@@ -268,17 +271,17 @@ void    Channel::Recv (Datagram& dgram) {
         dip_avg_ = rtt_avg_;
         dprintf("%s #%u sendctrl rtt init %lli\n",tintstr(),id_,rtt_avg_);
     }
-    bin64_t data = dgram.size() ? bin64_t::NONE : bin64_t::ALL;
-    while (dgram.size()) {
-        uint8_t type = dgram.Pull8();
+    bin64_t data = evbuffer_get_length(evb) ? bin64_t::NONE : bin64_t::ALL;
+    while (evbuffer_get_length(evb)) {
+        uint8_t type = evbuffer_remove_8(evb);
         switch (type) {
-            case SWIFT_HANDSHAKE: OnHandshake(dgram); break;
-            case SWIFT_DATA:      data=OnData(dgram); break;
-            case SWIFT_HAVE:      OnHave(dgram); break;
-            case SWIFT_ACK:       OnAck(dgram); break;
-            case SWIFT_HASH:      OnHash(dgram); break;
-            case SWIFT_HINT:      OnHint(dgram); break;
-            case SWIFT_PEX_ADD:   OnPex(dgram); break;
+            case SWIFT_HANDSHAKE: OnHandshake(evb); break;
+            case SWIFT_DATA:      data=OnData(evb); break;
+            case SWIFT_HAVE:      OnHave(evb); break;
+            case SWIFT_ACK:       OnAck(evb); break;
+            case SWIFT_HASH:      OnHash(evb); break;
+            case SWIFT_HINT:      OnHint(evb); break;
+            case SWIFT_PEX_ADD:   OnPex(evb); break;
             default:
                 eprintf("%s #%u ?msg id unknown %i\n",tintstr(),id_,(int)type);
                 return;
@@ -290,9 +293,9 @@ void    Channel::Recv (Datagram& dgram) {
 }
 
 
-void    Channel::OnHash (Datagram& dgram) {
-    bin64_t pos = dgram.Pull32();
-    Sha1Hash hash = dgram.PullHash();
+void    Channel::OnHash (struct evbuffer *evb) {
+    bin64_t pos = evbuffer_remove_32be(evb);
+    Sha1Hash hash = evbuffer_remove_hash(evb);
     file().OfferHash(pos,hash);
     dprintf("%s #%u -hash %s\n",tintstr(),id_,pos.str());
 }
@@ -319,10 +322,10 @@ void    Channel::CleanHintOut (bin64_t pos) {
 }
 
 
-bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted data
-    bin64_t pos = dgram.Pull32();
+bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupted data
+    bin64_t pos = evbuffer_remove_32be(evb);
     uint8_t *data;
-    int length = dgram.Pull(&data,1024);
+    int length = evbuffer_remove(evb, &data, 1024);
     bool ok = (pos==bin64_t::NONE) || 
         (!file().ack_out().get(pos) && file().OfferData(pos, (char*)data, length) );
     dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
@@ -346,9 +349,9 @@ bin64_t Channel::OnData (Datagram& dgram) {  // TODO: HAVE NONE for corrupted da
 }
 
 
-void    Channel::OnAck (Datagram& dgram) {
-    bin64_t ackd_pos = dgram.Pull32();
-    tint peer_time = dgram.Pull64(); // FIXME 32
+void    Channel::OnAck (struct evbuffer *evb) {
+    bin64_t ackd_pos = evbuffer_remove_32be(evb);
+    tint peer_time = evbuffer_remove_64be(evb); // FIXME 32
     // FIXME FIXME: wrap around here
     if (ackd_pos==bin64_t::NONE)
         return; // likely, brocken packet / insufficient hashes
@@ -428,8 +431,8 @@ void Channel::TimeoutDataOut ( ) {
 }
 
 
-void Channel::OnHave (Datagram& dgram) {
-    bin64_t ackd_pos = dgram.Pull32();
+void Channel::OnHave (struct evbuffer *evb) {
+    bin64_t ackd_pos = evbuffer_remove_32be(evb);
     if (ackd_pos==bin64_t::NONE)
         return; // wow, peer has hashes
     ack_in_.set(ackd_pos);
@@ -437,16 +440,16 @@ void Channel::OnHave (Datagram& dgram) {
 }
 
 
-void    Channel::OnHint (Datagram& dgram) {
-    bin64_t hint = dgram.Pull32();
+void    Channel::OnHint (struct evbuffer *evb) {
+    bin64_t hint = evbuffer_remove_32be(evb);
     // FIXME: wake up here
     hint_in_.push_back(hint);
     dprintf("%s #%u -hint %s\n",tintstr(),id_,hint.str());
 }
 
 
-void Channel::OnHandshake (Datagram& dgram) {
-    peer_channel_id_ = dgram.Pull32();
+void Channel::OnHandshake (struct evbuffer *evb) {
+    peer_channel_id_ = evbuffer_remove_32be(evb);
     dprintf("%s #%u -hs %x\n",tintstr(),id_,peer_channel_id_);
     // self-connection check
     if (!SELF_CONN_OK) {
@@ -461,58 +464,61 @@ void Channel::OnHandshake (Datagram& dgram) {
 }
 
 
-void Channel::OnPex (Datagram& dgram) {
-    uint32_t ipv4 = dgram.Pull32();
-    uint16_t port = dgram.Pull16();
+void Channel::OnPex (struct evbuffer *evb) {
+    uint32_t ipv4 = evbuffer_remove_32be(evb);
+    uint16_t port = evbuffer_remove_16be(evb);
     Address addr(ipv4,port);
     dprintf("%s #%u -pex %s\n",tintstr(),id_,addr.str());
     transfer().OnPexIn(addr);
 }
 
 
-void    Channel::AddPex (Datagram& dgram) {
+void    Channel::AddPex (struct evbuffer *evb) {
     int chid = transfer().RevealChannel(pex_out_);
     if (chid==-1 || chid==id_)
         return;
     Address a = channels[chid]->peer();
-    dgram.Push8(SWIFT_PEX_ADD);
-    dgram.Push32(a.ipv4());
-    dgram.Push16(a.port());
+    evbuffer_add_8(evb, SWIFT_PEX_ADD);
+    evbuffer_add_32be(evb, a.ipv4());
+    evbuffer_add_16be(evb, a.port());
     dprintf("%s #%u +pex %s\n",tintstr(),id_,a.str());
 }
 
 
 void    Channel::RecvDatagram (SOCKET socket) {
-    Datagram data(socket);
-    data.Recv();
-    const Address& addr = data.address();
+    // Datagram data(socket);
+    // data.Recv();
+    // const Address& addr = data.address();
+    struct evbuffer *evb = evbuffer_new();
+    Address addr;
+    RecvFrom(socket, addr, evb);
 #define return_log(...) { fprintf(stderr,__VA_ARGS__); return; }
-    if (data.size()<4)
+    if (evbuffer_get_length(evb)<4)
         return_log("datagram shorter than 4 bytes %s\n",addr.str());
-    uint32_t mych = data.Pull32();
+    uint32_t mych = evbuffer_remove_32be(evb);
     Sha1Hash hash;
     Channel* channel = NULL;
     if (mych==0) { // handshake initiated
-        if (data.size()<1+4+1+4+Sha1Hash::SIZE)
+        if (evbuffer_get_length(evb)<1+4+1+4+Sha1Hash::SIZE)
             return_log ("%s #0 incorrect size %i initial handshake packet %s\n",
-                        tintstr(),data.size(),addr.str());
-        uint8_t hashid = data.Pull8();
+                        tintstr(),evbuffer_get_length(evb),addr.str());
+        uint8_t hashid = evbuffer_remove_8(evb);
         if (hashid!=SWIFT_HASH)
             return_log ("%s #0 no hash in the initial handshake %s\n",
                         tintstr(),addr.str());
-        bin64_t pos = data.Pull32();
+        bin64_t pos = evbuffer_remove_32be(evb);
         if (pos!=bin64_t::ALL)
             return_log ("%s #0 that is not the root hash %s\n",tintstr(),addr.str());
-        hash = data.PullHash();
+        hash = evbuffer_remove_hash(evb);
         FileTransfer* file = FileTransfer::Find(hash);
         if (!file)
             return_log ("%s #0 hash %s unknown, no such file %s\n",tintstr(),hash.hex().c_str(),addr.str());
         dprintf("%s #0 -hash ALL %s\n",tintstr(),hash.hex().c_str());
         for(binqueue::iterator i=file->hs_in_.begin(); i!=file->hs_in_.end(); i++)
-            if (channels[*i] && channels[*i]->peer_==data.address() &&
+            if (channels[*i] && channels[*i]->peer_==addr &&
                 channels[*i]->last_recv_time_>NOW-TINT_SEC*2)
                 return_log("%s #0 have a channel already to %s\n",tintstr(),addr.str());
-        channel = new Channel(file, socket, data.address());
+        channel = new Channel(file, socket, addr);
     } else {
         mych = DecodeID(mych);
         if (mych>=channels.size())
@@ -526,7 +532,7 @@ void    Channel::RecvDatagram (SOCKET socket) {
         channel->own_id_mentioned_ = true;
     }
     //dprintf("recvd %i bytes for %i\n",data.size(),channel->id);
-    channel->Recv(data);
+    channel->Recv(evb);
 }
 
 
@@ -553,7 +559,7 @@ void Channel::Reschedule () {
  
 void Channel::SendCallback(int fd, short event, void *arg) {
     dprintf(">scb\n");
-    Datagram::Time();
+    Time();
     Channel * sender = (Channel*) arg;
     if (NOW<sender->next_send_time_-TINT_MSEC)
         dprintf("%s #%u suspicious send %s<%s\n",tintstr(),
@@ -564,7 +570,7 @@ void Channel::SendCallback(int fd, short event, void *arg) {
 
 void Channel::ReceiveCallback(int fd, short event, void *arg) {
     dprintf("rcb\n");
-    Datagram::Time();
+    Time();
     RecvDatagram(fd);
     event_add(&evrecv, NULL);
 }

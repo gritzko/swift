@@ -8,42 +8,42 @@
  */
 /*
 
-The swift protocol
+  The swift protocol
 
-Messages
+  Messages
 
- HANDSHAKE    00, channelid
- Communicates the channel id of the sender. The
- initial handshake packet also has the root hash
- (a HASH message).
+  HANDSHAKE    00, channelid
+  Communicates the channel id of the sender. The
+  initial handshake packet also has the root hash
+  (a HASH message).
 
- DATA        01, bin_32, buffer
- 1K of data.
+  DATA        01, bin_32, buffer
+  1K of data.
 
- ACK        02, bin_32, timestamp_32
- HAVE       03, bin_32
- Confirms successfull delivery of data. Used for
- congestion control, as well.
+  ACK        02, bin_32, timestamp_32
+  HAVE       03, bin_32
+  Confirms successfull delivery of data. Used for
+  congestion control, as well.
 
- HINT        08, bin_32
- Practical value of "hints" is to avoid overlap, mostly.
- Hints might be lost in the network or ignored.
- Peer might send out data without a hint.
- Hint which was not responded (by DATA) in some RTTs
- is considered to be ignored.
- As peers cant pick randomly kilobyte here and there,
- they send out "long hints" for non-base bins.
+  HINT        08, bin_32
+  Practical value of "hints" is to avoid overlap, mostly.
+  Hints might be lost in the network or ignored.
+  Peer might send out data without a hint.
+  Hint which was not responded (by DATA) in some RTTs
+  is considered to be ignored.
+  As peers cant pick randomly kilobyte here and there,
+  they send out "long hints" for non-base bins.
 
- HASH        04, bin_32, sha1hash
- SHA1 hash tree hashes for data verification. The
- connection to a fresh peer starts with bootstrapping
- him with peak hashes. Later, before sending out
- any data, a peer sends the necessary uncle hashes.
+  HASH        04, bin_32, sha1hash
+  SHA1 hash tree hashes for data verification. The
+  connection to a fresh peer starts with bootstrapping
+  him with peak hashes. Later, before sending out
+  any data, a peer sends the necessary uncle hashes.
 
- PEX+/PEX-    05/06, ipv4 addr, port
- Peer exchange messages; reports all connected and
- disconected peers. Might has special meaning (as
- in the case with swarm supervisors).
+  PEX+/PEX-    05/06, ipv4 addr, port
+  Peer exchange messages; reports all connected and
+  disconected peers. Might has special meaning (as
+  in the case with swarm supervisors).
 
 */
 #ifndef SWIFT_H
@@ -55,14 +55,95 @@ Messages
 #include <string>
 #include <event2/event.h>
 #include <event2/event_struct.h>
+#include <event2/buffer.h>
 #include "bin64.h"
 #include "bins.h"
-#include "datagram.h"
 #include "hashtree.h"
 
 namespace swift {
 
-    #define NOW Datagram::now
+#define MAXDGRAMSZ 2800
+#ifndef _WIN32
+#define INVALID_SOCKET -1
+#endif
+
+/** IPv4 address, just a nice wrapping around struct sockaddr_in. */
+    struct Address {
+	struct sockaddr_in  addr;
+	static uint32_t LOCALHOST;
+	void set_port (uint16_t port) {
+	    addr.sin_port = htons(port);
+	}
+	void set_port (const char* port_str) {
+	    int p;
+	    if (sscanf(port_str,"%i",&p))
+		set_port(p);
+	}
+	void set_ipv4 (uint32_t ipv4) {
+	    addr.sin_addr.s_addr = htonl(ipv4);
+	}
+	void set_ipv4 (const char* ipv4_str) ;
+	//{    inet_aton(ipv4_str,&(addr.sin_addr));    }
+	void clear () {
+	    memset(&addr,0,sizeof(struct sockaddr_in));
+	    addr.sin_family = AF_INET;
+	}
+	Address() {
+	    clear();
+	}
+	Address(const char* ip, uint16_t port)  {
+	    clear();
+	    set_ipv4(ip);
+	    set_port(port);
+	}
+	Address(const char* ip_port);
+	Address(uint16_t port) {
+	    clear();
+	    set_ipv4((uint32_t)INADDR_ANY);
+	    set_port(port);
+	}
+	Address(uint32_t ipv4addr, uint16_t port) {
+	    clear();
+	    set_ipv4(ipv4addr);
+	    set_port(port);
+	}
+	Address(const struct sockaddr_in& address) : addr(address) {}
+	uint32_t ipv4 () const { return ntohl(addr.sin_addr.s_addr); }
+	uint16_t port () const { return ntohs(addr.sin_port); }
+	operator sockaddr_in () const {return addr;}
+	bool operator == (const Address& b) const {
+	    return addr.sin_family==b.addr.sin_family &&
+		addr.sin_port==b.addr.sin_port &&
+		addr.sin_addr.s_addr==b.addr.sin_addr.s_addr;
+	}
+	const char* str () const {
+	    static char rs[4][32];
+	    static int i;
+	    i = (i+1) & 3;
+	    sprintf(rs[i],"%i.%i.%i.%i:%i",ipv4()>>24,(ipv4()>>16)&0xff,
+		    (ipv4()>>8)&0xff,ipv4()&0xff,port());
+	    return rs[i];
+	}
+	bool operator != (const Address& b) const { return !(*this==b); }
+    };
+
+
+    typedef void (*sockcb_t) (SOCKET);
+    struct sckrwecb_t {
+	sckrwecb_t (SOCKET s=0, sockcb_t mr=NULL, sockcb_t mw=NULL,
+		    sockcb_t oe=NULL) :
+	    sock(s), may_read(mr), may_write(mw), on_error(oe) {}
+	SOCKET sock;
+	sockcb_t   may_read;
+	sockcb_t   may_write;
+	sockcb_t   on_error;
+    };
+
+    struct now_t  {
+	static tint now;
+    };
+
+#define NOW now_t::now
 
     /** tintbin is basically a pair<tint,bin64_t> plus some nice operators.
         Most frequently used in different queues (acknowledgements, requests,
@@ -75,11 +156,11 @@ namespace swift {
         tintbin(tint time_, bin64_t bin_) : time(time_), bin(bin_) {}
         tintbin(bin64_t bin_) : time(NOW), bin(bin_) {}
         bool operator < (const tintbin& b) const
-            { return time > b.time; }
+	{ return time > b.time; }
         bool operator == (const tintbin& b) const
-            { return time==b.time && bin==b.bin; }
+	{ return time==b.time && bin==b.bin; }
         bool operator != (const tintbin& b) const
-            { return !(*this==b); }
+	{ return !(*this==b); }
     };
 
     typedef std::deque<tintbin> tbqueue;
@@ -136,7 +217,7 @@ namespace swift {
         /** A constructor. Open/submit/retrieve a file.
          *  @param file_name    the name of the file
          *  @param root_hash    the root hash of the file; zero hash if the file
-                                is newly submitted */
+	 is newly submitted */
         FileTransfer(const char *file_name, const Sha1Hash& root_hash=Sha1Hash::ZERO);
 
         /**    Close everything. */
@@ -189,7 +270,7 @@ namespace swift {
 
         tint            init_time_;
 
-        #define SWFT_MAX_TRANSFER_CB 8
+#define SWFT_MAX_TRANSFER_CB 8
         ProgressCallback callbacks[SWFT_MAX_TRANSFER_CB];
         uint8_t         cb_agg[SWFT_MAX_TRANSFER_CB];
         int             cb_installed;
@@ -245,11 +326,16 @@ namespace swift {
 
 
     /**    swift channel's "control block"; channels loosely correspond to TCP
-        connections or FTP sessions; one channel is created for one file
-        being transferred between two peers. As we don't need buffers and
-        lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
-        Normally, API users do not deal with this class. */
+	   connections or FTP sessions; one channel is created for one file
+	   being transferred between two peers. As we don't need buffers and
+	   lots of other TCP stuff, sizeof(Channel+members) must be below 1K.
+	   Normally, API users do not deal with this class. */
     class Channel {
+
+#define DGRAM_MAX_SOCK_OPEN 128
+	static int sock_count;
+	static sckrwecb_t sock_open[DGRAM_MAX_SOCK_OPEN];
+
     public:
         Channel    (FileTransfer* file, int socket=INVALID_SOCKET, Address peer=Address());
         ~Channel();
@@ -269,30 +355,49 @@ namespace swift {
         struct event evsend;
         static const char* SEND_CONTROL_MODES[];
 
+	static tint epoch, start;
+	static uint64_t dgrams_up, dgrams_down, bytes_up, bytes_down;
+
         static void RecvDatagram (SOCKET socket);
         //static void Loop (tint till);
         static void SendCallback(int fd, short event, void *arg);
         static void ReceiveCallback(int fd, short event, void *arg);
 
-        void        Recv (Datagram& dgram);
+	static SOCKET Bind(Address address, sckrwecb_t callbacks=sckrwecb_t());
+
+	static SOCKET default_socket()
+        { return sock_count ? sock_open[0].sock : INVALID_SOCKET; }
+
+	/** close the port */
+	static void Close(SOCKET sock);
+
+	static void Shutdown ();
+
+	/** the current time */
+	static tint Time();
+
+	static int SendTo(SOCKET sock, Address addr, struct evbuffer *evb);
+	static int RecvFrom(SOCKET sock, Address& addr, struct evbuffer *evb);
+
+        void        Recv (struct evbuffer *evb);
         void        Send ();
         void        Close ();
 
-        void        OnAck (Datagram& dgram);
-        void        OnHave (Datagram& dgram);
-        bin64_t     OnData (Datagram& dgram);
-        void        OnHint (Datagram& dgram);
-        void        OnHash (Datagram& dgram);
-        void        OnPex (Datagram& dgram);
-        void        OnHandshake (Datagram& dgram);
-        void        AddHandshake (Datagram& dgram);
-        bin64_t     AddData (Datagram& dgram);
-        void        AddAck (Datagram& dgram);
-        void        AddHave (Datagram& dgram);
-        void        AddHint (Datagram& dgram);
-        void        AddUncleHashes (Datagram& dgram, bin64_t pos);
-        void        AddPeakHashes (Datagram& dgram);
-        void        AddPex (Datagram& dgram);
+        void        OnAck (struct evbuffer *evb);
+        void        OnHave (struct evbuffer *evb);
+        bin64_t     OnData (struct evbuffer *evb);
+        void        OnHint (struct evbuffer *evb);
+        void        OnHash (struct evbuffer *evb);
+        void        OnPex (struct evbuffer *evb);
+        void        OnHandshake (struct evbuffer *evb);
+        void        AddHandshake (struct evbuffer *evb);
+        bin64_t     AddData (struct evbuffer *evb);
+        void        AddAck (struct evbuffer *evb);
+        void        AddHave (struct evbuffer *evb);
+        void        AddHint (struct evbuffer *evb);
+        void        AddUncleHashes (struct evbuffer *evb, bin64_t pos);
+        void        AddPeakHashes (struct evbuffer *evb);
+        void        AddPex (struct evbuffer *evb);
 
         void        BackOffOnLosses (float ratio=0.5);
         tint        SwitchSendControl (int control_mode);
@@ -322,9 +427,9 @@ namespace swift {
         HashTree&   file () { return transfer_->file(); }
         const Address& peer() const { return peer_; }
         tint ack_timeout () {
-			tint dev = dev_avg_ < MIN_DEV ? MIN_DEV : dev_avg_;
-			tint tmo = rtt_avg_ + dev * 4;
-			return tmo < 30*TINT_SEC ? tmo : 30*TINT_SEC;
+	    tint dev = dev_avg_ < MIN_DEV ? MIN_DEV : dev_avg_;
+	    tint tmo = rtt_avg_ + dev * 4;
+	    return tmo < 30*TINT_SEC ? tmo : 30*TINT_SEC;
         }
         uint32_t    id () const { return id_; }
 
@@ -477,6 +582,21 @@ namespace swift {
 
     void ReportCallback(int fd, short event, void *arg);
     void EndCallback(int fd, short event, void *arg);
+
+    int evbuffer_add_8(struct evbuffer *evb, uint8_t b);
+    int evbuffer_add_16be(struct evbuffer *evb, uint16_t w);
+    int evbuffer_add_32be(struct evbuffer *evb, uint32_t i);
+    int evbuffer_add_64be(struct evbuffer *evb, uint64_t l);
+    int evbuffer_add_hash(struct evbuffer *evb, const Sha1Hash& hash);
+
+    uint8_t evbuffer_remove_8(struct evbuffer *evb);
+    uint16_t evbuffer_remove_16be(struct evbuffer *evb);
+    uint32_t evbuffer_remove_32be(struct evbuffer *evb);
+    uint64_t evbuffer_remove_64be(struct evbuffer *evb);
+    Sha1Hash evbuffer_remove_hash(struct evbuffer* evb);
+
+    const char* tintstr(tint t=0);
+    std::string sock2str (struct sockaddr_in addr);
 
 } // namespace end
 

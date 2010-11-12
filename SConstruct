@@ -16,7 +16,7 @@ DEBUG = True
 TestDir='tests'
 
 target = 'swift'
-source = [ 'bin64.cpp','sha1.cpp','hashtree.cpp','datagram.cpp','bins.cpp',
+source = [ 'bin64.cpp','sha1.cpp','hashtree.cpp','bins.cpp',
     'transfer.cpp', 'channel.cpp', 'sendrecv.cpp', 'send_control.cpp',
     'compat.cpp']
 
@@ -96,7 +96,7 @@ env.StaticLibrary (
 
 env.Program(
    target='swift',
-   source=['swift.cpp','httpgw.cpp'],
+   source=['swift.cpp'],
    CPPPATH=cpppath,
    LIBS=[libs,'libswift'],
    LIBPATH=libpath+':.' )

@@ -124,8 +124,8 @@ int main (int argc, char** argv) {
     if (tracker!=Address())
         SetTracker(tracker);
 
-    if (http_gw!=Address())
-        InstallHTTPGateway(http_gw);
+    // if (http_gw!=Address())
+    //     InstallHTTPGateway(http_gw);
 
     if (root_hash!=Sha1Hash::ZERO && !filename)
         filename = strdup(root_hash.hex().c_str());
@@ -181,8 +181,8 @@ void swift::ReportCallback(int fd, short event, void *arg) {
 	    "%lli dgram %lli bytes down\n",
 	    IsComplete(file) ? "DONE" : "done",
 	    Complete(file), Size(file), SeqComplete(file),
-	    Datagram::dgrams_up, Datagram::bytes_up,
-	    Datagram::dgrams_down, Datagram::bytes_down );
+	    Channel::dgrams_up, Channel::bytes_up,
+	    Channel::dgrams_down, Channel::bytes_down );
     evtimer_add(&evreport, tint2tv(TINT_SEC));
 }
 
