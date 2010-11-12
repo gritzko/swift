@@ -324,8 +324,9 @@ void    Channel::CleanHintOut (bin64_t pos) {
 
 bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupted data
     bin64_t pos = evbuffer_remove_32be(evb);
-    uint8_t *data;
-    int length = evbuffer_remove(evb, &data, 1024);
+    int length = (evbuffer_get_length(evb) < 1024) ? evbuffer_get_length(evb)
+	: 1024;
+    uint8_t *data = evbuffer_pullup(evb, length);
     bool ok = (pos==bin64_t::NONE) || 
         (!file().ack_out().get(pos) && file().OfferData(pos, (char*)data, length) );
     dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
@@ -345,6 +346,7 @@ bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupt
         last_data_in_time_ = NOW;
     }
     CleanHintOut(pos);
+    evbuffer_drain(evb, length);
     return pos;
 }
 
