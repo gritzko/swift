@@ -329,6 +329,7 @@ bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupt
     uint8_t *data = evbuffer_pullup(evb, length);
     bool ok = (pos==bin64_t::NONE) || 
         (!file().ack_out().get(pos) && file().OfferData(pos, (char*)data, length) );
+    evbuffer_drain(evb, length);
     dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
     data_in_ = tintbin(NOW,bin64_t::NONE);
     if (!ok)
@@ -346,7 +347,6 @@ bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupt
         last_data_in_time_ = NOW;
     }
     CleanHintOut(pos);
-    evbuffer_drain(evb, length);
     return pos;
 }
 

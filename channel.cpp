@@ -110,7 +110,7 @@ int Channel::SendTo (SOCKET sock, Address addr, struct evbuffer *evb) {
                    (struct sockaddr*)&(addr.addr),sizeof(struct sockaddr_in));
     if (r<0)
         perror("can't send");
-    // TODO: evbuffer_drain?
+    evbuffer_drain(evb, length);
     dgrams_up++;
     bytes_up+=length;
     Time();
