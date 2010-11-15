@@ -109,7 +109,6 @@ void    Channel::AddHandshake (struct evbuffer *evb) {
 
 
 void    Channel::Send () {
-    // Datagram dgram(socket_,peer());
     struct evbuffer *evb = evbuffer_new();
     evbuffer_add_32be(evb, peer_channel_id_);
     bin64_t data = bin64_t::NONE;
@@ -488,13 +487,10 @@ void    Channel::AddPex (struct evbuffer *evb) {
 
 
 void    Channel::RecvDatagram (SOCKET socket) {
-    // Datagram data(socket);
-    // data.Recv();
-    // const Address& addr = data.address();
     struct evbuffer *evb = evbuffer_new();
     Address addr;
     RecvFrom(socket, addr, evb);
-#define return_log(...) { fprintf(stderr,__VA_ARGS__); return; }
+#define return_log(...) { fprintf(stderr,__VA_ARGS__); evbuffer_free(evb); return; }
     if (evbuffer_get_length(evb)<4)
         return_log("datagram shorter than 4 bytes %s\n",addr.str());
     uint32_t mych = evbuffer_remove_32be(evb);
@@ -535,6 +531,7 @@ void    Channel::RecvDatagram (SOCKET socket) {
     }
     //dprintf("recvd %i bytes for %i\n",data.size(),channel->id);
     channel->Recv(evb);
+    evbuffer_free(evb); 
 }
 
 
