@@ -193,7 +193,7 @@ Address::Address(const char* ip_port) {
             set_ipv4(ipp);
             set_port((uint16_t)0);
         } else {
-            set_ipv4(INADDR_LOOPBACK);
+            set_ipv4(INADDR_ANY);
             set_port(ipp);
         }
     }
