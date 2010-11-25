@@ -6,11 +6,10 @@
  *  Copyright 2009 Delft University of Technology. All rights reserved.
  *
  */
-
-#include <gtest/gtest.h>
-//#include <glog/logging.h>
-#include "swift.h"
+#include <sys/stat.h>
 #include <time.h>
+#include <gtest/gtest.h>
+#include "swift.h"
 
 
 using namespace swift;

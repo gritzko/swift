@@ -127,8 +127,8 @@ void    Channel::Send () {
         AddAck(evb);
     }
     dprintf("%s #%u sent %ib %s:%x\n",
-            tintstr(),id_,evbuffer_get_length(evb),peer().str(),
-	    peer_channel_id_);
+            tintstr(),id_,(int)evbuffer_get_length(evb),peer().str(),
+            peer_channel_id_);
     if (evbuffer_get_length(evb)==4) {// only the channel id; bare keep-alive
         data = bin64_t::ALL;
     }
@@ -229,9 +229,10 @@ bin64_t        Channel::AddData (struct evbuffer *evb) {
 void    Channel::AddAck (struct evbuffer *evb) {
     if (data_in_==tintbin())
         return;
-    evbuffer_add_8(evb, SWIFT_ACK);
-    evbuffer_add_32be(evb, data_in_.bin.to32()); // FIXME not cover
-    evbuffer_add_64be(evb, data_in_.time); // FIXME 32
+    evbuffer_add_8(evb, data_in_.time==TINT_NEVER?SWIFT_HAVE:SWIFT_ACK);
+    evbuffer_add_32be(evb, data_in_.bin.to32());
+    if (data_in_.time!=TINT_NEVER)
+        evbuffer_add_64be(evb, data_in_.time);
     have_out_.set(data_in_.bin);
     dprintf("%s #%u +ack %s %s\n",
         tintstr(),id_,data_in_.bin.str(),tintstr(data_in_.time));
@@ -262,7 +263,7 @@ void    Channel::AddHave (struct evbuffer *evb) {
 
 
 void    Channel::Recv (struct evbuffer *evb) {
-    dprintf("%s #%u recvd %ib\n",tintstr(),id_,evbuffer_get_length(evb)+4);
+    dprintf("%s #%u recvd %ib\n",tintstr(),id_,(int)evbuffer_get_length(evb)+4);
     dgrams_rcvd_++;
     if (last_send_time_ && rtt_avg_==TINT_SEC && dev_avg_==0) {
         rtt_avg_ = NOW - last_send_time_;
@@ -323,16 +324,20 @@ void    Channel::CleanHintOut (bin64_t pos) {
 
 bin64_t Channel::OnData (struct evbuffer *evb) {  // TODO: HAVE NONE for corrupted data
     bin64_t pos = evbuffer_remove_32be(evb);
-    int length = (evbuffer_get_length(evb) < 1024) ? evbuffer_get_length(evb)
-	: 1024;
-    uint8_t *data = evbuffer_pullup(evb, length);
-    bool ok = (pos==bin64_t::NONE) || 
-        (!file().ack_out().get(pos) && file().OfferData(pos, (char*)data, length) );
-    evbuffer_drain(evb, length);
-    dprintf("%s #%u %cdata %s\n",tintstr(),id_,ok?'-':'!',pos.str());
-    data_in_ = tintbin(NOW,bin64_t::NONE);
-    if (!ok)
+    if (file().ack_out().get(pos)) {
+        data_in_ = tintbin(TINT_NEVER,transfer().ack_out().cover(pos));
         return bin64_t::NONE;
+    }
+    int length = (evbuffer_get_length(evb) < 1024) ?
+        evbuffer_get_length(evb) : 1024;
+    uint8_t *data = evbuffer_pullup(evb, length);
+    evbuffer_drain(evb, length);
+    data_in_ = tintbin(NOW,bin64_t::NONE);
+    if (!file().OfferData(pos, (char*)data, length)) {
+        dprintf("%s #%u !data %s\n",tintstr(),id_,pos.str());
+        return bin64_t::NONE;
+    }
+    dprintf("%s #%u -data %s\n",tintstr(),id_,pos.str());
     bin64_t cover = transfer().ack_out().cover(pos);
     for(int i=0; i<transfer().cb_installed; i++)
         if (cover.layer()>=transfer().cb_agg[i])
@@ -499,7 +504,7 @@ void    Channel::RecvDatagram (SOCKET socket) {
     if (mych==0) { // handshake initiated
         if (evbuffer_get_length(evb)<1+4+1+4+Sha1Hash::SIZE)
             return_log ("%s #0 incorrect size %i initial handshake packet %s\n",
-                        tintstr(),evbuffer_get_length(evb),addr.str());
+                        tintstr(),(int)evbuffer_get_length(evb),addr.str());
         uint8_t hashid = evbuffer_remove_8(evb);
         if (hashid!=SWIFT_HASH)
             return_log ("%s #0 no hash in the initial handshake %s\n",
@@ -557,18 +562,15 @@ void Channel::Reschedule () {
 
  
 void Channel::SendCallback(int fd, short event, void *arg) {
-    dprintf(">scb\n");
     Time();
     Channel * sender = (Channel*) arg;
     if (NOW<sender->next_send_time_-TINT_MSEC)
         dprintf("%s #%u suspicious send %s<%s\n",tintstr(),
                 sender->id(),tintstr(NOW),tintstr(sender->next_send_time_));
     sender->Send();
-    dprintf("<scb\n");
 }
 
 void Channel::ReceiveCallback(int fd, short event, void *arg) {
-    dprintf("rcb\n");
     Time();
     RecvDatagram(fd);
     event_add(&evrecv, NULL);
