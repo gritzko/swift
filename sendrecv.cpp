@@ -229,6 +229,7 @@ bin64_t        Channel::AddData (struct evbuffer *evb) {
 void    Channel::AddAck (struct evbuffer *evb) {
     if (data_in_==tintbin())
         return;
+    // sometimes, we send a HAVE (e.g. in case the peer did repetitive send)
     evbuffer_add_8(evb, data_in_.time==TINT_NEVER?SWIFT_HAVE:SWIFT_ACK);
     evbuffer_add_32be(evb, data_in_.bin.to32());
     if (data_in_.time!=TINT_NEVER)
