@@ -45,7 +45,8 @@ void swift::AddProgressCallback (int transfer,ProgressCallback cb,uint8_t agg) {
     if (!trans)
         return;
     trans->cb_agg[trans->cb_installed] = agg;
-    trans->callbacks[trans->cb_installed++] = cb;
+    trans->callbacks[trans->cb_installed] = cb;
+    trans->cb_installed++;
 }
 
 
